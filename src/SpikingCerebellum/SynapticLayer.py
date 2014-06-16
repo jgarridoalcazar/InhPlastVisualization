@@ -97,7 +97,7 @@ class SynapticLayer(object):
                     else:
                         print 'Non-specified connectivity parameter: ',param,'in layer',kwargs['name'],'- Using default value'
                 # Generate the individual connections
-                self.template_connectivity_parameters[self.connectivity_type][-1]()
+                #self.template_connectivity_parameters[self.connectivity_type][-1]()
             else:
                 print 'Unknown connectivity type: ', self.connectivity_type
                 raise Exception('UnknownConnectivityType')                         
@@ -117,7 +117,7 @@ class SynapticLayer(object):
                         print 'Non-specified weight initialization parameter: ',param
                         raise Exception('Non-DefinedWeightInitializationParameter')
                 # Generate the individual connections
-                self.template_weight_parameters[self.weight_initialization_type][-1]()
+                #self.template_weight_parameters[self.weight_initialization_type][-1]()
             else:
                 print 'Unknown weight initialization type: ', self.weight_initialization_type
                 raise Exception('UnknownWeightInitializationType')                         
@@ -143,7 +143,7 @@ class SynapticLayer(object):
             
         # Gather the synapses to every node
         # It is not efficient in terms of memory consumption, but it makes this class independent of NEST simulator
-        self._share_connections()
+        #self._share_connections()
         
         # Check whether additional parameters have been used.
         for param in kwargs:

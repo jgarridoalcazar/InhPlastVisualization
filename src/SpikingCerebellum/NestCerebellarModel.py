@@ -64,6 +64,30 @@ class NestCerebellarModel(CerebellarModel):
         'mu_minus': '0.0' # Exponent of the weight dependence (0 to get additive STDP, 1 for multiplicative STDP)
     }
     
+    # Connectivity pattern translator
+    connectivityNameTranslatorDict = {
+        'randomn2one': ('fixed_indegree',['indegree']),
+        'random_with_probability': ('pairwise_bernoulli',['p'])
+    }
+    
+    # This dictionary maps the connectivity configuration parameters into the NEST connectivity parameters (used in the keys).
+    connectivityTranslatorDict = { 
+        'indegree':'number_of_source_cells', # Target cell fan-in
+        'p': 'connection_probability*1.', # Probability of connection
+    }
+    
+    # Weight initialization translator
+    distributionNameTranslatorDict = {
+        'random': ('uniform',['low','high']),
+    }
+    
+    # This dictionary maps the distribution configuration parameters into the NEST distribution parameters (used in the keys).
+    distributionTranslatorDict = { 
+        'low':'random_min_weight*1.e9', # Minimum weight
+        'high': 'random_max_weight*1.e9', # Maximum weight
+    }
+    
+    
     def _map_cm_parameters(self,neuron_layer):
         '''
         Calculate all the NEST cell model parameters from the values defined in the cfg file. 
@@ -129,8 +153,8 @@ class NestCerebellarModel(CerebellarModel):
         
         nest_options_dict = dict()
         
-        if 'number_of_threads' in self.nest_options:
-            nest_options_dict['local_num_threads'] = self.nest_options['number_of_threads']
+        if 'number_of_virtual_processes' in self.nest_options:
+            nest_options_dict['total_num_virtual_procs'] = self.nest_options['number_of_virtual_processes']
         
         if 'resolution' in self.nest_options:
             nest_options_dict['resolution'] = self.nest_options['resolution']*1e3
@@ -163,6 +187,7 @@ class NestCerebellarModel(CerebellarModel):
         self.simulation_time = 0
         
         return
+    
     
     def _initialize_weight_recording_buffer(self):
         
@@ -239,7 +264,8 @@ class NestCerebellarModel(CerebellarModel):
             # Check whether we have to record the activity. If that is the case, create the spike detector
             if layer.register_activity:
                 layer.nest_spike_detector = nest.Create(model='spike_detector')
-                nest.ConvergentConnect(layer.nest_layer,layer.nest_spike_detector)
+                #nest.ConvergentConnect(layer.nest_layer,layer.nest_spike_detector)
+                nest.Connect(layer.nest_layer,layer.nest_spike_detector,conn_spec='all_to_all')
             else:
                 layer.nest_spike_detector = None
                 
@@ -269,7 +295,8 @@ class NestCerebellarModel(CerebellarModel):
                                                                             'withgid': True, 
                                                                             'interval': layer.record_step*1e3,
                                                                             'record_from': recording_vars})
-                nest.DivergentConnect(layer.nest_multimeter,layer.nest_layer)
+                #nest.DivergentConnect(layer.nest_multimeter,layer.nest_layer)
+                nest.Connect(layer.nest_multimeter,layer.nest_layer,conn_spec='all_to_all')
             else:
                 layer.nest_multimeter = None
                 
@@ -293,6 +320,7 @@ class NestCerebellarModel(CerebellarModel):
         '''
         
         for layer in self.synaptic_layers:
+            
             # Check if the specified learning rule is included
             if layer.learning_rule_type:
                 if layer.learning_rule_type in self.ruleNameTranslatorDict:
@@ -303,32 +331,74 @@ class NestCerebellarModel(CerebellarModel):
         
                 # Get the dictionary with the mapped values
                 nest_param_dict = self._map_lr_parameters(layer)
+                nest_param_dict['delay'] = layer.synaptic_delay*1.e3
                 #nest_param_dict['min_delay'] = layer.synaptic_delay*1.e3
                 #nest_param_dict['max_delay'] = layer.synaptic_delay*1.e3
                 
                 nest.CopyModel(layer.nest_model_name,layer.__name__,nest_param_dict)
             else:
                 # Static synaptic layer
-                nest.CopyModel("static_synapse", layer.__name__)
+                nest.CopyModel("static_synapse", layer.__name__, {'delay':layer.synaptic_delay*1.e3})
             
             # Search the local nodes
-            node_info = nest.GetStatus(layer.target_layer.nest_layer)
+            #node_info = nest.GetStatus(layer.target_layer.nest_layer)
             
             # Create the synaptic connections in NEST
+            #presynaptic = [layer.source_layer.nest_layer[layer.source_index[index]] for index in xrange(len(layer.source_index)) if node_info[layer.target_index[index]]['local']] # Get absolute indexes in NEST
+            #postsynaptic = [layer.target_layer.nest_layer[layer.target_index[index]] for index in xrange(len(layer.target_index)) if node_info[layer.target_index[index]]['local']] # Get absolute indexes in NEST
+            #weights = [layer.weights[index]*1.e9 for index in xrange(len(layer.target_index)) if node_info[layer.target_index[index]]['local']] # Get absolute indexes in NEST
+            #delay_values = [layer.synaptic_delay*1.e3] * len(presynaptic)
             
-            presynaptic = [layer.source_layer.nest_layer[layer.source_index[index]] for index in xrange(len(layer.source_index)) if node_info[layer.target_index[index]]['local']] # Get absolute indexes in NEST
-            postsynaptic = [layer.target_layer.nest_layer[layer.target_index[index]] for index in xrange(len(layer.target_index)) if node_info[layer.target_index[index]]['local']] # Get absolute indexes in NEST
-            weights = [layer.weights[index]*1.e9 for index in xrange(len(layer.target_index)) if node_info[layer.target_index[index]]['local']] # Get absolute indexes in NEST
-            delay_values = [layer.synaptic_delay*1.e3] * len(presynaptic)
+            # Create the synaptic connections in NEST >2.4
+            con_dict = self._create_connection_pattern_dict(layer)
+            syn_dict = self._create_connection_synapsis_dict(layer)
             
             #print 'Process:', self.get_my_process_id(),'Source cells:', presynaptic,'Target cells:',postsynaptic
-            
-            nest.Connect(pre=presynaptic, post=postsynaptic, params= weights, delay=delay_values, model=layer.__name__)
+            nest.Connect(pre=layer.source_layer.nest_layer, post=layer.target_layer.nest_layer, conn_spec=con_dict, syn_spec=syn_dict)
+            #nest.OneToOneConnect(pre=presynaptic, post=postsynaptic, params= weights, delay=delay_values, model=layer.__name__)
             
             # print 'Process:', self.get_my_process_id(),'Connections created', nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)
 
+
+ 
         return
     
+    def _create_connection_pattern_dict(self, layer):
+        # Check if connectivity_type is defined
+        if layer.connectivity_type in self.connectivityNameTranslatorDict:
+            dictionary = {'rule':self.connectivityNameTranslatorDict[layer.connectivity_type][0]}
+
+            for param in self.connectivityNameTranslatorDict[layer.connectivity_type][1]:
+                dictionary[param] = eval(self.connectivityTranslatorDict[param],None,layer.connectivity_parameters)
+                
+        else:
+            print 'Non-mapped connectivity pattern ', layer.connectivity_type, ' in layer', layer.__name__
+            raise Exception('Non-MappedConnectivityPattern')
+            
+        return dictionary
+    
+    def _create_connection_synapsis_dict(self, layer):
+        # Check if weight_initialization_type is defined
+        if layer.weight_initialization_type=='fixed':
+            dictionary = {'model':layer.__name__,
+                          'weight': layer.weight_initialization_parameters['initial_weight']*1.e9}
+            return dictionary;
+        elif layer.weight_initialization_type in self.distributionNameTranslatorDict:
+            dictionary = {'model':layer.__name__}
+            weight_dict = {'distribution':self.distributionNameTranslatorDict[layer.weight_initialization_type][0]}
+
+            for param in self.distributionNameTranslatorDict[layer.weight_initialization_type][1]:
+                weight_dict[param] = eval(self.distributionTranslatorDict[param],None,layer.weight_initialization_parameters)
+                
+            dictionary['weight'] = weight_dict
+                
+        else:
+            print 'Non-mapped weight initialization distribution ', layer.weight_initialization_type, ' in layer', layer.__name__
+            raise Exception('Non-MappedWeightInitialization')
+        
+        return dictionary
+            
+             
     def add_ac_current(self, **kwargs):
         '''
         Set a new ac current that will be conveyed to the cerebellar mossy fibers according to the parameters.
@@ -362,7 +432,8 @@ class NestCerebellarModel(CerebellarModel):
         new_ac_generator = nest.Create(model='ac_generator', n=1, params=ac_dict)
         
         # Connect the new ac_generator to the mossy fibers
-        nest.DivergentConnect(pre=new_ac_generator, post=self.mflayer.nest_layer, weight=1., delay=1., model='static_synapse')
+        #nest.DivergentConnect(pre=new_ac_generator, post=self.mflayer.nest_layer, weight=1., delay=1., model='static_synapse')
+        nest.Connect(pre=new_ac_generator, post=self.mflayer.nest_layer, conn_spec='all_to_all', syn_spec={'model':'static_synapse','weight':1.,'delay':1.})
         
         self.ac_generator.append(new_ac_generator)
         
@@ -377,9 +448,10 @@ class NestCerebellarModel(CerebellarModel):
         # If dc_current generators have not been 
         if not self.dc_current:            
             self.dc_current = nest.Create(model='dc_generator', n=self.mflayer.number_of_neurons, params={'amplitude':0.0})
-            weights = [1.]*self.mflayer.number_of_neurons
-            delay = [1.]*self.mflayer.number_of_neurons
-            nest.Connect(pre=self.dc_current, post=self.mflayer.nest_layer, params=weights, delay=delay, model='static_synapse')
+            #weights = [1.]*self.mflayer.number_of_neurons
+            #delay = [1.]*self.mflayer.number_of_neurons
+            #nest.Connect(pre=self.dc_current, post=self.mflayer.nest_layer, params=weights, delay=delay, model='static_synapse')
+            nest.Connect(self.dc_current, self.mflayer.nest_layer, conn_spec='one_to_one', syn_spec={"model": "static_synapse", "weight":1., "delay":1.})
         
         # Default values of each parameter in NEST units
         if 'amplitude' in kwargs:

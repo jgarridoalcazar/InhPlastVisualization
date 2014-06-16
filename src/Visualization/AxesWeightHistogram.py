@@ -94,9 +94,18 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         width = self.max_weight/self.num_bins
         self.positions = numpy.arange(0,self.max_weight,width)
         
+        self.param['end_time'] = 0.0
+        _,gcon,_ = self.data_provider.get_synaptic_weights(**self.param)
+        
         self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), self.max_weight/self.num_bins)
-        self.axes.set_xlim([0,self.max_weight])
-        self.axes.set_ylim([0,synaptic_layer.number_of_synapses])
+        
+        comm = MPI.COMM_WORLD
+        
+        process_id = comm.Get_rank()
+        
+        if (process_id==0):
+            self.axes.set_xlim([0,self.max_weight])
+            self.axes.set_ylim([0,len(gcon)])
         
         super(AxesWeightHistogram, self).initialize()
             
