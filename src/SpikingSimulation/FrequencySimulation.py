@@ -78,14 +78,9 @@ class FrequencySimulation(object):
             
         print 'Simulation time fixed to',self.simulation_time,'s'
         
-        # Read cerebellar model options
-        if not 'cerebellum' in self.config_options:
-            print 'Non-specified cerebellum section in simulation config file.'
-            raise Exception('Non-DefinedCerebellumSection')
-        
         # Initialize cerebellar model
         print 'Process:', comm.Get_rank(),'. Creating cerebellum generator'
-        self.cerebellum = NestGenerator.NestCerebellarModel(**self.config_options['cerebellum'])
+        self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
     
         print 'Process:', comm.Get_rank(),'. Initializing cerebellum generator'
         self.cerebellum.initialize_simulation()

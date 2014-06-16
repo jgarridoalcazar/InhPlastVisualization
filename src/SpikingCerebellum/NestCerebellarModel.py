@@ -133,7 +133,7 @@ class NestCerebellarModel(CerebellarModel):
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates a new cerebellar model.
-        @param config_file: Name of the file including all the network generation parameters.
+        @param config_dict: Dictionary including all the network generation parameters.
         '''
         
         super(NestCerebellarModel, self).__init__(**kwargs)
@@ -149,7 +149,7 @@ class NestCerebellarModel(CerebellarModel):
         
         nest.ResetKernel()
         
-        self.nest_options = ConfigSectionMap(config_parser = self.config_parser, section = 'nest')
+        self.nest_options = self.config_dict['nest']
         
         nest_options_dict = dict()
         

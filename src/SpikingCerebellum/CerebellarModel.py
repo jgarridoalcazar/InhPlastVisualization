@@ -5,7 +5,6 @@ Created on May 12, 2014
 '''
 
 import abc
-import ConfigParser
 import NeuronLayer
 import InputLayer
 import SynapticLayer
@@ -25,18 +24,17 @@ class CerebellarModel(object):
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates a new cerebellar model.
-        @param config_file: Name of the file including all the network generation parameters.
+        @param config_dict: Dictionary including all the network generation parameters.
         '''
         
-        if ('config_file' in kwargs):
-            self.config_file = kwargs.pop('config_file')                         
+        if ('config_dict' in kwargs):
+            self.config_dict = kwargs.pop('config_dict')                         
         else:
             print 'Non-specified cerebellum config file.'
             raise Exception('Non-DefinedCerebellumModel')
         
         # Initialize the cell layer map
         self.layer_map = {}
-        
         
         super(CerebellarModel, self).__init__()
         
@@ -50,34 +48,34 @@ class CerebellarModel(object):
         self.neuron_layers = []
         
         # Create cerebellar inputs (mossy fibers and inferior olive)
-        mf_options = ConfigSectionMap(config_parser = self.config_parser, section = 'mflayer')
+        mf_options = self.config_dict['mflayer']
         self.mflayer = NeuronLayer.NeuronLayer(**mf_options)
         self.neuron_layers.append(self.mflayer)
         self.layer_map[self.mflayer.__name__] = self.mflayer
         
-#         io_options = ConfigSectionMap(config_parser = self.config_parser, section = 'iolayer')
+#         io_options = self.config_dict['iolayer']
 #         self.iolayer = InputLayer.InputLayer(**io_options)
 #         self.neuron_layers.append(self.iolayer)
         
         # Create granule cell layer
-        grc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'grclayer')
+        grc_options = self.config_dict['grclayer']
         self.grclayer = NeuronLayer.NeuronLayer(**grc_options)
         self.neuron_layers.append(self.grclayer)
         self.layer_map[self.grclayer.__name__] = self.grclayer
         
         # Create Golgi cell layer
-        goc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'goclayer')
+        goc_options = self.config_dict['goclayer']
         self.goclayer = NeuronLayer.NeuronLayer(**goc_options)
         self.neuron_layers.append(self.goclayer)
         self.layer_map[self.goclayer.__name__] = self.goclayer
                 
         # Create Purkinje cell layer
-#         pc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'pclayer')
+#         pc_options = self.config_dict['pclayer']
 #         self.pclayer = NeuronLayer.NeuronLayer(**pc_options)
 #         self.neuron_layers.append(self.pclayer)
         
         # Create deep cerebellar nuclei cell layer
-#         dcn_options = ConfigSectionMap(config_parser = self.config_parser, section = 'dcnlayer')
+#         dcn_options = self.config_dict['dcnlayer']
 #         self.dcnlayer = NeuronLayer.NeuronLayer(**dcn_options)
 #         self.neuron_layers.append(self.dcnlayer)
 #         
@@ -93,7 +91,7 @@ class CerebellarModel(object):
         process_id = self.get_my_process_id()
         
         # Create MF-GrC synaptic layer
-        mfgrc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'mfgrcsynapsis')
+        mfgrc_options = self.config_dict['mfgrcsynapsis']
         mfgrc_options['source_layer'] = self.mflayer
         mfgrc_options['target_layer'] = self.grclayer
         mfgrc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
@@ -102,7 +100,7 @@ class CerebellarModel(object):
         self.layer_map[self.mfgrclayer.__name__] = self.mfgrclayer
         
         # Create MF-GoC synaptic layer
-        mfgoc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'mfgocsynapsis')
+        mfgoc_options = self.config_dict['mfgocsynapsis']
         mfgoc_options['source_layer'] = self.mflayer
         mfgoc_options['target_layer'] = self.goclayer
         mfgoc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
@@ -111,7 +109,7 @@ class CerebellarModel(object):
         self.layer_map[self.mfgoclayer.__name__] = self.mfgoclayer
         
         # Create GrC-GoC synaptic layer
-        grcgoc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'grcgocsynapsis')
+        grcgoc_options = self.config_dict['grcgocsynapsis']
         grcgoc_options['source_layer'] = self.grclayer
         grcgoc_options['target_layer'] = self.goclayer
         grcgoc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
@@ -120,7 +118,7 @@ class CerebellarModel(object):
         self.layer_map[self.grcgoclayer.__name__] = self.grcgoclayer
         
         # Create GoC-GoC synaptic layer
-        gocgrc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'gocgrcsynapsis')
+        gocgrc_options = self.config_dict['gocgrcsynapsis']
         gocgrc_options['source_layer'] = self.goclayer
         gocgrc_options['target_layer'] = self.grclayer
         gocgrc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
@@ -129,7 +127,7 @@ class CerebellarModel(object):
         self.layer_map[self.gocgrclayer.__name__] = self.gocgrclayer
         
         # Create GoC-GoC synaptic layer
-        gocgoc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'gocgocsynapsis')
+        gocgoc_options = self.config_dict['gocgocsynapsis']
         gocgoc_options['source_layer'] = self.goclayer
         gocgoc_options['target_layer'] = self.goclayer
         gocgoc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
@@ -138,28 +136,28 @@ class CerebellarModel(object):
         self.layer_map[self.gocgoclayer.__name__] = self.gocgoclayer
         
         # Create GrC-PC synaptic layer
-#         grcpc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'grcpcsynapsis')
+#         grcpc_options = self.config_dict['grcpcsynapsis']
 #         grcpc_options['source_layer'] = self.grclayer
 #         grcpc_options['target_layer'] = self.pclayer
 #         self.grcpclayer = SynapticLayer.SynapticLayer(**grcpc_options)
 #         self.synaptic_layers.append(self.grcpclayer)
         
         # Create IO-PC synaptic layer
-#         iopc_options = ConfigSectionMap(config_parser = self.config_parser, section = 'iopcsynapsis')
+#         iopc_options = self.config_dict['iopcsynapsis']
 #         iopc_options['source_layer'] = self.iolayer
 #         iopc_options['target_layer'] = self.pclayer
 #         self.iopclayer = SynapticLayer.SynapticLayer(**iopc_options)
 #         self.synaptic_layers.append(self.iopclayer)
         
         # Create MF-DCN synaptic layer
-#         mfdcn_options = ConfigSectionMap(config_parser = self.config_parser, section = 'mfdcnsynapsis')
+#         mfdcn_options = self.config_dict['mfdcnsynapsis']
 #         mfdcn_options['source_layer'] = self.mflayer
 #         mfdcn_options['target_layer'] = self.dcnlayer
 #         self.mfdcnlayer = SynapticLayer.SynapticLayer(**mfdcn_options)
 #         self.synaptic_layers.append(self.mfdcnlayer)
         
         # Create PC-DCN synaptic layer
-#         pcdcn_options = ConfigSectionMap(config_parser = self.config_parser, section = 'pcdcnsynapsis')
+#         pcdcn_options = self.config_dict['pcdcnsynapsis']
 #         pcdcn_options['source_layer'] = self.pclayer
 #         pcdcn_options['target_layer'] = self.dcnlayer
 #         self.pcdcnlayer = SynapticLayer.SynapticLayer(**pcdcn_options)
@@ -172,13 +170,8 @@ class CerebellarModel(object):
         Reset the simulator, build the network and set additional parameters (e.g. the simulation time-step, the number of threads, ...).     
         '''
         
-        print 'Parsing configuration file ', self.config_file
-    
-        self.config_parser = ConfigParser.ConfigParser()
-        self.config_parser.read(self.config_file)
-        
         # Check simulation options
-        self.simulation_options = ConfigSectionMap(config_parser = self.config_parser, section = 'simulation')
+        self.simulation_options = self.config_dict['simulation']
         if not 'seed' in self.simulation_options:
             self.simulation_options['seed']  = time()
         
