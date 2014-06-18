@@ -4,12 +4,14 @@ Created on May 27, 2014
 @author: Jesus Garrido (jgarridoalcazar at gmail.com)
 '''
 import SpikingCerebellum.NestCerebellarModel as NestGenerator
+import SpikingCerebellum.SavedCerebellarModel as SavedGenerator
 from mpi4py import MPI
 import Stimulation.FrequencyPatternGenerator as FrequencyPatternGenerator
 import matplotlib.pylab
 import numpy
 import ConfigParser
 import bisect
+import ntpath
 from Utils.Utils import ConfigSectionMap
 
 import Visualization.SimulFigure as SimulFigure
@@ -80,15 +82,17 @@ class FrequencySimulation(object):
         
         # Initialize cerebellar model
         print 'Process:', comm.Get_rank(),'. Creating cerebellum generator'
-        self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
+        if 'run_simulation' in self.config_options['simulation'] and self.config_options['simulation']['run_simulation']:
+            self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
+        else:
+            self.config_options['simulation']['run_simulation'] = False
+            # Get the path of the config_file
+            path,_ = ntpath.split(self.config_file)
+            self.cerebellum = SavedGenerator.SavedCerebellarModel(config_dict=self.config_options, simulation_folder=path)
     
         print 'Process:', comm.Get_rank(),'. Initializing cerebellum generator'
         self.cerebellum.initialize_simulation()
     
-        print 'Process:', comm.Get_rank(),'. Building the network'
-        self.cerebellum.build_network()
-        
-        
         # Initialize oscillatory input current
         if 'oscillations' in self.config_options:
             print 'Process:', comm.Get_rank(),'. Creating AC Current generator'
@@ -126,7 +130,7 @@ class FrequencySimulation(object):
         else:
             end_time = self.simulation_time
             
-        if 'stimulation' in self.config_options:
+        if 'stimulation' in self.config_options and self.config_options['simulation']['run_simulation']:
             init_index = bisect.bisect_left(self.pattern_length_cum, self.current_time)
             end_index = bisect.bisect_left(self.pattern_length_cum,end_time)
         
@@ -195,7 +199,13 @@ class FrequencySimulation(object):
 #                                               'layer':'mfgocsynapsis'})
 #         figure7.plot_at_time()
         
-        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=5,numColumns=1,end_time=self.simulation_time,frame_rate=0.1,figsize=[23,14],dpi=80)
+        # Adjust the frame_rate depending on whether the simulation is running at the same time
+        if self.config_options['simulation']['run_simulation']:
+            frame_rate = 0.1
+        else:
+            frame_rate = 0.1
+        
+        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=5,numColumns=1,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
 #         animation.add_subplot(fig_position=1,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'property':'Vm',

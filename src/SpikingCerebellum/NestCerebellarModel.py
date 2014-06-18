@@ -7,9 +7,11 @@ Created on May 12, 2014
 import nest
 import abc
 from CerebellarModel import CerebellarModel,ConfigSectionMap
+import shutil
 import numpy
 import math
 import os
+import ConfigParser
 from mpi4py import MPI
 
 class NestCerebellarModel(CerebellarModel):
@@ -129,6 +131,29 @@ class NestCerebellarModel(CerebellarModel):
                     print 'Warning: ', key, ' cannot be calculated in layer ', synapsis_layer.__name__, '. Variable ', e.message.split("'")[1],' is not defined. Using default value ', rule_model_dict[key]
                                     
         return lr_parameters_out
+    
+    def _write_config_file(self, file_name):
+        '''
+        Write the current configuration into a file
+        '''
+        parser = ConfigParser.ConfigParser()
+        
+        OldValue = self.config_dict['simulation']['run_simulation']
+        # Set run_simulation to false to avoid overwrite the simulation
+        self.config_dict['simulation']['run_simulation'] = False
+        
+        # Add every section to the file
+        for sec in self.config_dict.keys():
+            parser.add_section(sec)
+            
+            for key in self.config_dict[sec].keys():
+                parser.set(sec, key, self.config_dict[sec][key])
+
+        with open(file_name, 'w') as f:
+            parser.write(f)
+            
+        # ReSet run_simulation to false to avoid overwrite the simulation
+        self.config_dict['simulation']['run_simulation'] = OldValue
         
     def __init__(self,**kwargs):
         '''
@@ -164,15 +189,30 @@ class NestCerebellarModel(CerebellarModel):
                 
         if 'data_path' in self.simulation_options:
             nest_options_dict['data_path'] = self.simulation_options['data_path']
+        else:
+            nest_options_dict['data_path'] = './results'
             
+        if 'simulation_name' in self.simulation_options:
+            nest_options_dict['data_path'] = nest_options_dict['data_path'] + '/' + self.simulation_options['simulation_name']
+            
+        data_path = nest_options_dict['data_path']
+        
+        if self.get_my_process_id()==0:
             if not os.path.exists(nest_options_dict['data_path']):
                 os.makedirs(nest_options_dict['data_path'])
+            else:
+                print 'Process:', self.get_my_process_id(),'. Removing results folder', data_path
+                shutil.rmtree(data_path)
+                os.makedirs(data_path)
+                 
+        # Synchronize all the processes to avoid start writting before deleting the folder
+        comm = MPI.COMM_WORLD
+        
+        comm.Barrier()   
             
-        if 'data_prefix' in self.simulation_options:
-            nest_options_dict['data_prefix'] = self.simulation_options['data_prefix']
         
         nest.SetKernelStatus(nest_options_dict)
-            
+        
         # Set random seeds
         nest_options_dict = dict()
         nest_options_dict['grng_seed'] = self.simulation_options['seed'] + self.get_number_of_virtual_processes()
@@ -180,11 +220,24 @@ class NestCerebellarModel(CerebellarModel):
                                                self.simulation_options['seed'] + 2*self.get_number_of_virtual_processes() + 1)
         nest.SetKernelStatus(nest_options_dict)
         
+        if not 'record_to_file' in self.simulation_options:
+            self.simulation_options['record_to_file'] = False
+        
+        # Set record_to_file in spike_detectors to the value    
+        nest.SetDefaults('spike_detector', 'to_file', self.simulation_options['record_to_file'])
+        nest.SetDefaults('multimeter', 'to_file', self.simulation_options['record_to_file'])
+        
         # Initialize ac_current and dc_current stimulation
         self.ac_generator = []
         self.dc_current = []
+        
+        # Build the network
+        self._build_network()
                 
         self.simulation_time = 0
+        
+        # Copy configuration file of this simulation
+        self._write_config_file(data_path+'/'+'SimulationConfig.cfg')
         
         return
     
@@ -195,6 +248,15 @@ class NestCerebellarModel(CerebellarModel):
         if self.simulation_options['weight_recording_step'] >= float("inf"):
             return
         
+        if 'data_path' in self.simulation_options:
+            data_path = self.simulation_options['data_path']
+        else:
+            data_path = './results'
+            
+        if 'simulation_name' in self.simulation_options:
+            data_path = data_path + '/' + self.simulation_options['simulation_name']
+
+        
         for layer in self.synaptic_layers:
             if layer.weight_recording:
                 layer.weight_record = dict()
@@ -204,12 +266,30 @@ class NestCerebellarModel(CerebellarModel):
                 # Store the source and target cells to know the order to be stored
                 # We assume GetConnections return only those connections whose target node is local to the process
                 layer.weight_record['con'] = nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)
-                layer.weight_record['connections'] = numpy.array(nest.GetStatus(layer.weight_record['con'],['source','target']))
+                global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['source','target']))
+                min_source = layer.source_layer.MinIndex
+                min_target = layer.target_layer.MinIndex
+                layer.weight_record['connections'] = numpy.array([(val[0]-min_source,val[1]-min_target) for val in global_connections])
                 
                 # Record the initial weights
                 scaled_weights = [weight*1.e-9 for weight in nest.GetStatus(layer.weight_record['con'],'weight')]
                 layer.weight_record['weights'] = numpy.array([scaled_weights])
                 layer.weight_record['time'] = numpy.array([0])
+                
+                # Open the file when the weights are going to be stored
+                if self.simulation_options['record_to_file']:
+                    file_name = data_path + '/' + layer.__name__ + '_weights_' + str(self.get_my_process_id()) + '.dat'
+                    layer.weight_record['f_handle'] =  open(file_name,'w')
+                    
+                    # Write the connections in the first line
+                    numpy.savetxt(layer.weight_record['f_handle'], layer.weight_record['connections'], fmt='%1.1u', delimiter=' ', newline=' ')
+                    layer.weight_record['f_handle'].write('\n')
+                    # Write the initial weights and time
+                    numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
+                    layer.weight_record['f_handle'].write('\n')
+                    # Store the IO buffer
+                    layer.weight_record['f_handle'].flush()
+                    
                 
                 # print 'Process',self.get_my_process_id(),':','Weight record:',layer.weight_record
             else:
@@ -220,12 +300,12 @@ class NestCerebellarModel(CerebellarModel):
         
         return
     
-    def build_network(self):
+    def _build_network(self):
         '''
         Generate a NEST model based on the inherited cerebellar model.
         '''
         
-        super(NestCerebellarModel, self).build_network()
+        super(NestCerebellarModel, self)._build_network()
         
         # Create nodes in the network
         self._create_nodes()
@@ -266,11 +346,15 @@ class NestCerebellarModel(CerebellarModel):
                 layer.nest_spike_detector = nest.Create(model='spike_detector')
                 #nest.ConvergentConnect(layer.nest_layer,layer.nest_spike_detector)
                 nest.Connect(layer.nest_layer,layer.nest_spike_detector,conn_spec='all_to_all')
+                
+                # Set layer registered name
+                nest.SetStatus(layer.nest_spike_detector,{'label':layer.__name__+'_spike'})
             else:
                 layer.nest_spike_detector = None
                 
             # Check wether register any state variable (Vm, gexc, ginh, ...)
             recording_vars = []
+            recorded_vars = []
             
             # Get NEST model recordable variables
             available_vars = nest.GetDefaults(layer.nest_model_name)['recordables']
@@ -285,6 +369,7 @@ class NestCerebellarModel(CerebellarModel):
                         # Check if this variable is recordable in this cell model for NEST
                         if self.stateTranslatorDict[var][0] in available_vars:
                             recording_vars.append(self.stateTranslatorDict[var][0])
+                            recorded_vars.append(var)
                         else:
                             print 'Warning: ', self.stateTranslatorDict[var][0], ' variable is not recordable in the model ',layer.nest_model_name,'. Ignoring'
                     else:
@@ -297,6 +382,9 @@ class NestCerebellarModel(CerebellarModel):
                                                                             'record_from': recording_vars})
                 #nest.DivergentConnect(layer.nest_multimeter,layer.nest_layer)
                 nest.Connect(layer.nest_multimeter,layer.nest_layer,conn_spec='all_to_all')
+                
+                # Set layer registered name
+                nest.SetStatus(layer.nest_multimeter,{'label':layer.__name__+'_mult'})
             else:
                 layer.nest_multimeter = None
                 
@@ -305,7 +393,11 @@ class NestCerebellarModel(CerebellarModel):
             # Collect the minimum of the layer indexes
             localMin = numpy.array(numpy.min(layer.nest_layer), dtype='l') 
             layer.MinIndex = numpy.array(0, dtype='l') 
-            comm.Allreduce([localMin, MPI.LONG], [layer.MinIndex, MPI.LONG], op=MPI.MIN) 
+            comm.Allreduce([localMin, MPI.LONG], [layer.MinIndex, MPI.LONG], op=MPI.MIN)
+            
+            self.config_dict[layer.__name__]['minindex'] = layer.MinIndex
+            # Update the record_vars variable to those that effectively can be recorded
+            self.config_dict[layer.__name__]['record_vars'] = ','.join(recorded_vars) 
             
             # print 'Process:', self.get_my_process_id(),'Layer:', layer.__name__, 'Collected:', layer.MinIndex
             
@@ -481,6 +573,16 @@ class NestCerebellarModel(CerebellarModel):
                 scaled_weights = [weight*1.e-9 for weight in nest.GetStatus(layer.weight_record['con'],'weight')]
                 layer.weight_record['weights'] = numpy.append(layer.weight_record['weights'],[scaled_weights], axis=0)
                 layer.weight_record['time'] = numpy.append(layer.weight_record['time'],self.next_weight_step * self.simulation_options['weight_recording_step'])
+                
+                # Open the file when the weights are going to be stored
+                if self.simulation_options['record_to_file']:
+                    # Write the initial weights and time
+                    numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
+                    layer.weight_record['f_handle'].write('\n')
+                    # Store the IO buffer
+                    layer.weight_record['f_handle'].flush()
+                    
+                
 
         self.next_weight_step += 1
     
@@ -763,26 +865,22 @@ class NestCerebellarModel(CerebellarModel):
             raise Exception('InvalidSynapticLayer')
         
         if 'source_indexes' in kwargs:
-            local_source_indexes = kwargs.pop('source_indexes')
+            source_indexes = kwargs.pop('source_indexes')
             
-            if (max(local_source_indexes)>=(synaptic_layer.source_layer.MinIndex+synaptic_layer.source_layer.number_of_neurons)):
+            if (max(source_indexes)>=(synaptic_layer.source_layer.number_of_neurons)):
                 print 'Invalid source index in get_synaptic_weights function.'
                 raise Exception('InvalidSourceIndex')
-            
-            source_indexes = [synaptic_layer.source_layer.MinIndex+index for index in local_source_indexes]            
         else:
-            source_indexes = synaptic_layer.source_layer.nest_layer
+            source_indexes = range(synaptic_layer.source_layer.number_of_neurons)
         
         if 'target_indexes' in kwargs:
-            local_target_indexes = kwargs.pop('target_indexes')
+            target_indexes = kwargs.pop('target_indexes')
             
-            if (max(local_target_indexes)>=(synaptic_layer.target_layer.MinIndex+synaptic_layer.target_layer.number_of_neurons)):
+            if (max(target_indexes)>=(synaptic_layer.target_layer.number_of_neurons)):
                 print 'Invalid target index in get_synaptic_weights function.'
                 raise Exception('InvalidTargetIndex')
-            
-            target_indexes = [synaptic_layer.target_layer.MinIndex+index for index in local_target_indexes]            
         else:
-            target_indexes = synaptic_layer.target_layer.nest_layer
+            target_indexes = range(synaptic_layer.target_layer.number_of_neurons)
             
         # print 'Process',self.get_my_process_id(),':','Source indexes:',source_indexes,'Target indexes ->',target_indexes
         
@@ -807,8 +905,6 @@ class NestCerebellarModel(CerebellarModel):
         connections = synaptic_layer.weight_record['connections']
         connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes) and (connections[index][1] in target_indexes)]
         selected_connections = connections[connection_indexes]
-        if connection_indexes:
-            selected_connections = selected_connections - numpy.tile(numpy.array([synaptic_layer.source_layer.MinIndex, synaptic_layer.target_layer.MinIndex]),(len(connection_indexes),1))
         
         # print 'Process',self.get_my_process_id(),':','Selected connections:',selected_connections
         

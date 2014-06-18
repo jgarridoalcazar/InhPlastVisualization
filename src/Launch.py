@@ -2,13 +2,19 @@
 
 import SpikingSimulation.FrequencySimulation as FrequencySimulation
 import time
+import sys
 from mpi4py import MPI 
 
 if __name__ == "__main__":
     
-    system_config_file = './SimulationConfig.cfg'
+    if len(sys.argv)==1:
+        print sys.argv
+        print 'Error: Configuration file has not been specified. Usage:',sys.argv[0],'config_file'
+        sys.exit(1)
     
-    simulation = FrequencySimulation.FrequencySimulation(config_file = './SimulationConfig.cfg')
+    system_config_file = sys.argv[1]
+    
+    simulation = FrequencySimulation.FrequencySimulation(config_file = system_config_file)
     
     simulation.initialize()
     

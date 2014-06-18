@@ -4,3 +4,9 @@
 .project
 
 .pydevproject
+
+*.dat
+
+*.gdf
+
+results/test/SimulationConfig.cfg

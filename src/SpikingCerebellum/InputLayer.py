@@ -14,6 +14,7 @@ class InputLayer(object):
         Constructor of the class. It creates a new input layer (composed of fibers).
         @param number_of_neurons: Number of cells in the layer.
         @param register_activity: Boolean parameter indicating whether the activity in this layer will be registered.
+        @param minindex: Index of the first cell in the network (optional).
         '''
         
         # Read name
@@ -32,6 +33,13 @@ class InputLayer(object):
         else:
             print 'Non-specified register_actiity parameter. Using default value false.'
             self.register_activity = False
+            
+        # Read minindex parameter
+        if ('minindex' in kwargs):
+            self.MinIndex = kwargs.pop('minindex') 
+        else:
+            self.MinIndex = None
+        
             
         # Check whether additional parameters have been used.
         for param in kwargs:

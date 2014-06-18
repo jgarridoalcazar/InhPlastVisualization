@@ -185,7 +185,7 @@ class CerebellarModel(object):
         
         return
     
-    def build_network(self):
+    def _build_network(self):
         '''
         Generate a model based on the inherited cerebellar model.
         '''
