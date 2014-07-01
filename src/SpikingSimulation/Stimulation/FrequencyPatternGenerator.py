@@ -7,7 +7,10 @@ Created on May 27, 2014
 import time
 import numpy
 import bisect
-import pylab
+import logging
+
+logger = logging.getLogger('Simulation')
+
 
 class FrequencyPatternGenerator(object):
     '''
@@ -39,54 +42,54 @@ class FrequencyPatternGenerator(object):
             self.mean_length = kwargs.pop('mean_length')
         else:
             self.mean_length = 0.250
-            print 'Non-specified activity mean length.Using default value', self.mean_length
+            logger.warning('Non-specified activity mean length.Using default value %s', self.mean_length)
             
         if 'min_amplitude' in kwargs:
             self.min_amplitude = kwargs.pop('min_amplitude')
         else:
             self.min_amplitude = 0
-            print 'Non-specified stimulation minimum amplitude. Using default value', self.min_amplitude
+            logger.warning('Non-specified stimulation minimum amplitude. Using default value %s', self.min_amplitude)
             
         if 'max_amplitude' in kwargs:
             self.max_amplitude = kwargs.pop('max_amplitude')
         else:
             self.max_amplitude = 1
-            print 'Non-specified stimulation maximum amplitude. Using default value', self.max_amplitude
+            logger.warning('Non-specified stimulation maximum amplitude. Using default value %s', self.max_amplitude)
             
         if 'number_of_fibers' in kwargs:
             self.number_of_fibers = kwargs.pop('number_of_fibers')
         else:
-            print 'Non-specified activity number of fibers.'
+            logger.error('Non-specified activity number of fibers')
             raise Exception('Non-DefinedNumberOfFibers')
         
         if 'rate_of_fibers_in_pattern' in kwargs:
             self.rate_of_fibers_in_pattern = kwargs.pop('rate_of_fibers_in_pattern')
         else:
             self.rate_of_fibers_in_pattern = 0.10
-            print 'Non-specified stimulation rate of fibers in pattern. Using default value', self.rate_of_fibers_in_pattern
+            logger.warning('Non-specified stimulation rate of fibers in pattern. Using default value %s', self.rate_of_fibers_in_pattern)
             
         if 'rate_of_time_in_pattern' in kwargs:
             self.rate_of_time_in_pattern = kwargs.pop('rate_of_time_in_pattern')
         else:
             self.rate_of_time_in_pattern = 0.20
-            print 'Non-specified stimulation rate of time in pattern. Using default value', self.rate_of_time_in_pattern
+            logger.warning('Non-specified stimulation rate of time in pattern. Using default value %s', self.rate_of_time_in_pattern)
             
         if 'number_of_patterns' in kwargs:
             self.number_of_patterns = kwargs.pop('number_of_patterns')
         else:
             self.number_of_patterns = 1
-            print 'Non-specified stimulation number of patterns. Using default value', self.number_of_patterns
+            logger.warning('Non-specified stimulation number of patterns. Using default value %s', self.number_of_patterns)
             
         if 'number_of_normalizations' in kwargs:
             self.number_of_normalizations = kwargs.pop('number_of_normalizations')
         else:
             self.number_of_normalizations = 10
-            print 'Non-specified stimulation number of normalizations. Using default value', self.number_of_normalizations
+            logger.warning('Non-specified stimulation number of normalizations. Using default value %s', self.number_of_normalizations)
             
         if 'simulation_time' in kwargs:
             self.simulation_time = kwargs.pop('simulation_time')
         else:
-            print 'Non-specified stimulation simulation time.'
+            logger.error('Non-specified stimulation simulation time')
             raise Exception('Non-DefinedSimulationTime')
         
         super(FrequencyPatternGenerator, self).__init__()
@@ -227,9 +230,9 @@ class FrequencyPatternGenerator(object):
         self.activation_levels = (self.activation_levels-min_value)/(max_value-min_value)
         
         # Print the sum per rows and per columns
-        print 'Normalization on iteration',it
-        print 'Average sum per columns',numpy.average(numpy.sum(self.activation_levels,axis=1))
-        print 'Average sum per rows',numpy.average(numpy.sum(self.activation_levels,axis=0))
+        logger.debug('Normalization on iteration %s',it)
+        logger.debug('Average sum per columns %s',numpy.average(numpy.sum(self.activation_levels,axis=1)))
+        logger.debug('Average sum per rows %s',numpy.average(numpy.sum(self.activation_levels,axis=0)))
         
         
 #         pylab.figure()

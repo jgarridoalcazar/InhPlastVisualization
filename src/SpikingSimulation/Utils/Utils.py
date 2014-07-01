@@ -1,3 +1,38 @@
+import ConfigParser
+
+
+def ReadConfigFile(config_file):
+        '''
+        Read all the sections in the configuration file.
+        @param config_file Configuration file to be readed
+        '''
+        config_parser = ConfigParser.ConfigParser()
+        config_parser.read(config_file)
+        
+        # Read every section in the file
+        sections = config_parser.sections()
+        config_options = dict()
+        for sect in sections:
+            config_options[sect] = ConfigSectionMap(config_parser = config_parser, section = sect)
+        
+        return config_options
+
+def WriteConfigFile(config_dict, file_name):
+        '''
+        Write the simulation configuration into a file
+        '''
+        parser = ConfigParser.ConfigParser()
+        
+        # Add every section to the file
+        for sec in config_dict.keys():
+            parser.add_section(sec)
+            
+            for key in config_dict[sec].keys():
+                parser.set(sec, key, config_dict[sec][key])
+
+        with open(file_name, 'w') as f:
+            parser.write(f)
+        
 def ConfigSectionMap(config_parser, section):
     '''
     This function extracts all the properties in a specific section of the file.

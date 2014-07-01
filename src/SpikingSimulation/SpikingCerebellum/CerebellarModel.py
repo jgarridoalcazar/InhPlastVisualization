@@ -10,7 +10,9 @@ import InputLayer
 import SynapticLayer
 import time
 import numpy
-from Utils.Utils import ConfigSectionMap
+import logging
+
+logger = logging.getLogger('Simulation')
 
 class CerebellarModel(object):
     '''
@@ -30,7 +32,7 @@ class CerebellarModel(object):
         if ('config_dict' in kwargs):
             self.config_dict = kwargs.pop('config_dict')                         
         else:
-            print 'Non-specified cerebellum config file.'
+            logger.error('Non-specified cerebellum config file')
             raise Exception('Non-DefinedCerebellumModel')
         
         # Initialize the cell layer map
@@ -207,7 +209,7 @@ class CerebellarModel(object):
         if 'layer' in kwargs:
             layer_name = kwargs.pop('layer')
         else:
-            print 'Non-specified layer name.'
+            logger.error('Non-specified layer name')
             raise Exception('Non-DefinedLayerName')
         
         if layer_name in self.layer_map:
@@ -218,10 +220,10 @@ class CerebellarModel(object):
             elif (isinstance(layer, SynapticLayer.SynapticLayer)):
                 return layer.number_of_synapses
             else:
-                print 'Invalid layer type in',layer.__name__
+                logger.error('Invalid layer type in %s',layer.__name__)
                 raise Exception('InvalidLayerType')
         else:
-            print layer_name,'does not exist in the model'
+            logger.error('%s does not exist in the model',layer_name)
             raise Exception('InvalidLayerName')
     
     @abc.abstractmethod

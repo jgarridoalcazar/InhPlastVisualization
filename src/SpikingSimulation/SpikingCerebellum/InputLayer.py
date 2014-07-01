@@ -3,6 +3,9 @@ Created on March 22, 2014
 
 @author: Jesus Garrido (jgarridoalcazar at gmail.com)
 '''
+import logging
+
+logger = logging.getLogger('Simulation')
 
 class InputLayer(object):
     '''
@@ -24,14 +27,14 @@ class InputLayer(object):
         if ('number_of_neurons' in kwargs):
             self.number_of_neurons = kwargs.pop('number_of_neurons')
         else:
-            print 'Non-specified number of neurons.'
+            logger.error('Non-specified number of neurons in layer %s',self.__name__)
             raise Exception('Non-DefinedProperty')
         
         # Read register activity parameter
         if ('register_activity' in kwargs):
             self.register_activity = kwargs.pop('register_activity') 
         else:
-            print 'Non-specified register_actiity parameter. Using default value false.'
+            logger.error('Non-specified register_actiity parameter in layer %s. Using default value false',self.__name__)
             self.register_activity = False
             
         # Read minindex parameter
@@ -39,8 +42,7 @@ class InputLayer(object):
             self.MinIndex = kwargs.pop('minindex') 
         else:
             self.MinIndex = None
-        
             
         # Check whether additional parameters have been used.
         for param in kwargs:
-            print 'Unrecognized parameter ',param,'in layer',self.__name__
+            logger.warning('Unrecognized parameter %s in layer %s',param,self.__name__)

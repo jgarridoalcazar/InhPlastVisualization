@@ -1,7 +1,10 @@
 import numpy
 import bisect
 import AxesPlot
+import logging
 from mpi4py import MPI
+
+logger = logging.getLogger('Simulation')
 
 class AxesWeightActivationPlot(AxesPlot.AxesPlot):
     '''
@@ -25,14 +28,14 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         if ('data_provider' in kwargs):
             self.data_provider = kwargs.pop('data_provider',None)
         else:
-            print 'Obligatory data_provider parameter not provided'
+            logger.error('Obligatory data_provider parameter not provided')
             raise Exception('NonProvidedParameter','data_provider')
         
         # Get data_provider parameter 
         if ('pattern_provider' in kwargs):
             self.pattern_provider = kwargs.pop('pattern_provider',None)
         else:
-            print 'Obligatory pattern_provider parameter not provided'
+            logger.error('Obligatory pattern_provider parameter not provided')
             raise Exception('NonProvidedParameter','pattern_provider')
         
         if ('show_legend' in kwargs):
@@ -44,7 +47,7 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         if ('layer' in kwargs):
             self.layer = kwargs.pop('layer',None)
         else:
-            print 'Obligatory layer parameter not provided'
+            logger.error('Obligatory layer parameter not provided')
             raise Exception('NonProvidedParameter','layer')
         
         # Get number of patterns to highlight 
@@ -54,7 +57,7 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
             self.pattern = None
         
         if (self.data_provider.layer_map[self.layer].source_layer!=self.data_provider.layer_map[self.stimulation_layer]):
-            print 'Invalid connection layer.',self.layer,'is not connected from', self.stimulation_layer
+            logger.error('Invalid connection layer. %s is not connected from %s', self.layer, self.stimulation_layer)
             raise Exception('InvalidConnectionLayer','InvalidLayer')
         
                 

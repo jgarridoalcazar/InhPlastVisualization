@@ -6,13 +6,15 @@ Created on May 12, 2014
 
 import nest
 import abc
-from CerebellarModel import CerebellarModel,ConfigSectionMap
+from CerebellarModel import CerebellarModel
 import shutil
 import numpy
-import math
 import os
-import ConfigParser
+import logging
+from SpikingSimulation.Utils.Utils import WriteConfigFile
 from mpi4py import MPI
+
+logger = logging.getLogger('Simulation')
 
 class NestCerebellarModel(CerebellarModel):
     '''
@@ -59,8 +61,8 @@ class NestCerebellarModel(CerebellarModel):
     # This dictionary maps the learning rule configuration parameters into the NEST learning rule model parameters (used in the keys).
     ruleTranslatorDict = { 
         'tau_plus':'tau_plus*1.e3', # Time constant of the pre-post part in ms
-        'lambda': 'amp_plus*1.e9', # pre-post amplitude (normalized?)
-        'alpha': 'amp_minus/amp_plus', # post-pre/pre-post ratio (normalized?)
+        'lambda': 'max_weight*learning_step*1.e9', # pre-post amplitude (normalized?)
+        'alpha': 'minus_plus_ratio', # post-pre/pre-post ratio (normalized?)
         'Wmax': 'max_weight*1e9', # Maximum weight in nS
         'mu_plus': '0.0', # Exponent of the weight dependence (0 to get additive STDP, 1 for multiplicative STDP)
         'mu_minus': '0.0' # Exponent of the weight dependence (0 to get additive STDP, 1 for multiplicative STDP)
@@ -107,7 +109,7 @@ class NestCerebellarModel(CerebellarModel):
                     v_out = eval(self.paramTranslatorDict[key],None, neuron_layer.cell_model_parameters)
                     cm_parameters_out[key] = v_out
                 except NameError as e:
-                    print 'Warning: ', key, ' cannot be calculated in layer ', neuron_layer.__name__, '. Variable ', e.message.split("'")[1],' is not defined. Using default value ', cell_model_dict[key]
+                    logger.warning('%s cannot be calculated in layer %s. Variable %s is not defined. Using default value %s', key, neuron_layer.__name__, e.message.split("'")[1], cell_model_dict[key])
                                     
         return cm_parameters_out
     
@@ -128,32 +130,11 @@ class NestCerebellarModel(CerebellarModel):
                     v_out = eval(self.ruleTranslatorDict[key],None, synapsis_layer.learning_rule_parameters)
                     lr_parameters_out[key] = v_out
                 except NameError as e:
-                    print 'Warning: ', key, ' cannot be calculated in layer ', synapsis_layer.__name__, '. Variable ', e.message.split("'")[1],' is not defined. Using default value ', rule_model_dict[key]
+                    logger.warning('%s cannot be calculated in layer %s. Variable %s is not defined. Using default value %s', key, synapsis_layer.__name__, e.message.split("'")[1], rule_model_dict[key])
                                     
         return lr_parameters_out
     
-    def _write_config_file(self, file_name):
-        '''
-        Write the current configuration into a file
-        '''
-        parser = ConfigParser.ConfigParser()
-        
-        OldValue = self.config_dict['simulation']['run_simulation']
-        # Set run_simulation to false to avoid overwrite the simulation
-        self.config_dict['simulation']['run_simulation'] = False
-        
-        # Add every section to the file
-        for sec in self.config_dict.keys():
-            parser.add_section(sec)
-            
-            for key in self.config_dict[sec].keys():
-                parser.set(sec, key, self.config_dict[sec][key])
-
-        with open(file_name, 'w') as f:
-            parser.write(f)
-            
-        # ReSet run_simulation to false to avoid overwrite the simulation
-        self.config_dict['simulation']['run_simulation'] = OldValue
+    
         
     def __init__(self,**kwargs):
         '''
@@ -178,6 +159,14 @@ class NestCerebellarModel(CerebellarModel):
         
         nest_options_dict = dict()
         
+        if 'num_record_processes' in self.nest_options:
+            if self.nest_options['num_record_processes']>0:
+                if nest.NumProcesses()>self.nest_options['num_record_processes']:
+                    logger.debug('Setting number of record processes to %s',self.nest_options['num_record_processes'])
+                    nest.SetNumRecProcesses(self.nest_options['num_record_processes'])
+                else:
+                    logger.warning('Invalid number of record processes: %s. Ignoring',self.nest_options['num_record_processes'])
+               
         if 'number_of_virtual_processes' in self.nest_options:
             nest_options_dict['total_num_virtual_procs'] = self.nest_options['number_of_virtual_processes']
         
@@ -186,25 +175,33 @@ class NestCerebellarModel(CerebellarModel):
         
         nest_options_dict['overwrite_files'] = True # set to True to permit overwriting
         nest_options_dict['print_time'] = False # set to True to print the simulation completed
-                
-        if 'data_path' in self.simulation_options:
-            nest_options_dict['data_path'] = self.simulation_options['data_path']
-        else:
-            nest_options_dict['data_path'] = './results'
-            
-        if 'simulation_name' in self.simulation_options:
-            nest_options_dict['data_path'] = nest_options_dict['data_path'] + '/' + self.simulation_options['simulation_name']
-            
-        data_path = nest_options_dict['data_path']
         
-        if self.get_my_process_id()==0:
-            if not os.path.exists(nest_options_dict['data_path']):
-                os.makedirs(nest_options_dict['data_path'])
+        if not 'record_to_file' in self.simulation_options:
+            self.simulation_options['record_to_file'] = False
+        
+        if self.simulation_options['record_to_file']:        
+            if 'data_path' in self.simulation_options:
+                nest_options_dict['data_path'] = self.simulation_options['data_path']
             else:
-                print 'Process:', self.get_my_process_id(),'. Removing results folder', data_path
-                shutil.rmtree(data_path)
-                os.makedirs(data_path)
-                 
+                nest_options_dict['data_path'] = './results'
+                
+            if 'simulation_name' in self.simulation_options:
+                nest_options_dict['data_path'] = nest_options_dict['data_path'] + '/' + self.simulation_options['simulation_name']
+                
+            data_path = nest_options_dict['data_path']
+            
+            if self.get_my_process_id()==0 and self.simulation_options['record_to_file']:
+                if not os.path.exists(nest_options_dict['data_path']):
+                    os.makedirs(nest_options_dict['data_path'])
+                else:
+                    logger.debug('Removing results folder %s', data_path)
+                    try:
+                        shutil.rmtree(data_path)
+                        os.makedirs(data_path)
+                    except OSError:
+                        pass
+                    
+                     
         # Synchronize all the processes to avoid start writting before deleting the folder
         comm = MPI.COMM_WORLD
         
@@ -220,9 +217,6 @@ class NestCerebellarModel(CerebellarModel):
                                                self.simulation_options['seed'] + 2*self.get_number_of_virtual_processes() + 1)
         nest.SetKernelStatus(nest_options_dict)
         
-        if not 'record_to_file' in self.simulation_options:
-            self.simulation_options['record_to_file'] = False
-        
         # Set record_to_file in spike_detectors to the value    
         nest.SetDefaults('spike_detector', 'to_file', self.simulation_options['record_to_file'])
         nest.SetDefaults('multimeter', 'to_file', self.simulation_options['record_to_file'])
@@ -236,8 +230,9 @@ class NestCerebellarModel(CerebellarModel):
                 
         self.simulation_time = 0
         
-        # Copy configuration file of this simulation
-        self._write_config_file(data_path+'/'+'SimulationConfig.cfg')
+        if self.simulation_options['record_to_file']:
+            # Copy configuration file of this simulation
+            WriteConfigFile(self.config_dict, data_path+'/'+'SimulationConfig.cfg')
         
         return
     
@@ -261,8 +256,7 @@ class NestCerebellarModel(CerebellarModel):
             if layer.weight_recording:
                 layer.weight_record = dict()
                 
-                # print 'Process',self.get_my_process_id(),':','Source layer:',layer.source_layer.nest_layer,'Target layer:', layer.target_layer.nest_layer
-                
+                # logger.debug('Source layer: %s. Target layer: %s',layer.source_layer.nest_layer,layer.target_layer.nest_layer)
                 # Store the source and target cells to know the order to be stored
                 # We assume GetConnections return only those connections whose target node is local to the process
                 layer.weight_record['con'] = nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)
@@ -271,10 +265,14 @@ class NestCerebellarModel(CerebellarModel):
                 min_target = layer.target_layer.MinIndex
                 layer.weight_record['connections'] = numpy.array([(val[0]-min_source,val[1]-min_target) for val in global_connections])
                 
+                # logger.debug('Connections created in the weight record of layer %s: %s', layer.__name__, layer.weight_record['connections'])
+                
                 # Record the initial weights
                 scaled_weights = [weight*1.e-9 for weight in nest.GetStatus(layer.weight_record['con'],'weight')]
                 layer.weight_record['weights'] = numpy.array([scaled_weights])
                 layer.weight_record['time'] = numpy.array([0])
+                
+                # logger.debug('Initial weights in the weight record of layer %s: %s', layer.__name__, layer.weight_record['weights'])
                 
                 # Open the file when the weights are going to be stored
                 if self.simulation_options['record_to_file']:
@@ -332,7 +330,7 @@ class NestCerebellarModel(CerebellarModel):
             if layer.cell_model in self.cellNameTranslatorDict:
                 layer.nest_model_name = self.cellNameTranslatorDict[layer.cell_model]
             else:
-                print 'The cell model ', layer.cell_model, ' has not been mapped to a NEST model.'
+                logger.error('The cell model %s has not been mapped to a NEST model', layer.cell_model)
                 raise Exception('Non-MappedCellModel')
         
             # Get the dictionary with the mapped values
@@ -371,9 +369,9 @@ class NestCerebellarModel(CerebellarModel):
                             recording_vars.append(self.stateTranslatorDict[var][0])
                             recorded_vars.append(var)
                         else:
-                            print 'Warning: ', self.stateTranslatorDict[var][0], ' variable is not recordable in the model ',layer.nest_model_name,'. Ignoring'
+                            logger.warning('%s variable is not recordable in the model %s. Ignoring',self.stateTranslatorDict[var][0],layer.nest_model_name)
                     else:
-                        print 'Warning: ', var, ' state variable is included in the recordable variable map. Ignoring.'
+                        logger.warning('%s state variable is included in the recordable variable map. Ignoring',var)
                 
             if recording_vars:
                 layer.nest_multimeter = nest.Create(model='multimeter', params = {'withtime': True,
@@ -418,7 +416,7 @@ class NestCerebellarModel(CerebellarModel):
                 if layer.learning_rule_type in self.ruleNameTranslatorDict:
                     layer.nest_model_name = self.ruleNameTranslatorDict[layer.learning_rule_type]
                 else:
-                    print 'The synapsis model ', layer.learning_rule_type, ' has not been mapped to a NEST model.'
+                    logger.error('The synapsis model %s has not been mapped to a NEST model',layer.learning_rule_type)
                     raise Exception('Non-MappedSynapsisModel')
         
                 # Get the dictionary with the mapped values
@@ -448,8 +446,7 @@ class NestCerebellarModel(CerebellarModel):
             #print 'Process:', self.get_my_process_id(),'Source cells:', presynaptic,'Target cells:',postsynaptic
             nest.Connect(pre=layer.source_layer.nest_layer, post=layer.target_layer.nest_layer, conn_spec=con_dict, syn_spec=syn_dict)
             #nest.OneToOneConnect(pre=presynaptic, post=postsynaptic, params= weights, delay=delay_values, model=layer.__name__)
-            
-            # print 'Process:', self.get_my_process_id(),'Connections created', nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)
+            logger.debug('Nest Process: %s. Connections created in layer %s: %s', nest.Rank(), layer.__name__,len(nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)))
 
 
  
@@ -464,7 +461,7 @@ class NestCerebellarModel(CerebellarModel):
                 dictionary[param] = eval(self.connectivityTranslatorDict[param],None,layer.connectivity_parameters)
                 
         else:
-            print 'Non-mapped connectivity pattern ', layer.connectivity_type, ' in layer', layer.__name__
+            logger.error('Non-mapped connectivity pattern %s in layer %s', layer.connectivity_type, layer.__name__)
             raise Exception('Non-MappedConnectivityPattern')
             
         return dictionary
@@ -485,7 +482,7 @@ class NestCerebellarModel(CerebellarModel):
             dictionary['weight'] = weight_dict
                 
         else:
-            print 'Non-mapped weight initialization distribution ', layer.weight_initialization_type, ' in layer', layer.__name__
+            logger.error('Non-mapped weight initialization distribution %s in layer %s', layer.weight_initialization_type, layer.__name__)
             raise Exception('Non-MappedWeightInitialization')
         
         return dictionary
@@ -556,10 +553,10 @@ class NestCerebellarModel(CerebellarModel):
                 nest.SetStatus(nodes=self.dc_current, params='amplitude', val=amplitude)
                 # We could check and set status only of the local nodes   
             else:
-                print 'Error: dc_current amplitude has to be a list with the same length of the number of MFs'
+                logger.error('dc_current amplitude has to be a list with the same length of the number of MFs')
                 raise Exception('InvalidDCCurrent')
         else:
-            print 'Error: dc_current amplitude has to be specified'
+            logger.error('Error: dc_current amplitude has to be specified')
             raise Exception('Non-SpecifiedDCCurrent')
         
         return
@@ -629,21 +626,21 @@ class NestCerebellarModel(CerebellarModel):
         if 'neuron_layer' in kwargs:
             neuron_layer_name = kwargs.pop('neuron_layer')
         else:
-            print 'Non specified neuron layer in get_spike_activity function.'
+            logger.error('Non specified neuron layer in get_spike_activity function')
             raise Exception('Non-DefinedNeuronLayer')
         
         
         if neuron_layer_name in self.layer_map:
             neuron_layer = self.layer_map[neuron_layer_name]
         else:
-            print 'Invalid neuron layer in get_spike_activity function.'
+            logger.error('Invalid neuron layer in get_spike_activity function')
             raise Exception('InvalidNeuronLayer')
         
         if 'neuron_indexes' in kwargs:
             local_indexes = kwargs.pop('neuron_indexes')
             
             if (max(local_indexes)>=(neuron_layer.MinIndex+neuron_layer.number_of_neurons)):
-                print 'Invalid neuron index in get_spike_activity function.'
+                logger.error('Invalid neuron index in get_spike_activity function')
                 raise Exception('InvalidNeuronIndex')
             
             neuron_indexes = [neuron_layer.MinIndex+index for index in local_indexes]            
@@ -662,11 +659,13 @@ class NestCerebellarModel(CerebellarModel):
         
         # Comprobar que la neurona (spike recorder) sea local
         if not neuron_layer.nest_spike_detector: 
-            print 'Invalid neuron layer in get_spike_activity function. The activity in this layer has not been recorded.'
+            logger.error('Invalid neuron layer in get_spike_activity function. The activity in this layer has not been recorded')
             raise Exception('InvalidNeuronLayer')
         
         # If the spike detector is local to this process
-        if nest.GetStatus(neuron_layer.nest_spike_detector,'local'):
+        # logger.debug('Checking locality in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector,'local'))
+        if nest.GetStatus(neuron_layer.nest_spike_detector,'local')[0]:
+            # logger.debug('Getting spikes in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector,'events'))
             spike_events = nest.GetStatus(neuron_layer.nest_spike_detector,'events')[0]
             time = spike_events['times']*1e-3
             neuron_id = spike_events['senders']
@@ -703,7 +702,9 @@ class NestCerebellarModel(CerebellarModel):
             # Total number of spikes to be gathered
             gsum = num_spikes.sum()
             num_sent = tuple(num_spikes)
-            offset = tuple(numpy.insert(num_spikes.cumsum()[0:-1],0,0))
+            aux_array = numpy.roll(num_spikes.cumsum(),1)
+            aux_array[0] = 0
+            offset = tuple(aux_array)
             
             gtime = numpy.empty(gsum, dtype=numpy.float64)
             gneuron_id = numpy.empty(gsum, dtype=numpy.uint64)
@@ -733,21 +734,21 @@ class NestCerebellarModel(CerebellarModel):
         if 'neuron_layer' in kwargs:
             neuron_layer_name = kwargs.pop('neuron_layer')
         else:
-            print 'Non specified neuron layer in get_state_variable function.'
+            logger.error('Non specified neuron layer in get_state_variable function')
             raise Exception('Non-DefinedNeuronLayer')
         
         
         if neuron_layer_name in self.layer_map:
             neuron_layer = self.layer_map[neuron_layer_name]
         else:
-            print 'Invalid neuron layer in get_state_variable function.'
+            logger.error('Invalid neuron layer in get_state_variable function')
             raise Exception('InvalidNeuronLayer')
         
         if 'neuron_indexes' in kwargs:
             local_indexes = kwargs.pop('neuron_indexes')
             
             if (max(local_indexes)>=(neuron_layer.MinIndex+neuron_layer.number_of_neurons)):
-                print 'Invalid neuron index in get_state_variable function.'
+                logger.error('Invalid neuron index in get_state_variable function')
                 raise Exception('InvalidNeuronIndex')
             
             neuron_indexes = [neuron_layer.MinIndex+index for index in local_indexes]         
@@ -757,17 +758,17 @@ class NestCerebellarModel(CerebellarModel):
         if 'state_variable' in kwargs:
             variable_name = kwargs.pop('state_variable')
         else:
-            print 'Non specified state_variable in get_state_variable function.'
+            logger.error('Non specified state_variable in get_state_variable function')
             raise Exception('Non-DefinedStateVariable')
         
         if variable_name in self.stateTranslatorDict:
             state_variable_name = self.stateTranslatorDict[variable_name][0]
         else:
-            print 'Invalid state variable in get_state_variable function.'
+            logger.error('Invalid state variable in get_state_variable function')
             raise Exception('InvalidStateVariable')
         
         if not variable_name in neuron_layer.record_vars:
-            print 'Invalid state variable in get_state_variable function.',variable_name,'has not been recorded.'
+            logger.error('Invalid state variable in get_state_variable function. %s has not been recorded', variable_name)
             raise Exception('InvalidStateVariable')
         
         if 'init_time' in kwargs:
@@ -818,7 +819,9 @@ class NestCerebellarModel(CerebellarModel):
             # Total number of spikes to be gathered
             gsum = num_events.sum()
             num_sent = tuple(num_events)
-            offset = tuple(numpy.insert(num_events.cumsum()[0:-1],0,0))
+            aux_array = numpy.roll(num_events.cumsum(),1)
+            aux_array[0] = 0
+            offset = tuple(aux_array)
             
             gtime = numpy.empty(gsum, dtype=numpy.float64)
             gneuron_id = numpy.empty(gsum, dtype=numpy.uint64)
@@ -855,20 +858,20 @@ class NestCerebellarModel(CerebellarModel):
         if 'synaptic_layer' in kwargs:
             synaptic_layer_name = kwargs.pop('synaptic_layer')
         else:
-            print 'Non specified synaptic layer in get_synaptic_weights function.'
+            logger.error('Non specified synaptic layer in get_synaptic_weights function')
             raise Exception('Non-DefinedSynapticLayer')
         
         if synaptic_layer_name in self.layer_map:
             synaptic_layer = self.layer_map[synaptic_layer_name]
         else:
-            print 'Invalid synaptic layer in get_synaptic_weights function.'
+            logger.error('Invalid synaptic layer in get_synaptic_weights function')
             raise Exception('InvalidSynapticLayer')
         
         if 'source_indexes' in kwargs:
             source_indexes = kwargs.pop('source_indexes')
             
             if (max(source_indexes)>=(synaptic_layer.source_layer.number_of_neurons)):
-                print 'Invalid source index in get_synaptic_weights function.'
+                logger.error('Invalid source index in get_synaptic_weights function')
                 raise Exception('InvalidSourceIndex')
         else:
             source_indexes = range(synaptic_layer.source_layer.number_of_neurons)
@@ -877,7 +880,7 @@ class NestCerebellarModel(CerebellarModel):
             target_indexes = kwargs.pop('target_indexes')
             
             if (max(target_indexes)>=(synaptic_layer.target_layer.number_of_neurons)):
-                print 'Invalid target index in get_synaptic_weights function.'
+                logger.error('Invalid target index in get_synaptic_weights function')
                 raise Exception('InvalidTargetIndex')
         else:
             target_indexes = range(synaptic_layer.target_layer.number_of_neurons)
@@ -896,7 +899,7 @@ class NestCerebellarModel(CerebellarModel):
         
         
         if not synaptic_layer.weight_recording:
-            print 'Invalid synaptic layer in get_synaptic_weights function. The weights in this layer has not been recorded.'
+            logger.error('Invalid synaptic layer in get_synaptic_weights function. The weights in this layer has not been recorded')
             raise Exception('InvalidSynapticLayer')
         
         # print 'Process',self.get_my_process_id(),':','Weight record:',synaptic_layer.weight_record
@@ -922,13 +925,13 @@ class NestCerebellarModel(CerebellarModel):
         # Send the number of elements
         time_elements = len(selected_time) 
         
-        # Gather every connection record individually
-        connection_aux = numpy.array(len(connection_indexes), dtype=numpy.uint64) 
-        connection_elements = numpy.array(0, dtype=numpy.uint64) 
-        comm.Reduce(connection_aux, connection_elements, op=MPI.SUM, root=0)
-        
-        # print 'Process',self.get_my_process_id(),':','Connection number sent:',connection_aux,'Connection number collected ->',connection_elements
-        
+#         # Gather every connection record individually
+#         connection_aux = numpy.array(len(connection_indexes), dtype=numpy.uint64) 
+#         connection_elements = numpy.array(0, dtype=numpy.uint64) 
+#         comm.Reduce(connection_aux, connection_elements, op=MPI.SUM, root=0)
+#         
+#         logger.debug('Connection number sent: %s. Connection number collected: %s',connection_aux,connection_elements)
+#         
         # Send the number of elements
         connection_aux = numpy.array([len(connection_indexes)], dtype=numpy.uint64)
         if self.get_my_process_id()==0:
@@ -937,7 +940,7 @@ class NestCerebellarModel(CerebellarModel):
             connection_elements = None
         comm.Gather([connection_aux, MPI.UNSIGNED_LONG], [connection_elements, MPI.UNSIGNED_LONG], root=0) 
         
-        # print 'Process',self.get_my_process_id(),':','Sent number:',connection_aux,'Collected numbers ->',connection_elements
+        # logger.debug('Sent number: %s. Collected numbers: %s',connection_aux,connection_elements)
         
         
         if self.get_my_process_id()==0:
@@ -945,8 +948,10 @@ class NestCerebellarModel(CerebellarModel):
             gsum = connection_elements.sum()
             con_num_sent = tuple(connection_elements*2)
             weight_num_sent = tuple(connection_elements*time_elements)
-            con_offset = tuple(numpy.insert(connection_elements.cumsum()[0:-1],0,0)*2)
-            weight_offset = tuple(numpy.insert(connection_elements.cumsum()[0:-1],0,0)*time_elements)
+            aux_array = numpy.roll(connection_elements.cumsum(),1)
+            aux_array[0] = 0
+            con_offset = tuple(aux_array*2)
+            weight_offset = tuple(aux_array*time_elements)
             
             gtime = selected_time
             gconnections = numpy.empty((gsum,2), dtype=numpy.uint64)

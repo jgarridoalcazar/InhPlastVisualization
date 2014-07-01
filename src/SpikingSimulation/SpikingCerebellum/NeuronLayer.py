@@ -5,6 +5,9 @@ Created on April 22, 2014
 '''
 
 import InputLayer
+import logging
+
+logger = logging.getLogger('Simulation')
 
 class NeuronLayer(InputLayer.InputLayer):
     '''
@@ -39,12 +42,12 @@ class NeuronLayer(InputLayer.InputLayer):
                     if (param in kwargs):
                         self.cell_model_parameters[param] = kwargs.pop(param)
                     else:
-                        print 'Non-specified cell model parameter: ',param,'in layer', kwargs['name'],'- Using default value'
+                        logger.warning('Non-specified cell model parameter: %s in layer %s. Using default value', param, kwargs['name'])
             else:
-                print 'Unknown cell model: ', self.cell_model
+                logger.error('Unknown cell model: %s', self.cell_model)
                 raise Exception('UnknownCellModel')                         
         else:
-            print 'Non-specified cell model.'
+            logger.error('Non-specified cell model')
             raise Exception('Non-DefinedProperty')
         
         if ('record_vars' in kwargs):

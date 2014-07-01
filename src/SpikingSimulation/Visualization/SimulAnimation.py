@@ -4,6 +4,9 @@ import matplotlib.animation as animation
 import numpy
 import SimulFigure
 import time
+import logging
+
+logger = logging.getLogger('Simulation')
 
 class SimulAnimation (SimulFigure.SimulFigure,animation.TimedAnimation):
     '''
@@ -52,7 +55,7 @@ class SimulAnimation (SimulFigure.SimulFigure,animation.TimedAnimation):
         if ('end_time' in kwargs):
             self.end_time = kwargs.pop('end_time',None)
         else:
-            print 'Obligatory end_time parameter not provided'
+            logger.error('Obligatory end_time parameter not provided')
             raise Exception('NonProvidedParameter','end_time')
         
         # Get frame_rate parameter
@@ -78,7 +81,7 @@ class SimulAnimation (SimulFigure.SimulFigure,animation.TimedAnimation):
         """
         new_update = time.time()
         
-        print 'Refresh rate:',1./(new_update-self.last_update),'FPS'
+        logger.debug('Refresh rate: %sFPS', 1./(new_update-self.last_update))
         self.last_update = new_update
         
         # Run the simulation until that time

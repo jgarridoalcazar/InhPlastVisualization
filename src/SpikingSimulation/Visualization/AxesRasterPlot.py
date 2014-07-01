@@ -1,56 +1,66 @@
 import numpy
+import bisect
 import AxesPlot
+import logging
 from mpi4py import MPI
 
-class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
+logger = logging.getLogger('Simulation')
+
+class AxesRasterPlot(AxesPlot.AxesPlot):
     '''
     This class defines the link between an axes object and the dataProvider for plots.
-    '''       
+    '''
+    
+    stimulation_layer = 'mflayer'
     
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates an object linking the axes with the DataProvider.
         @param data_provider The dataProvider that will be used in the axes to get the data. Obligatory parameter.
+        @param pattern_provider: Pattern generator where we can retrieve the pattern times and cells. Optional parameter.
         @param layer: Name of the layer to plot. Obligatory parameter.
-        @param source_indexes Indexes of the source cells of the synapses to get the activity.
-        @param target_indexes Indexes of the target cells of the synapses to get the activity.
+        @param cell_index: Indexes of the cells to plot. Optional parameter.
+        @param pattern: List of patterns to highlight. 0 is noise. Optional parameter. If nothing is specified, all the patterns will be shown.
         @param show_legend: True if the legend will be shown. Optional parameter. Default: True
         @param y_window_lim: Window limits in the Y-axis. Optional parameter.
         @param visible_data_only: True, it loads only the data that matches within the visualization window. Default=True
         @param load_new_data: True, it loads only the new data from the previus update call. Default=True.
         @param x_length: X-axis window limits in case of trial_per_trial figures. Optinal parameter. If x_lenght is not specified, the trial length will be used.
         '''
-        
-        
-        super(AxesWeightEvolutionLine, self).__init__(**kwargs)
+        super(AxesRasterPlot, self).__init__(**kwargs)
                 
         # Get data_provider parameter 
         if ('data_provider' in kwargs):
             self.data_provider = kwargs.pop('data_provider',None)
         else:
-            print 'Obligatory data_provider parameter not provided'
+            logger.error('Obligatory data_provider parameter not provided')
             raise Exception('NonProvidedParameter','data_provider')
+        
+        # Get data_provider parameter 
+        if ('pattern_provider' in kwargs):
+            self.pattern_provider = kwargs.pop('pattern_provider',None)
+        else:
+            self.pattern_provider = None
         
         # Get layer name parameter
         if ('layer' in kwargs):
             self.layer = kwargs.pop('layer',None)
         else:
-            print 'Obligatory layer parameter not provided'
+            logger.error('Obligatory layer parameter not provided')
             raise Exception('NonProvidedParameter','layer')
         
-        # Get souce cell index parameter
-        if ('source_indexes' in kwargs):
-            self.source_indexes = kwargs.pop('source_indexes',None)
+        # Get index parameter
+        if ('cell_index' in kwargs):
+            self.index = kwargs.pop('cell_index',None)
         else:
-            self.source_indexes = None
+            self.index = range(self.data_provider.get_number_of_elements(layer=self.layer))
             
-        # Get target cell index parameter
-        if ('target_indexes' in kwargs):
-            self.target_indexes = kwargs.pop('target_indexes',None)
+        # Get number of patterns to highlight 
+        if ('pattern' in kwargs):
+            self.pattern = kwargs.pop('pattern',None)
         else:
-            self.target_indexes = None
+            self.pattern = None
         
-            
         # Get y_window_lim parameter 
         if ('y_window_lim' in kwargs):
             self.y_window_lim = kwargs.pop('y_window_lim',None)
@@ -92,45 +102,37 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         It sets the title, axes titles, axes limits, legend and creates the lines.
         The DataProvider object must be initialized before calling this function.
         '''
-        self.figure_title = 'Weight Evolution - ' + self.layer
+        self.figure_title = 'Raster plot - ' + self.layer
         self.figure_x_label = 'Time (s)'
-        self.figure_y_label = 'Weight (S)'
-        
-        # Set connection parameters
-        self.param = dict()
-        
-        self.param['synaptic_layer'] = self.layer
-        if self.target_indexes:
-            self.param['target_indexes'] = self.target_indexes
-            target_cells = self.target_indexes
-        else:
-            target_cells = range(self.data_provider.layer_map[self.layer].target_layer.number_of_neurons)
-            
-        if self.source_indexes:
-            self.param['source_indexes'] = self.source_indexes
-            source_cells = self.source_indexes
-        else:
-            source_cells = range(self.data_provider.layer_map[self.layer].source_layer.number_of_neurons)
-        
-        self.param['init_time'] = 0
-        self.param['end_time'] = 0
-        
-        self.connections = [[source,target] for source in source_cells for target in target_cells]
-        
+        self.figure_y_label = 'Cell id'
+         
         # Set axes lines and legends
-        data_labels = [str(syn[0]) + ' - ' + str(syn[1]) for syn in self.connections]
+        if self.pattern_provider:
+            if not self.pattern:
+                self.pattern = range(self.pattern_provider.number_of_patterns+1)
+        else:
+            self.pattern = [0]
+        
+        data_labels = []
+        for pat in self.pattern:
+            if pat:
+                data_labels.append('Pattern '+str(pat))
+            else:
+                data_labels.append('Noise')
+        
         number_of_lines = len(data_labels)
         
         self.axesLines = []
         
         for _ in range(number_of_lines):
-            newLine, = self.axes.plot([],[])
+            #newLine = self.axes.scatter([],[],marker='.')
+            newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=8, markeredgecolor = 'none')
             self.axesLines.append(newLine)
         
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower right')
             
-        super(AxesWeightEvolutionLine, self).initialize()
+        super(AxesRasterPlot, self).initialize()
             
         return
     
@@ -167,11 +169,9 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         else:
             load_data_init = data_init_time
         
-        self.param['init_time'] = load_data_init
-        self.param['end_time'] = simulation_time
-        
         # Load data from the data provider
-        gtime,gconnections,gvalue = self.data_provider.get_synaptic_weights(**self.param)
+        gtime,gcell_id = self.data_provider.get_spike_activity(neuron_layer = self.layer, neuron_indexes = self.index,\
+                                                               init_time = load_data_init, end_time = simulation_time)
         
         self.data_update = simulation_time
         
@@ -185,23 +185,45 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         
             y_limits = range(2)
             initialized = False
-        
-            # Select the values for each cell_id
-            for ind in range(len(self.axesLines)):
-                indexes = [index for index in range(len(self.connections)) if (gconnections[index][0]==self.connections[ind][0]) and (gconnections[index][1]==self.connections[ind][1])]
-                time = gtime
-                value = gvalue[indexes]
-                
-                old_time_data = self.axesLines[ind].get_xdata()
-                first_index = numpy.searchsorted(old_time_data, data_init_time)
-                new_time_data = numpy.append(old_time_data[first_index:],time)
             
-                old_signal_data = self.axesLines[ind].get_ydata()
-                new_signal_data = old_signal_data[first_index:]
-                new_signal_data = numpy.append(new_signal_data, value)
+            
+            for i in range(len(self.pattern)):
+                pat = self.pattern[i]
+            
+                # Filter the activity for each pattern
+                if self.pattern_provider:
                 
-                self.axesLines[ind].set_xdata(new_time_data)
-                self.axesLines[ind].set_ydata(new_signal_data)
+                    # Find the pattern of the time bin for each spike
+                    pattern_of_spike = numpy.array([self.pattern_provider.pattern_id[bisect.bisect_right(self.pattern_provider.pattern_length_cum, time)] for time in gtime])
+                
+                    if self.layer == self.stimulation_layer:
+                        if pat:
+                            # Select those spikes fired for the cells in the selected fibers of each pattern
+                            indexes = (pattern_of_spike==pat) & numpy.in1d(gcell_id,self.pattern_provider.fibers_in_pattern[pat-1])
+                        else:
+                            # Select those spikes fired in noise interval or those in pattern bin but are not included in the selected fibers
+                            indexes = (pattern_of_spike==pat)
+                            for pat1 in range(1,self.pattern_provider.number_of_patterns+1):
+                                indexes = indexes | ((pattern_of_spike==pat1) & ~numpy.in1d(gcell_id,self.pattern_provider.fibers_in_pattern[pat1-1]))
+                    else:
+                        indexes = (pattern_of_spike==pat)
+                        
+                    sel_time = gtime[indexes]
+                    sel_cell = gcell_id[indexes]
+                else:
+                    sel_time = gtime
+                    sel_cell = gcell_id
+                    
+                old_time_data = self.axesLines[i].get_xdata()
+                first_index = numpy.searchsorted(old_time_data, data_init_time)
+                new_time_data = numpy.append(old_time_data[first_index:],sel_time)
+            
+                old_signal_data = self.axesLines[i].get_ydata()
+                new_signal_data = old_signal_data[first_index:]
+                new_signal_data = numpy.append(new_signal_data, sel_cell)
+                
+                self.axesLines[i].set_xdata(new_time_data)
+                self.axesLines[i].set_ydata(new_signal_data)
                 
                 if (new_signal_data.size):
                     if (initialized):

@@ -1,4 +1,7 @@
 import abc
+import logging
+
+logger = logging.getLogger('Simulation')
 
 class AxesPlot(object):
     '''
@@ -17,7 +20,7 @@ class AxesPlot(object):
         if ('axes' in kwargs):
             self.axes = kwargs.pop('axes',None)
         else:
-            print 'Obligatory axes parameter not provided'
+            logger.error('Obligatory axes parameter not provided')
             raise Exception('NonProvidedParameter','axes')
         
         return 

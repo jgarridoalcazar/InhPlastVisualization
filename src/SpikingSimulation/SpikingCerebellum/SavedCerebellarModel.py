@@ -5,16 +5,16 @@ Created on May 12, 2014
 '''
 
 import abc
-from CerebellarModel import CerebellarModel,ConfigSectionMap
+from CerebellarModel import CerebellarModel
 import InputLayer
-import NeuronLayer
 import SynapticLayer
 import numpy
-import math
 import os
 import glob
-import ConfigParser
 from mpi4py import MPI
+import logging
+
+logger = logging.getLogger('Simulation')
 
 class SavedCerebellarModel(CerebellarModel):
     '''
@@ -55,7 +55,7 @@ class SavedCerebellarModel(CerebellarModel):
                 self.simulation_folder = self.simulation_folder + '/' + self.simulation_options['simulation_name']
             
         if not os.path.exists(self.simulation_folder):
-            print 'Error: Simulation folder', self.simulation_folder, 'does not exist.'
+            logger.error('Simulation folder %s does not exist', self.simulation_folder)
             raise Exception('InvalidSimulationFolder')
         
         
@@ -70,30 +70,30 @@ class SavedCerebellarModel(CerebellarModel):
         
         return
     
-    def _file_name_iterator(self, layer, type=None):
+    def _file_name_iterator(self, layer, type_layer=None):
         '''
         Return an iterator to the file names of recorded activity/state/weights in the specified layer.
         @param layer Layer to get the files.
-        @param type  Type of the files to get in 'spike','state','weight'
+        @param type_layer  Type of the files to get in 'spike','state','weight'
         '''
         name_pattern = self.simulation_folder + '/' + layer.__name__
         
         if isinstance(layer,InputLayer.InputLayer):
-            if type=='spike':
+            if type_layer=='spike':
                 name_pattern = name_pattern + '_spike*.gdf'
-            elif type=='state':
+            elif type_layer=='state':
                 name_pattern = name_pattern + '_mult*.dat'
             else:
-                print 'Warning: Invalid type of register', type, ' used.'
+                logger.error('Invalid type of register %s used',type_layer)
                 raise Exception('InvalidType')
         elif isinstance(layer,SynapticLayer.SynapticLayer):
-            if type=='weight' or type is None:
+            if type_layer=='weight' or type_layer is None:
                 name_pattern = name_pattern + '_weights*.dat'
             else:
-                print 'Warning: Invalid type of register', type, ' used.'
+                logger.error('Invalid type of register %s used', type_layer)
                 raise Exception('InvalidType')
         else:
-            print 'Warning: Invalid layer type used.'
+            logger.error('Invalid layer type used')
             raise Exception('InvalidLayerType')
         
         file_list = glob.glob(name_pattern)
@@ -126,10 +126,10 @@ class SavedCerebellarModel(CerebellarModel):
                 
                 
                 # Get the weight file list of the layer
-                file_iterator = self._file_name_iterator(layer=layer, type='weight')
+                file_iterator = self._file_name_iterator(layer=layer, type_layer='weight')
                 for file_name in file_iterator:
                     
-                    print 'Process',self.get_my_process_id(),':','Reading weight register file', file_name
+                    logger.debug('Reading weight register file %s', file_name)
                     
                     with open(file_name, 'r') as f:
                         # Get the connections array and transform into an array of tuples
@@ -181,10 +181,10 @@ class SavedCerebellarModel(CerebellarModel):
                 layer.MinIndex = self.config_dict[layer.__name__]['minindex']
                 
                 # Get the weight file list of the layer
-                file_iterator = self._file_name_iterator(layer=layer, type='spike')
+                file_iterator = self._file_name_iterator(layer=layer, type_layer='spike')
                 for file_name in file_iterator:
                     
-                    print 'Process',self.get_my_process_id(),':','Reading activity register file', file_name
+                    logger.debug('Reading activity register file %s', file_name)
                     
                     # Get the activity file
                     data = numpy.loadtxt(file_name)
@@ -200,7 +200,7 @@ class SavedCerebellarModel(CerebellarModel):
                             layer.activity_record['cell'] = numpy.append(layer.activity_record['cell'],cell_array)
                         
                         if layer.activity_record['time'] is None:
-                            layer.activity_record['time'] = cell_array
+                            layer.activity_record['time'] = time_array
                         else:
                             layer.activity_record['time'] = numpy.append(layer.activity_record['time'],time_array)
             else:
@@ -228,10 +228,10 @@ class SavedCerebellarModel(CerebellarModel):
                 layer.MinIndex = self.config_dict[layer.__name__]['minindex']
                 
                 # Get the weight file list of the layer
-                file_iterator = self._file_name_iterator(layer=layer, type='state')
+                file_iterator = self._file_name_iterator(layer=layer, type_layer='state')
                 for file_name in file_iterator:
                     
-                    print 'Process',self.get_my_process_id(),':','Reading state recorded file', file_name
+                    logger.debug('Reading state recorded file %s', file_name)
                     
                     # Get the activity file
                     data = numpy.loadtxt(file_name)
@@ -319,21 +319,21 @@ class SavedCerebellarModel(CerebellarModel):
         if 'neuron_layer' in kwargs:
             neuron_layer_name = kwargs.pop('neuron_layer')
         else:
-            print 'Non specified neuron layer in get_spike_activity function.'
+            logger.error('Non specified neuron layer in get_spike_activity function')
             raise Exception('Non-DefinedNeuronLayer')
         
         
         if neuron_layer_name in self.layer_map:
             neuron_layer = self.layer_map[neuron_layer_name]
         else:
-            print 'Invalid neuron layer in get_spike_activity function.'
+            logger.error('Invalid neuron layer in get_spike_activity function')
             raise Exception('InvalidNeuronLayer')
         
         if 'neuron_indexes' in kwargs:
             neuron_indexes = kwargs.pop('neuron_indexes')
             
             if (max(neuron_indexes)>=(neuron_layer.number_of_neurons)):
-                print 'Invalid neuron index in get_state_variable function.'
+                logger.error('Invalid neuron index in get_state_variable function')
                 raise Exception('InvalidNeuronIndex')
         else:
             neuron_indexes = range(neuron_layer.number_of_neurons)
@@ -350,7 +350,7 @@ class SavedCerebellarModel(CerebellarModel):
         
         # Check whether the neuron has been recorded
         if not neuron_layer.register_activity: 
-            print 'Invalid neuron layer in get_spike_activity function. The activity in this layer has not been recorded.'
+            logger.error('Invalid neuron layer in get_spike_activity function. The activity in this layer has not been recorded')
             raise Exception('InvalidNeuronLayer')
         
         # If the spike detector is local to this process
@@ -383,21 +383,21 @@ class SavedCerebellarModel(CerebellarModel):
         if 'neuron_layer' in kwargs:
             neuron_layer_name = kwargs.pop('neuron_layer')
         else:
-            print 'Non specified neuron layer in get_state_variable function.'
+            logger.error('Non specified neuron layer in get_state_variable function')
             raise Exception('Non-DefinedNeuronLayer')
         
         
         if neuron_layer_name in self.layer_map:
             neuron_layer = self.layer_map[neuron_layer_name]
         else:
-            print 'Invalid neuron layer in get_state_variable function.'
+            logger.error('Invalid neuron layer in get_state_variable function')
             raise Exception('InvalidNeuronLayer')
         
         if 'neuron_indexes' in kwargs:
             neuron_indexes = kwargs.pop('neuron_indexes')
             
             if (max(neuron_indexes)>=(neuron_layer.number_of_neurons)):
-                print 'Invalid neuron index in get_state_variable function.'
+                logger.error('Invalid neuron index in get_state_variable function')
                 raise Exception('InvalidNeuronIndex')
         else:
             neuron_indexes = range(neuron_layer.number_of_neurons)
@@ -405,11 +405,11 @@ class SavedCerebellarModel(CerebellarModel):
         if 'state_variable' in kwargs:
             variable_name = kwargs.pop('state_variable')
         else:
-            print 'Non specified state_variable in get_state_variable function.'
+            logger.error('Non specified state_variable in get_state_variable function')
             raise Exception('Non-DefinedStateVariable')
         
         if not variable_name in neuron_layer.record_vars:
-            print 'Invalid state variable in get_state_variable function.',variable_name,'has not been recorded.'
+            logger.error('Invalid state variable in get_state_variable function. %s has not been recorded', variable_name)
             raise Exception('InvalidStateVariable')
         
         if 'init_time' in kwargs:
@@ -456,20 +456,20 @@ class SavedCerebellarModel(CerebellarModel):
         if 'synaptic_layer' in kwargs:
             synaptic_layer_name = kwargs.pop('synaptic_layer')
         else:
-            print 'Non specified synaptic layer in get_synaptic_weights function.'
+            logger.error('Non specified synaptic layer in get_synaptic_weights function')
             raise Exception('Non-DefinedSynapticLayer')
         
         if synaptic_layer_name in self.layer_map:
             synaptic_layer = self.layer_map[synaptic_layer_name]
         else:
-            print 'Invalid synaptic layer in get_synaptic_weights function.'
+            logger.error('Invalid synaptic layer in get_synaptic_weights function')
             raise Exception('InvalidSynapticLayer')
         
         if 'source_indexes' in kwargs:
             source_indexes = kwargs.pop('source_indexes')
             
             if (max(source_indexes)>=(synaptic_layer.source_layer.number_of_neurons)):
-                print 'Invalid source index in get_synaptic_weights function.'
+                logger.error('Invalid source index in get_synaptic_weights function')
                 raise Exception('InvalidSourceIndex')
         else:
             source_indexes = range(synaptic_layer.source_layer.number_of_neurons)
@@ -478,7 +478,7 @@ class SavedCerebellarModel(CerebellarModel):
             target_indexes = kwargs.pop('target_indexes')
             
             if (max(target_indexes)>=(synaptic_layer.target_layer.number_of_neurons)):
-                print 'Invalid target index in get_synaptic_weights function.'
+                logger.error('Invalid target index in get_synaptic_weights function')
                 raise Exception('InvalidTargetIndex')
         else:
             target_indexes = range(synaptic_layer.target_layer.number_of_neurons)
@@ -497,7 +497,7 @@ class SavedCerebellarModel(CerebellarModel):
         
         
         if not synaptic_layer.weight_recording:
-            print 'Invalid synaptic layer in get_synaptic_weights function. The weights in this layer has not been recorded.'
+            logger.error('Invalid synaptic layer in get_synaptic_weights function. The weights in this layer has not been recorded')
             raise Exception('InvalidSynapticLayer')
         
         # print 'Process',self.get_my_process_id(),':','Weight record:',synaptic_layer.weight_record

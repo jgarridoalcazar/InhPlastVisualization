@@ -5,22 +5,17 @@ Created on May 27, 2014
 '''
 import SpikingCerebellum.NestCerebellarModel as NestGenerator
 import SpikingCerebellum.SavedCerebellarModel as SavedGenerator
-from mpi4py import MPI
 import Stimulation.FrequencyPatternGenerator as FrequencyPatternGenerator
-import matplotlib.pylab
-import numpy
-import ConfigParser
 import bisect
 import ntpath
-from Utils.Utils import ConfigSectionMap
+import logging
+from Utils.Utils import ReadConfigFile
+from Utils.Logger import InitializeLogger
 
-import Visualization.SimulFigure as SimulFigure
-import Visualization.SimulAnimation as SimulAnimation
-import Visualization.AxesNeuronPropertyLine as AxesNeuronPropertyLine
-import Visualization.AxesRasterPlot as AxesRasterPlot
-import Visualization.AxesWeightEvolutionLine as AxesWeightEvolutionLine
-import Visualization.AxesWeightHistogram as AxesWeightHistogram
-import Visualization.AxesWeightActivationPlot as AxesWeightActivationPlot
+InitializeLogger('Simulation')
+
+# Get logger with default level to INFO
+logger = logging.getLogger('Simulation')
 
 class FrequencySimulation(object):
     '''
@@ -30,34 +25,22 @@ class FrequencySimulation(object):
 
     def __init__(self,**kwargs):
         '''
-        Constructor of the class. It creates a new simulation object.
-        @param config_file Name of the file with the options of the model.
+        Constructor of the class. It creates a new simulation object. 1 of the parameters have to be defined
+        @param config_options Dictionary with the parameters of the simulations.
+        @param config_file Name of the file where the simulation parameters are stored.
         '''
         
-        if ('config_file' in kwargs):
-            self.config_file = kwargs.pop('config_file')                         
+        if 'config_options' in kwargs:
+            self.config_options = kwargs.pop('config_options')                         
+        elif 'config_file' in kwargs:
+            self.config_file = kwargs.pop('config_file')
+            logger.info('Parsing configuration file %s',self.config_file)
+            self.config_options = ReadConfigFile(self.config_file)
         else:
-            print 'Non-specified simulation config file.'
+            logger.error('Non-specified simulation configuration options or configuration file')
             raise Exception('Non-DefinedSimulationConfig')
         
         super(FrequencySimulation, self).__init__(**kwargs)
-        
-        return
-    
-    def _read_config_file_(self):
-        '''
-        Read all the sections in the configuration file.
-        '''
-        print 'Parsing configuration file ', self.config_file
-    
-        self.config_parser = ConfigParser.ConfigParser()
-        self.config_parser.read(self.config_file)
-        
-        # Read every section in the file
-        sections = self.config_parser.sections()
-        self.config_options = dict()
-        for sect in sections:
-            self.config_options[sect] = ConfigSectionMap(config_parser = self.config_parser, section = sect)
         
         return
     
@@ -65,42 +48,43 @@ class FrequencySimulation(object):
         '''
         Initialize all the objects needed for running the simulation.
         '''
-        comm = MPI.COMM_WORLD
-        
-        self._read_config_file_()
-        
         # Read simulation general options
         if 'simulation' in self.config_options:
             if 'time' in self.config_options['simulation']:
                 self.simulation_time = self.config_options['simulation']['time']
             else:
                 self.simulation_time = 1
+                
+            if 'debug' in self.config_options['simulation'] and self.config_options['simulation']['debug']:
+                logger.setLevel(logging.DEBUG)
+            else:
+                logger.setLevel(logging.INFO)
         else:
             self.simulation_time = 1
             
-        print 'Simulation time fixed to',self.simulation_time,'s'
+        logger.debug('Simulation time fixed to %ss',self.simulation_time)
         
         # Initialize cerebellar model
-        print 'Process:', comm.Get_rank(),'. Creating cerebellum generator'
+        logger.debug('Creating cerebellum generator')
         if 'run_simulation' in self.config_options['simulation'] and self.config_options['simulation']['run_simulation']:
             self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
         else:
             self.config_options['simulation']['run_simulation'] = False
             # Get the path of the config_file
-            path,_ = ntpath.split(self.config_file)
+            path = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name']
             self.cerebellum = SavedGenerator.SavedCerebellarModel(config_dict=self.config_options, simulation_folder=path)
     
-        print 'Process:', comm.Get_rank(),'. Initializing cerebellum generator'
+        logger.debug('Initializing cerebellum generator')
         self.cerebellum.initialize_simulation()
     
         # Initialize oscillatory input current
         if 'oscillations' in self.config_options:
-            print 'Process:', comm.Get_rank(),'. Creating AC Current generator'
+            logger.debug('Creating AC Current generator')
             self.cerebellum.add_ac_current(**self.config_options['oscillations'])
             
         # Initialize frequency stimulation input current
         if 'stimulation' in self.config_options:      
-            print 'Process:', comm.Get_rank(),'. Creating DC Current generator'
+            logger.debug('Creating DC Current generator')
             self.config_options['stimulation']['simulation_time'] = self.simulation_time
             self.config_options['stimulation']['number_of_fibers'] = self.cerebellum.mflayer.number_of_neurons
             self.pattern_generator = FrequencyPatternGenerator.FrequencyPatternGenerator(**self.config_options['stimulation'])
@@ -118,17 +102,17 @@ class FrequencySimulation(object):
         @param end_time Time until when simulation will be run
         '''
         
-        comm = MPI.COMM_WORLD
-        
         if 'end_time' in kwargs:
             end_time = kwargs.pop('end_time')
             
             if end_time>self.simulation_time:
-                print 'Warning: simulation time is shorter than end_time. Simulating', self.simulation_time,'seconds'
+                logger.warning('Simulation time is shorter than end_time. Simulating %ss',self.simulation_time)
                 
             end_time = min(end_time,self.simulation_time)
         else:
             end_time = self.simulation_time
+            
+        logger.info('Running the simulation from %ss until time %ss',self.current_time, end_time)
             
         if 'stimulation' in self.config_options and self.config_options['simulation']['run_simulation']:
             init_index = bisect.bisect_left(self.pattern_length_cum, self.current_time)
@@ -139,13 +123,13 @@ class FrequencySimulation(object):
                 
                 self.cerebellum.set_dc_current(amplitude=self.pattern_activations[index])
             
-                print 'Process:', comm.Get_rank(),'. Running the simulation',sim_time,'seconds until', self.cerebellum.simulation_time+sim_time,' seconds.'
+                logger.debug('Running the simulation %ss until %ss', sim_time, self.cerebellum.simulation_time+sim_time) 
                 self.cerebellum.simulate_network(sim_time)
                 
                 self.current_time = self.cerebellum.simulation_time
         else:
             sim_time = self.simulation_time-self.current_time
-            print 'Process:', comm.Get_rank(),'. Running the simulation',sim_time,'seconds until', self.cerebellum.simulation_time+sim_time,' seconds.'
+            logger.debug('Running the simulation %ss until %ss', sim_time, self.cerebellum.simulation_time+sim_time) 
             self.cerebellum.simulate_network(sim_time)
             self.current_time = self.cerebellum.simulation_time
             
@@ -153,6 +137,15 @@ class FrequencySimulation(object):
         '''
         Visualize the results of the simulation
         '''
+        
+        import Visualization.SimulAnimation as SimulAnimation
+        import Visualization.AxesNeuronPropertyLine as AxesNeuronPropertyLine
+        import Visualization.AxesRasterPlot as AxesRasterPlot
+        import Visualization.AxesWeightEvolutionLine as AxesWeightEvolutionLine
+        import Visualization.AxesWeightHistogram as AxesWeightHistogram
+        import Visualization.AxesWeightActivationPlot as AxesWeightActivationPlot
+        import matplotlib.pylab
+        
                 
 #         figure7 = SimulFigure.SimulFigure(simulation = self, numRows=4,numColumns=2,figsize=[23,14],dpi=80)
 #         figure7.add_subplot(fig_position=1,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
@@ -262,9 +255,42 @@ class FrequencySimulation(object):
 
         matplotlib.pylab.show() 
             
+    def analyze_results(self):
+        '''
+        Analyze the estimators that have been set in the configuration file
+        '''
+        
+        import Analysis.MutualInformation as MutualInformation
+        
+        # Extract every mutual information to explore
+        parameter_keys = [key for key in self.config_options.keys() if key.startswith('mutual_information')]
+        for key in parameter_keys:
             
+            if not 'layer' in self.config_options[key]:
+                logger.error('Layer name has not been specified in the mutual information section')
+                raise Exception('NonSpecifiedLayer')
             
+            if not 'window_length' in self.config_options[key]:
+                logger.error('Window length has not been specified in the mutual information section')
+                raise Exception('NonSpecifiedWindowLenght')
+            
+            if not 'time_bin' in self.config_options[key]:
+                logger.error('time bin has not been specified in the mutual information section')
+                raise Exception('NonSpecifiedTimeBin')
+            
+            logger.info('Analyzing mutual information in section %s',key)
+            MIAnalysis = MutualInformation.MutualInformation(data_provider=self.cerebellum, pattern_generator=self.pattern_generator, layer=self.config_options[key]['layer'],
+                                                             window_length=self.config_options[key]['window_length'], time_bin = self.config_options[key]['time_bin'])
+            MIAnalysis.initialize()
+            MIAnalysis.runAtTime(self.simulation_time)
+            if self.config_options['simulation']['record_to_file']:
+                filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key
+                logger.debug('Writing mutual information from section %s to file %s',key,filename)
+                MIAnalysis.writeToFile(file_name=filename)
+                
+        return
     
         
         
+    
     

@@ -6,8 +6,9 @@ Created on Oct 9, 2013
 
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import logging
 
-
+logger = logging.getLogger('Simulation')
 
 class SimulFigure(object):
     '''
@@ -30,7 +31,7 @@ class SimulFigure(object):
         if ('simulation' in kwargs):
             self.simulation = kwargs.pop('simulation',None)
         else:
-            print 'Obligatory simulation parameter not provided'
+            logger.error('Obligatory simulation parameter not provided')
             raise Exception('NonProvidedParameter','simulation')
         
         # Get numColumns parameter
@@ -55,10 +56,6 @@ class SimulFigure(object):
             super(SimulFigure, self).__init__(self.figure,interval=1000./self.frame_rate,repeat=False,blit=False)
         else:
             super(SimulFigure, self).__init__()
-            
-        
-    
-    
         
     def add_subplot(self, **kwargs):
         '''
@@ -74,14 +71,14 @@ class SimulFigure(object):
         if ('axes_type' in kwargs):
             self.axes_type = kwargs.pop('axes_type',None)
         else:
-            print 'Obligatory axes_type parameter not provided'
+            logger.error('Obligatory axes_type parameter not provided')
             raise Exception('NonProvidedParameter','axes_type')
             
         # Get fig_position position
         if ('fig_position' in kwargs):
             self.position = kwargs.pop('fig_position',None)
         else:
-            print 'Obligatory fig_position parameter not provided'
+            logger.error('Obligatory fig_position parameter not provided')
             raise Exception('NonProvidedParameter','fig_position')
         
         # Get axes_parameters

@@ -1,6 +1,9 @@
 import numpy
 import AxesPlot
+import logging
 from mpi4py import MPI
+
+logger = logging.getLogger('Simulation')
 
 class AxesWeightHistogram(AxesPlot.AxesPlot):
     '''
@@ -25,14 +28,14 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         if ('data_provider' in kwargs):
             self.data_provider = kwargs.pop('data_provider',None)
         else:
-            print 'Obligatory data_provider parameter not provided'
+            logger.error('Obligatory data_provider parameter not provided')
             raise Exception('NonProvidedParameter','data_provider')
         
         # Get layer name parameter
         if ('layer' in kwargs):
             self.layer = kwargs.pop('layer',None)
         else:
-            print 'Obligatory layer parameter not provided'
+            logger.error('Obligatory layer parameter not provided')
             raise Exception('NonProvidedParameter','layer')
         
         # Get souce cell index parameter
@@ -91,8 +94,7 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
             else:
                 self.max_weight = 1.
         
-        width = self.max_weight/self.num_bins
-        self.positions = numpy.arange(0,self.max_weight,width)
+        self.positions = numpy.linspace(0, self.max_weight,self.num_bins)
         
         self.param['end_time'] = 0.0
         _,gcon,_ = self.data_provider.get_synaptic_weights(**self.param)
@@ -137,4 +139,5 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
             for rect, f in zip(self.axesRect, frequencies):
                 rect.set_height(f)
             
+            self.axes.set_ylim([0,max(frequencies)])
         return self.axesRect

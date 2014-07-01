@@ -1,62 +1,58 @@
 import numpy
 import AxesPlot
+import logging
 from mpi4py import MPI
 
-class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
+logger = logging.getLogger('Simulation')
+
+class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
     '''
     This class defines the link between an axes object and the dataProvider for plots.
-    '''
-    # Figure title (Figure title, X-axis title, Y-axis title)
-    figure_property_map = {'Vm': ['Membrane Potential','Vm (V)'],\
-                   'Gexc': ['Excitatory Conductance', 'Gexc (S)'],\
-                   'Ginh': ['Inhibitory Conductance','Ginh (S)']}
-    
+    '''       
     
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates an object linking the axes with the DataProvider.
         @param data_provider The dataProvider that will be used in the axes to get the data. Obligatory parameter.
-        @param property: Name of the property to plot. Obligatory parameter.
         @param layer: Name of the layer to plot. Obligatory parameter.
-        @param cell_index: Indexes of the cells to plot. Optional parameter.
+        @param source_indexes Indexes of the source cells of the synapses to get the activity.
+        @param target_indexes Indexes of the target cells of the synapses to get the activity.
         @param show_legend: True if the legend will be shown. Optional parameter. Default: True
         @param y_window_lim: Window limits in the Y-axis. Optional parameter.
         @param visible_data_only: True, it loads only the data that matches within the visualization window. Default=True
         @param load_new_data: True, it loads only the new data from the previus update call. Default=True.
         @param x_length: X-axis window limits in case of trial_per_trial figures. Optinal parameter. If x_lenght is not specified, the trial length will be used.
         '''
-        super(AxesNeuronPropertyLine, self).__init__(**kwargs)
+        
+        
+        super(AxesWeightEvolutionLine, self).__init__(**kwargs)
                 
         # Get data_provider parameter 
         if ('data_provider' in kwargs):
             self.data_provider = kwargs.pop('data_provider',None)
         else:
-            print 'Obligatory data_provider parameter not provided'
+            logger.error('Obligatory data_provider parameter not provided')
             raise Exception('NonProvidedParameter','data_provider')
-        
-        # Get property name parameter 
-        if ('property' in kwargs):
-            self.property = kwargs.pop('property',None)
-        else:
-            print 'Obligatory property parameter not provided'
-            raise Exception('NonProvidedParameter','property')
-        
-        if (self.property not in self.figure_property_map):
-            print self.property,'is not implemented as a type',type(self),'figure'
-            raise Exception('FigureNotImplemented')
         
         # Get layer name parameter
         if ('layer' in kwargs):
             self.layer = kwargs.pop('layer',None)
         else:
-            print 'Obligatory layer parameter not provided'
+            logger.error('Obligatory layer parameter not provided')
             raise Exception('NonProvidedParameter','layer')
         
-        # Get index parameter
-        if ('cell_index' in kwargs):
-            self.index = kwargs.pop('cell_index',None)
+        # Get souce cell index parameter
+        if ('source_indexes' in kwargs):
+            self.source_indexes = kwargs.pop('source_indexes',None)
         else:
-            self.index = range(self.data_provider.get_number_of_elements(layer=self.layer))
+            self.source_indexes = None
+            
+        # Get target cell index parameter
+        if ('target_indexes' in kwargs):
+            self.target_indexes = kwargs.pop('target_indexes',None)
+        else:
+            self.target_indexes = None
+        
             
         # Get y_window_lim parameter 
         if ('y_window_lim' in kwargs):
@@ -99,13 +95,34 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         It sets the title, axes titles, axes limits, legend and creates the lines.
         The DataProvider object must be initialized before calling this function.
         '''
-        self.figure_title = self.figure_property_map[self.property][0] + ' - ' + self.layer
+        self.figure_title = 'Weight Evolution - ' + self.layer
         self.figure_x_label = 'Time (s)'
-        self.figure_y_label = self.figure_property_map[self.property][1]
-         
+        self.figure_y_label = 'Weight (S)'
+        
+        # Set connection parameters
+        self.param = dict()
+        
+        self.param['synaptic_layer'] = self.layer
+        if self.target_indexes:
+            self.param['target_indexes'] = self.target_indexes
+            target_cells = self.target_indexes
+        else:
+            target_cells = range(self.data_provider.layer_map[self.layer].target_layer.number_of_neurons)
+            
+        if self.source_indexes:
+            self.param['source_indexes'] = self.source_indexes
+            source_cells = self.source_indexes
+        else:
+            source_cells = range(self.data_provider.layer_map[self.layer].source_layer.number_of_neurons)
+        
+        self.param['init_time'] = 0
+        self.param['end_time'] = 0
+        
+        self.connections = [[source,target] for source in source_cells for target in target_cells]
+        
         # Set axes lines and legends
-        data_labels = ['Cell ' + str(ind) for ind in self.index]
-        number_of_lines = len(self.index)
+        data_labels = [str(syn[0]) + ' - ' + str(syn[1]) for syn in self.connections]
+        number_of_lines = len(data_labels)
         
         self.axesLines = []
         
@@ -116,7 +133,7 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower right')
             
-        super(AxesNeuronPropertyLine, self).initialize()
+        super(AxesWeightEvolutionLine, self).initialize()
             
         return
     
@@ -153,9 +170,11 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         else:
             load_data_init = data_init_time
         
+        self.param['init_time'] = load_data_init
+        self.param['end_time'] = simulation_time
+        
         # Load data from the data provider
-        gtime,gcell_id,gvalue = self.data_provider.get_state_variable(state_variable = self.property, neuron_layer = self.layer,\
-                                                              neuron_indexes = self.index, init_time = load_data_init, end_time = simulation_time)
+        gtime,gconnections,gvalue = self.data_provider.get_synaptic_weights(**self.param)
         
         self.data_update = simulation_time
         
@@ -172,9 +191,9 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         
             # Select the values for each cell_id
             for ind in range(len(self.axesLines)):
-                cell_index = (gcell_id==self.index[ind])
-                time = gtime[cell_index]
-                value = gvalue[cell_index]
+                indexes = [index for index in range(len(self.connections)) if (gconnections[index][0]==self.connections[ind][0]) and (gconnections[index][1]==self.connections[ind][1])]
+                time = gtime
+                value = gvalue[indexes]
                 
                 old_time_data = self.axesLines[ind].get_xdata()
                 first_index = numpy.searchsorted(old_time_data, data_init_time)

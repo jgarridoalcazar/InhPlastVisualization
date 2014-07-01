@@ -1,9 +1,7 @@
 #! /usr/bin/env python
 
 import SpikingSimulation.FrequencySimulation as FrequencySimulation
-import time
 import sys
-from mpi4py import MPI 
 
 if __name__ == "__main__":
     
@@ -15,22 +13,13 @@ if __name__ == "__main__":
     system_config_file = sys.argv[1]
     
     simulation = FrequencySimulation.FrequencySimulation(config_file = system_config_file)
-    
+                
     simulation.initialize()
-    
-    comm = MPI.COMM_WORLD
 
-    init_time = time.time()
+    if simulation.config_options['simulation']['visualize_results']:
+        simulation.visualize_results()
+    else:
+        simulation.run_simulation()
+                
     
-    #if comm.Get_size()==1:
-    simulation.visualize_results()
-    #else:
-    #    simulation.run_simulation()
-    
-    end_time = time.time()
-    
-    print 'Elapsed time:',end_time-init_time
-    
-    
-    pass
-    
+    simulation.analyze_results()    
