@@ -1,75 +1,42 @@
 import numpy
+import bisect
 import AxesPlot
 import logging
+import math
 from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
-class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
+class AxesPatternLine(AxesPlot.AxesPlot):
     '''
     This class defines the link between an axes object and the dataProvider for plots.
     '''
-    # Figure title (Figure title, X-axis title, Y-axis title)
-    figure_property_map = {'Vm': ['Membrane Potential','Vm (V)'],\
-                   'Gexc': ['Excitatory Conductance', 'Gexc (S)'],\
-                   'Ginh': ['Inhibitory Conductance','Ginh (S)'],\
-                   'gL': ['Leak Conductance', 'Gleak (S)'],\
-                   'rC': ['Inverse Membrane Capacitance', 'rC (pF-1)']
-                   }
-    
     
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates an object linking the axes with the DataProvider.
-        @param data_provider The dataProvider that will be used in the axes to get the data. Obligatory parameter.
-        @param property: Name of the property to plot. Obligatory parameter.
-        @param layer: Name of the layer to plot. Obligatory parameter.
-        @param cell_index: Indexes of the cells to plot. Optional parameter.
+        @param pattern_provider: Pattern generator where we can retrieve the pattern times and cells. Optional parameter.
+        @param pattern: List of patterns to highlight. 0 is noise. Optional parameter. If nothing is specified, all the patterns will be shown.
         @param show_legend: True if the legend will be shown. Optional parameter. Default: True
-        @param y_window_lim: Window limits in the Y-axis. Optional parameter.
         @param visible_data_only: True, it loads only the data that matches within the visualization window. Default=True
         @param load_new_data: True, it loads only the new data from the previus update call. Default=True.
         @param x_length: X-axis window limits in case of trial_per_trial figures. Optinal parameter. If x_lenght is not specified, the trial length will be used.
         '''
-        super(AxesNeuronPropertyLine, self).__init__(**kwargs)
+        super(AxesPatternLine, self).__init__(**kwargs)
                 
-        # Get data_provider parameter 
-        if ('data_provider' in kwargs):
-            self.data_provider = kwargs.pop('data_provider',None)
+        # Get pattern_provider parameter 
+        if ('pattern_provider' in kwargs):
+            self.pattern_provider = kwargs.pop('pattern_provider',None)
         else:
-            logger.error('Obligatory data_provider parameter not provided')
-            raise Exception('NonProvidedParameter','data_provider')
+            logger.error('Obligatory pattern_provider parameter not provided')
+            raise Exception('NonProvidedParameter','pattern_provider')
         
-        # Get property name parameter 
-        if ('property' in kwargs):
-            self.property = kwargs.pop('property',None)
+        # Get number of patterns to highlight 
+        if ('pattern' in kwargs):
+            self.pattern = kwargs.pop('pattern',None)
         else:
-            logger.error('Obligatory property parameter not provided')
-            raise Exception('NonProvidedParameter','property')
+            self.pattern = None
         
-        if (self.property not in self.figure_property_map):
-            logger.error('%s is not implemented as a type %s figure', self.property, type(self))
-            raise Exception('FigureNotImplemented')
-        
-        # Get layer name parameter
-        if ('layer' in kwargs):
-            self.layer = kwargs.pop('layer',None)
-        else:
-            logger.error('Obligatory layer parameter not provided')
-            raise Exception('NonProvidedParameter','layer')
-        
-        # Get index parameter
-        if ('cell_index' in kwargs):
-            self.index = kwargs.pop('cell_index',None)
-        else:
-            self.index = range(self.data_provider.get_number_of_elements(layer=self.layer))
-            
-        # Get y_window_lim parameter 
-        if ('y_window_lim' in kwargs):
-            self.y_window_lim = kwargs.pop('y_window_lim',None)
-        else:
-            self.y_window_lim = None
-            
         # Get visible_data_only parameter 
         if ('visible_data_only' in kwargs):
             self.visible_data_only = kwargs.pop('visible_data_only',None)
@@ -105,24 +72,77 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         It sets the title, axes titles, axes limits, legend and creates the lines.
         The DataProvider object must be initialized before calling this function.
         '''
-        self.figure_title = self.figure_property_map[self.property][0] + ' - ' + self.layer
+        self.figure_title = 'Pattern selector'
         self.figure_x_label = 'Time (s)'
-        self.figure_y_label = self.figure_property_map[self.property][1]
+        self.figure_y_label = ''
          
         # Set axes lines and legends
-        data_labels = ['Cell ' + str(ind) for ind in self.index]
-        number_of_lines = len(self.index)
+        if self.pattern_provider:
+            if not self.pattern:
+                self.pattern = range(self.pattern_provider.number_of_patterns+1)
+        else:
+            self.pattern = [0]
+        
+        self.time_bin = 1.e-3
+        self.inv_time_bin = 1./self.time_bin
+        
+        # Initialize the pattern generator information
+        # Generate the time bin matrix
+        self.total_time = self.pattern_provider.simulation_time
+        self.bin_time_init = numpy.linspace(0.0, self.total_time-self.time_bin, num=self.total_time*self.inv_time_bin)
+        
+        # Initialize a matrix
+        self.num_patterns = len(self.pattern)
+        self.num_bins = len(self.bin_time_init)
+        
+        # Calculate the time of each pattern interval
+        time_end_of_pattern = self.pattern_provider.pattern_length_cum
+        
+        # Calculate the bin of each pattern interval. Check the round of the last bin to avoid out of range
+        bin_end_of_pattern = numpy.floor(time_end_of_pattern * self.inv_time_bin).astype(int)
+        if (bin_end_of_pattern[-1]>=self.num_bins):
+            bin_end_of_pattern[-1]=self.num_bins-1
+        bin_init_of_pattern = numpy.append([0],bin_end_of_pattern[:-1])
+        if (bin_init_of_pattern[-1]>=self.num_bins):
+            bin_init_of_pattern[-1]=self.num_bins-1
+        
+        # Final matrix indicating which bins are considered of each pattern
+        self.bin_is_pattern = numpy.empty((self.num_patterns, self.num_bins),dtype='bool')
+        self.bin_is_pattern[:,:] = False
+        
+        for value in self.pattern:
+            for index in self.pattern_provider.pattern_id_index[value]:
+                init_bin = bin_init_of_pattern[index]
+                end_bin = bin_end_of_pattern[index]
+                
+                list_of_bins = range(init_bin,end_bin)
+                
+                # Add the time of the initial bin (if exists)
+                self.bin_is_pattern[value,list_of_bins] = True
+        
+        # Initialize the axes
+        data_labels = []
+        for pat in self.pattern:
+            if pat:
+                data_labels.append('Pattern '+str(pat))
+            else:
+                data_labels.append('Noise')
+        
+        number_of_lines = len(data_labels)
         
         self.axesLines = []
         
         for _ in range(number_of_lines):
-            newLine, = self.axes.plot([],[])
+            #newLine = self.axes.scatter([],[],marker='.')
+            newLine, = self.axes.plot([], [])
             self.axesLines.append(newLine)
         
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower right')
             
-        super(AxesNeuronPropertyLine, self).initialize()
+        self.axes.set_ylim([-0.05,1.05])  
+            
+        super(AxesPatternLine, self).initialize()
             
         return
     
@@ -160,8 +180,8 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
             load_data_init = data_init_time
         
         # Load data from the data provider
-        gtime,gcell_id,gvalue = self.data_provider.get_state_variable(state_variable = self.property, neuron_layer = self.layer,\
-                                                              neuron_indexes = self.index, init_time = load_data_init, end_time = simulation_time)
+        init_bin = int(math.floor(load_data_init*self.inv_time_bin))
+        end_bin = int(math.floor(simulation_time*self.inv_time_bin))
         
         self.data_update = simulation_time
         
@@ -175,23 +195,22 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         
             y_limits = range(2)
             initialized = False
-        
-            # Select the values for each cell_id
-            for ind in range(len(self.axesLines)):
-                cell_index = (gcell_id==self.index[ind])
-                time = gtime[cell_index]
-                value = gvalue[cell_index]
-                
-                old_time_data = self.axesLines[ind].get_xdata()
-                first_index = numpy.searchsorted(old_time_data, data_init_time)
-                new_time_data = numpy.append(old_time_data[first_index:],time)
             
-                old_signal_data = self.axesLines[ind].get_ydata()
-                new_signal_data = old_signal_data[first_index:]
-                new_signal_data = numpy.append(new_signal_data, value)
+            sel_time = self.bin_time_init[init_bin:end_bin]
+            
+            for index,_ in enumerate(self.pattern):
+                sel_data = self.bin_is_pattern[index,init_bin:end_bin]
                 
-                self.axesLines[ind].set_xdata(new_time_data)
-                self.axesLines[ind].set_ydata(new_signal_data)
+                old_time_data = self.axesLines[index].get_xdata()
+                first_index = numpy.searchsorted(old_time_data, data_init_time)
+                new_time_data = numpy.append(old_time_data[first_index:],sel_time)
+            
+                old_signal_data = self.axesLines[index].get_ydata()
+                new_signal_data = old_signal_data[first_index:]
+                new_signal_data = numpy.append(new_signal_data, sel_data)
+                
+                self.axesLines[index].set_xdata(new_time_data)
+                self.axesLines[index].set_ydata(new_signal_data)
                 
                 if (new_signal_data.size):
                     if (initialized):
@@ -201,12 +220,5 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
                         initialized = True
                         y_limits[0] = numpy.min(new_signal_data)
                         y_limits[1] = numpy.max(new_signal_data)
-                
-            if (self.y_window_lim is not None):
-                self.axes.set_ylim(self.y_lim)
-            elif initialized:
-                self.axes.set_ylim(y_limits)
-            else:
-                self.axes.set_ylim([0,1])  
-    
+            
         return self.axesLines

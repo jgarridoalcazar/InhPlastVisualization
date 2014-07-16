@@ -27,6 +27,7 @@ class NestCerebellarModel(CerebellarModel):
     # Cell name translation
     cellNameTranslatorDict = {
          'ConductanceLIF' : 'iaf_cond_exp',
+         'ConductanceLIFwIP': 'iaf_cond_exp_ip',
          'CurrentLIF' : 'iaf_neuron'
     }
 
@@ -43,14 +44,22 @@ class NestCerebellarModel(CerebellarModel):
         't_ref': 'tref*1.e3', # Refractory period in ms
         'C_m': 'cm*1.e12', # Membrane capacitance in pF
         'tau_m': 'cm/grest*1.e3', # Membrane time constant in ms
-        'tau_minus':'tau_minus*1.e3' # Time constant of the post-pre part in ms
+        'tau_minus':'tau_minus*1.e3', # Time constant of the post-pre part in ms
+        # Intrinsic plasticity parameters
+        'tau_ip':'tau_ip*1.e3', # Time constant of the intrinsic plasticity in ms
+        'beta':'beta_ip*1.', # Beta parameter of the IP (unitless)
+        'epsilon_rC': 'epsilon_rc_ip*1.', # epsilon_rC parameter of the IP (unitless)
+        'epsilon_rR': 'epsilon_rr_ip*1.', # epsilon_rR parameter of the IP (unitless)
+        'r_C': '1./(cm*1.e12)' # Inverse of the membrane capacitance
     }
     
     # This dictionary maps the state variables as used in the config file with the state variable names in NEST.
     stateTranslatorDict = {
         'Vm': ['V_m',1.e-3], # Membrane potential
-        'Gexc': ['g_ex',1e-9], # Excitatory conductance
-        'Ginh': ['g_in',1e-9] # Inhibitory conductance
+        'Gexc': ['g_ex',1.e-9], # Excitatory conductance
+        'Ginh': ['g_in',1.e-9], # Inhibitory conductance
+        'rC': ['r_C',1.], # Excitatory conductance
+        'gL': ['g_L',1.] # Excitatory conductance
     }
     
     # Learning rule translation
@@ -70,14 +79,15 @@ class NestCerebellarModel(CerebellarModel):
     
     # Connectivity pattern translator
     connectivityNameTranslatorDict = {
-        'randomn2one': ('fixed_indegree',['indegree']),
-        'random_with_probability': ('pairwise_bernoulli',['p'])
+        'randomn2one': ('fixed_indegree',['indegree','autapses']),
+        'random_with_probability': ('pairwise_bernoulli',['p','autapses'])
     }
     
     # This dictionary maps the connectivity configuration parameters into the NEST connectivity parameters (used in the keys).
     connectivityTranslatorDict = { 
         'indegree':'number_of_source_cells', # Target cell fan-in
         'p': 'connection_probability*1.', # Probability of connection
+        'autapses': 'allow_auto_connection' # Connections from one node to itself are allowed
     }
     
     # Weight initialization translator
@@ -151,6 +161,8 @@ class NestCerebellarModel(CerebellarModel):
         
         super(NestCerebellarModel, self).initialize_simulation()
         
+        nest.Install('glplasticitymodule')
+
         nest.sr("M_WARNING setverbosity")
         
         nest.ResetKernel()
@@ -717,6 +729,16 @@ class NestCerebellarModel(CerebellarModel):
         # Gather the time and neuron_id arrays
         comm.Gatherv(time, [gtime, num_sent, offset, MPI.DOUBLE], root=0)
         comm.Gatherv(neuron_id, [gneuron_id, num_sent, offset, MPI.UNSIGNED_LONG], root=0)
+        
+#         # Calculate the average activity
+#         av_activity = float(gneuron_id.shape[0])/(len(neuron_indexes)*(end_time-init_time))
+#         logger.debug('Average firing rate in layer %s: %s',neuron_layer_name, av_activity)
+#         av_activity_per_cell = [numpy.count_nonzero(gneuron_id==num_cell)/(8.*(end_time-init_time)) for num_cell in (neuron_indexes-neuron_layer.MinIndex)]
+#         logger.debug('Average spikes per cycle: %s', av_activity_per_cell)
+#         bins = numpy.arange(-0,4.5)
+#         av_activity_histogram = numpy.histogram(av_activity_per_cell,bins)[0]
+#         logger.debug('Histogram of spikes per cycle: %s', av_activity_histogram)
+        
         
         # print 'Process',self.get_my_process_id(),':','Collected time ->',gtime,'Collected Neurons ->',gneuron_id
         return (gtime,gneuron_id)

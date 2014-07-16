@@ -3,7 +3,6 @@ Created on May 27, 2014
 
 @author: Jesus Garrido (jgarridoalcazar at gmail.com)
 '''
-import FrequencySimulation
 import numpy
 import math
 import itertools
@@ -13,11 +12,6 @@ import os
 import time
 import subprocess
 
-import scipy.interpolate
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
-import matplotlib.pyplot as plt
 
 from popen2 import popen2
 
@@ -65,9 +59,15 @@ class ParameterSearch(object):
         # Set important undefined options
         if 'visualize_results' not in self.config_options['simulation']:
             self.config_options['simulation']['visualize_results'] = False
+        
+        if 'seed' not in self.config_options['simulation']:
+            self.config_options['simulation']['seed'] = time()
             
         if 'launcher' not in self.config_options:
             self.config_options['launcher'] = dict()
+            
+        if 'number_of_repetitions' not in self.config_options['launcher']:
+            self.config_options['launcher']['number_of_repetitions'] = 1
         
         # By default 1 process is used for the simulations
         if 'num_mpi_processes' not in self.config_options['launcher']:
@@ -177,17 +177,20 @@ class ParameterSearch(object):
             simulation_options = list() 
             
             for tuple_act in combinations:
+                for seed in range(self.config_options['simulation']['seed'],self.config_options['simulation']['seed']+self.config_options['launcher']['number_of_repetitions']):
                 # Copy the dictionary and change every single parameter 
-                options_copy = copy.deepcopy(self.config_options)
+                    options_copy = copy.deepcopy(self.config_options)
             
-                logger.info('Setting parameters to the following values: %s',tuple_act)
-                sim_name = ''
-                for param_dic, value in zip(self.parameter_dic,tuple_act):
-                    options_copy[param_dic['section']][param_dic['parameter']] = value
-                    sim_name += '_' + str(value)
+                    logger.info('Setting parameters to the following values: %s',tuple_act)
+                    logger.debug('Using seed %s', seed)
+                    options_copy['simulation']['seed'] = seed
+                    sim_name = '_' + str(seed) 
+                    for param_dic, value in zip(self.parameter_dic,tuple_act):
+                        options_copy[param_dic['section']][param_dic['parameter']] = value
+                        sim_name += '_' + str(value)
                     
-                options_copy['simulation']['simulation_name'] += sim_name
-                simulation_options.append(options_copy)
+                    options_copy['simulation']['simulation_name'] += sim_name
+                    simulation_options.append(options_copy)
         else:
             simulation_options = [options_copy]
             
@@ -207,8 +210,12 @@ class ParameterSearch(object):
         '''
         Launch a new simulation according to the proposed method.
         '''
+        import FrequencySimulation
         
         for index,config in enumerate(config_options):
+            logger.debug('Writing configuration file for job %s',index)
+            self._save_configuration_file(config)
+            
             logger.info('Launching simulation %s of %s', index, len(config_options))
             # Create, initialize and launch the simulation
             logger.debug('Creating the simulation object')
@@ -320,7 +327,7 @@ class ParameterSearch(object):
         buf += '#$ -N ' + self.config_options['simulation']['simulation_name'] + '\n'
         buf += '#$ -o ' + self.config_options['simulation']['data_path'] + '/\n'
         buf += '#$ -M jesusgarrido@ugr.es\n'
-        buf += '#$ -m abe\n'
+        buf += '#$ -m ae\n'
         buf += '#$ -j y\n'
         buf += '#$ -cwd\n'
         buf += '#$ -V\n'
@@ -333,7 +340,7 @@ class ParameterSearch(object):
         buf += '\nPARAM_FILE=' + job_table_file + '\n'
         buf += 'PARAM=$(cat $PARAM_FILE | head -n $SGE_TASK_ID | tail -n 1)\n\n'
         
-        buf += 'mpirun -n ' + str(self.config_options['launcher']['num_mpi_processes']) + ' ' + self.config_options['launcher']['python_exec'] + ' ./src/LaunchSimulation.py $PARAM\n'
+        buf += 'mpirun -n ' + str(self.config_options['launcher']['num_mpi_processes']) + ' -ppn 1 ' + self.config_options['launcher']['python_exec'] + ' ./src/LaunchSimulation.py $PARAM\n'
 
         logger.debug('Generated qsub script:')
         logger.debug(buf)        
@@ -347,76 +354,6 @@ class ParameterSearch(object):
  
         # Print your job and the response to the screen
         logger.info(output.read())
-        
-    def visualize_results(self):
-        '''
-        Visualize the results only if the number of parameters is 1 or 2. For the moment it only works
-        with two parameters, one pattern and one cell.
-        '''
 
-        # Generate the config option dictionaries
-        simulation_options = self._generate_config_dicts()
-        
-        if len(self.parameter_dic)!=2:
-            logger.error('Number of parameters is different than 2. It can not be represented')
-            raise Exception('InvalidNumberOfParameters')
-        
-        # Generate the labels for each axis    
-        labels = []    
-        axis = []
-        values = []
-        for param in self.parameter_dic:
-            labels.append(param['section']+'.'+param['parameter'])
-            axis.append([])
-    
-        # Extract every mutual information to explore
-        parameter_keys = [key for key in self.config_options.keys() if key.startswith('mutual_information')]
-        for key in parameter_keys:        
-            # Generate the configuration options
-            for index,config in enumerate(simulation_options):
-                logger.debug('Loading configuration file for job %s',index)
-                file_name = self._get_configuration_file_name(config)
-                
-                # Load the MI file
-                mi_file = os.path.dirname(os.path.realpath(file_name)) + '/' + key
-                value = numpy.loadtxt(mi_file)
-                values.append(float(value))
-                
-                for index,param_dic in enumerate(self.parameter_dic):
-                    axis[index].append(config[param_dic['section']][param_dic['parameter']])
-
-
-                    
-            # Create the figure    
-            fig = plt.figure()
-            #ax = fig.gca(projection='3d')
-            ax = fig.gca()
-            x = numpy.array(axis[0])*1e9
-            y = numpy.array(axis[1])*1.
-            z = values
-
-            # Set up a regular grid of interpolation points
-            xi, yi = numpy.linspace(min(x), max(x), 100), numpy.linspace(min(y), max(y), 100)
-            xi, yi = numpy.meshgrid(xi, yi)
-
-            # Interpolate; there's also method='cubic' for 2-D data such as here
-            zi = scipy.interpolate.griddata((x, y), z, (xi, yi), method='linear')
-
-            surf = ax.imshow(zi, vmin=min(z), vmax=max(z), origin='lower', extent=[min(x), max(x), min(y), max(y)])
-            #surf = ax.plot_surface(xi, yi, zi, rstride=1, cstride=1, cmap=cm.coolwarm, linewidth=0, antialiased=False)
-            ax.scatter(x, y, c=z)
-            fig.colorbar(surf, shrink=0.5, aspect=5)
-            # Interpolate the data to generate the mesh
-            ax.set_title(key)
-            ax.set_xlabel(labels[0])
-            ax.set_ylabel(labels[1])
-            fig.savefig(key+'.png')
-            
-
-            
-        #plt.show()
-            
-    
-        
         
     

@@ -16,6 +16,7 @@ class NeuronLayer(InputLayer.InputLayer):
     
     template_model_parameters = {
                          'ConductanceLIF': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus'],
+                         'ConductanceLIFwIP': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus','tau_ip','beta_ip','epsilon_rc_ip','epsilon_rr_ip'],
                          'CurrentLIF': ['cm','grest','erest','eth','tref','tau_minus']
                         }
 

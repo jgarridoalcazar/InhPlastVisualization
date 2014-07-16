@@ -19,6 +19,8 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         @param data_provider The dataProvider that will be used in the axes to get the data. Obligatory parameter.
         @param pattern_provider: Pattern generator where we can retrieve the pattern times and cells. Obligatory parameter.
         @param layer: Name of the synaptic layer to plot. Obligatory parameter.
+        @param source_indexes Indexes of the source cells of the synapses to get the activity.
+        @param target_indexes Indexes of the target cells of the synapses to get the activity.
         @param pattern: List of patterns to highlight. From 0 to number of patterns-1. Optional parameter. If nothing is specified, all the patterns will be shown.
         @param show_legend: True if the legend will be shown. Optional parameter. Default: True
         '''
@@ -49,6 +51,18 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         else:
             logger.error('Obligatory layer parameter not provided')
             raise Exception('NonProvidedParameter','layer')
+        
+        # Get souce cell index parameter
+        if ('source_indexes' in kwargs):
+            self.source_indexes = kwargs.pop('source_indexes',None)
+        else:
+            self.source_indexes = None
+            
+        # Get target cell index parameter
+        if ('target_indexes' in kwargs):
+            self.target_indexes = kwargs.pop('target_indexes',None)
+        else:
+            self.target_indexes = None
         
         # Get number of patterns to highlight 
         if ('pattern' in kwargs):
@@ -82,6 +96,13 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         self.param['synaptic_layer'] = self.layer
         self.param['init_time'] = 0
         self.param['end_time'] = 0
+        
+        if self.target_indexes:
+            self.param['target_indexes'] = self.target_indexes
+            
+        if self.source_indexes:
+            self.param['source_indexes'] = self.source_indexes
+        
         
         data_labels = ['Pattern '+str(pat+1) for pat in self.pattern]
         

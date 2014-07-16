@@ -96,7 +96,13 @@ class SynapticLayer(object):
                     if (param in kwargs):
                         self.connectivity_parameters[param] = kwargs.pop(param)
                     else:
-                        logger.warning('Non-specified connectivity parameter: %s in layer %s. Using default value', param, kwargs['name'])
+                        logger.warning('Non-specified connectivity parameter: %s in layer %s. Using default value', param, self.__name__)
+                
+                if 'allow_auto_connection' in kwargs:
+                    self.connectivity_parameters['allow_auto_connection'] = kwargs.pop('allow_auto_connection')
+                else:
+                    self.connectivity_parameters['allow_auto_connection'] = True
+                
                 # Generate the individual connections
                 #self.template_connectivity_parameters[self.connectivity_type][-1]()
             else:

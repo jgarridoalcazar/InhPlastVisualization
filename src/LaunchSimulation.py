@@ -16,10 +16,12 @@ if __name__ == "__main__":
                 
     simulation.initialize()
 
-    if simulation.config_options['simulation']['visualize_results']:
-        simulation.visualize_results()
+    if simulation.config_options['simulation']['visualize_animation']:
+        simulation.visualize_animation()
     else:
         simulation.run_simulation()
                 
+    if simulation.config_options['simulation']['visualize_results']:
+        simulation.visualize_results()
     
     simulation.analyze_results()    
