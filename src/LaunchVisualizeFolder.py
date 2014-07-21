@@ -99,13 +99,16 @@ def visualize_results(name_list, seed_values, param1_values, param2_values):
     fig = plt.figure()
     #ax = fig.gca(projection='3d')
     ax = fig.gca()
+    #x = numpy.log(numpy.array(axis[0])*1.)/numpy.log(1.5)
     x = numpy.array(axis[0])*1.e9
+    #y = numpy.log(numpy.array(axis[1])*1.)/numpy.log(1.5)
     y = numpy.array(axis[1])*1.
     z = MI_Av_Values
     
     # Set up a regular grid of interpolation points
     xi, yi = numpy.linspace(min(x), max(x), 100), numpy.linspace(min(y), max(y), 100)
     xi, yi = numpy.meshgrid(xi, yi)
+    
 
     # Interpolate; there's also method='cubic' for 2-D data such as here
     zi = scipy.interpolate.griddata((x, y), z, (xi, yi), method='linear')
@@ -124,14 +127,8 @@ def visualize_results(name_list, seed_values, param1_values, param2_values):
     fig = plt.figure()
     #ax = fig.gca(projection='3d')
     ax = fig.gca()
-    x = numpy.array(axis[0])*1.e9
-    y = numpy.array(axis[1])*1.
     z = Freq_Av_Values
     
-    # Set up a regular grid of interpolation points
-    xi, yi = numpy.linspace(min(x), max(x), 100), numpy.linspace(min(y), max(y), 100)
-    xi, yi = numpy.meshgrid(xi, yi)
-
     # Interpolate; there's also method='cubic' for 2-D data such as here
     zi = scipy.interpolate.griddata((x, y), z, (xi, yi), method='linear')
 

@@ -14,9 +14,14 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
                    'Gexc': ['Excitatory Conductance', 'Gexc (S)'],\
                    'Ginh': ['Inhibitory Conductance','Ginh (S)'],\
                    'gL': ['Leak Conductance', 'Gleak (S)'],\
-                   'rC': ['Inverse Membrane Capacitance', 'rC (pF-1)']
+                   'rC': ['Inverse Membrane Capacitance', 'rC (pF-1)'],\
+                   'Vth': ['Threshold Potential', 'Vth (V)'],\
+                   'r0': ['Gain Constant', 'Gain (Hz)'],\
+                   'ualpha': ['Potential Scale', 'u_alpha (V)'],\
+                   'refractoriness': ['Refractoriness', 'Refr.'],\
+                   'gain': ['Instantaneous Frequency', 'Freq. (Hz)'],\
+                   'firing_probability': ['Firing Probability', 'FProp']
                    }
-    
     
     def __init__(self,**kwargs):
         '''

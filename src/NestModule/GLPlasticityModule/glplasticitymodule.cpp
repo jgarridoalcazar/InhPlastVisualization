@@ -37,6 +37,7 @@
 // include headers with your own stuff
 #include "glplasticitymodule.h"
 #include "iaf_cond_exp_ip.h"
+#include "iaf_cond_exp_sto_ip.h"
 #include "drop_odd_spike_connection.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
@@ -83,7 +84,15 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
 
   void mynest::GLPlasticityModule::init(SLIInterpreter *i, nest::Network*)
   {
-    /* Register a neuron or device model.
+	/* Register a neuron or device model.
+	   Give node type as template argument and the name as second argument.
+	   The first argument is always a reference to the network.
+	   Return value is a handle for later unregistration.
+	*/
+	nest::register_model<iaf_cond_exp_sto_ip>(nest::NestModule::get_network(),
+	                                          "iaf_cond_exp_sto_ip");
+
+	/* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
        The first argument is always a reference to the network.
        Return value is a handle for later unregistration.

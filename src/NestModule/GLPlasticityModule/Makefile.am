@@ -26,6 +26,7 @@ lib_LTLIBRARIES=      glplasticitymodule.la libglplasticitymodule.la
 
 glplasticitymodule_la_CXXFLAGS= @AM_CXXFLAGS@
 glplasticitymodule_la_SOURCES=  glplasticitymodule.cpp      glplasticitymodule.h      \
+                      iaf_cond_exp_sto_ip.cpp 	iaf_cond_exp_sto_ip.h \
                       iaf_cond_exp_ip.cpp 	iaf_cond_exp_ip.h \
                       drop_odd_spike_connection.h
 glplasticitymodule_la_LDFLAGS=  -module

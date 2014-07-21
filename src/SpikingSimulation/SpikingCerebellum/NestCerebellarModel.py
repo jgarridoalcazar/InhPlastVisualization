@@ -28,6 +28,7 @@ class NestCerebellarModel(CerebellarModel):
     cellNameTranslatorDict = {
          'ConductanceLIF' : 'iaf_cond_exp',
          'ConductanceLIFwIP': 'iaf_cond_exp_ip',
+         'ConductanceLIFStowIP': 'iaf_cond_exp_sto_ip',
          'CurrentLIF' : 'iaf_neuron'
     }
 
@@ -50,7 +51,10 @@ class NestCerebellarModel(CerebellarModel):
         'beta':'beta_ip*1.', # Beta parameter of the IP (unitless)
         'epsilon_rC': 'epsilon_rc_ip*1.', # epsilon_rC parameter of the IP (unitless)
         'epsilon_rR': 'epsilon_rr_ip*1.', # epsilon_rR parameter of the IP (unitless)
-        'r_C': '1./(cm*1.e12)' # Inverse of the membrane capacitance
+        'r_C': '1./(cm*1.e12)', # Inverse of the membrane capacitance
+        # Stochastic IP model parameters
+        'ip_rate': 'ip_rate', # IP rate
+        'target_firing': 'target_freq' # Target firing frequency
     }
     
     # This dictionary maps the state variables as used in the config file with the state variable names in NEST.
@@ -59,7 +63,13 @@ class NestCerebellarModel(CerebellarModel):
         'Gexc': ['g_ex',1.e-9], # Excitatory conductance
         'Ginh': ['g_in',1.e-9], # Inhibitory conductance
         'rC': ['r_C',1.], # Excitatory conductance
-        'gL': ['g_L',1.] # Excitatory conductance
+        'gL': ['g_L',1.], # Excitatory conductance
+        'Vth': ['V_th',1.e-3], # Threshold potential
+        'r0': ['r_0',1.], # Gain frequency
+        'ualpha': ['u_alpha',1.e-3], # Alpha parameter
+        'refractoriness': ['refractoriness',1.], # Refreactoriness
+        'gain': ['gain',1.], # Current frequency
+        'firing_probability': ['firing_probability',1.] # Firing probability
     }
     
     # Learning rule translation

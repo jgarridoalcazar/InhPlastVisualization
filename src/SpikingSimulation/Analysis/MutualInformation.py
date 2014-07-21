@@ -184,7 +184,7 @@ class MutualInformation(Analysis.Analysis):
             spike_bin_index = numpy.floor(gtime*self.inv_time_bin).astype(int)
             
             self.av_firing_rate = float(len(gtime))/(len(self.cell_index)*(simulation_time-load_data_init))
-            logger.info('Average firing rate in MI analysis: %sHz',str(av_firing_rate))
+            logger.info('Average firing rate in MI analysis: %sHz',str(self.av_firing_rate))
             
             cell_index = numpy.array([self.cell_map[value] for value in gcell_id])
             
@@ -201,6 +201,13 @@ class MutualInformation(Analysis.Analysis):
 #             
 #             # Calculate probability of pattern
 #             pattern_prob = numpy.sum(self.bin_is_pattern[:,init_bin:end_bin],axis=1) / float(end_bin-init_bin)
+            
+            # Calculate hit matrix
+            patterns, hit_matrix = calc_Hit_Matrix(self.bin_has_fired[:,init_bin:end_bin], self.bin_pattern[init_bin:end_bin])
+            
+            logger.info('Pattern list %s', str(patterns))
+            logger.info('Hit matrix')
+            logger.info(str(hit_matrix))
             
             # Calculate the firing state of the cell population
             cell_state = calc_Firing_State(self.bin_has_fired[:,init_bin:end_bin])
@@ -296,6 +303,27 @@ class MutualInformation(Analysis.Analysis):
         '''
         
         numpy.savetxt(file_name, [self.mutual_information, self.av_firing_rate], delimiter='\t', newline='\n')
+
+def calc_Hit_Matrix(cell_firing, bin_pattern):
+    '''
+    Calculate the hit matrix with 1 line for each cell and 1 column for each pattern (including noise).
+    @param cell_firing Boolean matrix including 1 line for each cell and 1 column for each time bin.
+    @param bin_pattern Array with the index of the pattern for each bin.
+    '''
+    patterns = numpy.unique(bin_pattern)
+    
+    hit_matrix = numpy.empty((len(cell_firing),len(patterns)))
+    
+    for index, pat in enumerate(patterns):
+        pattern_bin_index = (bin_pattern==pat)
+        
+        for cell_index in range(len(cell_firing)):
+            hit_matrix[cell_index,index] = numpy.count_nonzero(cell_firing[cell_index,pattern_bin_index])/float(numpy.count_nonzero(pattern_bin_index))   
+    
+    return patterns, hit_matrix
+    
+    
+     
 
 def calc_Firing_State(fired_matrix):
     '''
