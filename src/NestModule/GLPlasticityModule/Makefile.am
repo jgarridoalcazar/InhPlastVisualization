@@ -26,9 +26,13 @@ lib_LTLIBRARIES=      glplasticitymodule.la libglplasticitymodule.la
 
 glplasticitymodule_la_CXXFLAGS= @AM_CXXFLAGS@
 glplasticitymodule_la_SOURCES=  glplasticitymodule.cpp      glplasticitymodule.h      \
-                      iaf_cond_exp_sto_ip.cpp 	iaf_cond_exp_sto_ip.h \
-                      iaf_cond_exp_ip.cpp 	iaf_cond_exp_ip.h \
-                      drop_odd_spike_connection.h
+				  iaf_cond_exp_sto_ip.cpp 	iaf_cond_exp_sto_ip.h \
+                  iaf_cond_exp_ip.cpp 	iaf_cond_exp_ip.h \
+				  histentry_sym.cpp			histentry_sym.h \
+				  archiving_node_sym.cpp	archiving_node_sym.h \
+                  stdp_sym_connection_hom.cpp	stdp_sym_connection_hom.h
+
+
 glplasticitymodule_la_LDFLAGS=  -module
 
 libglplasticitymodule_la_CXXFLAGS= $(glplasticitymodule_la_CXXFLAGS) -DLINKED_MODULE

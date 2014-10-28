@@ -3,7 +3,7 @@
  *
  *  This file is based on the iaf_cond_exp cell model distributed with NEST.
  *  
- *  Modified by: Jesœs Garrido (jgarridoalcazar at gmail.com) in 2014.
+ *  Modified by: Jesï¿½s Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
 #include "iaf_cond_exp_ip.h"
@@ -243,7 +243,7 @@ mynest::iaf_cond_exp_ip::Buffers_::Buffers_(const Buffers_&, iaf_cond_exp_ip& n)
  * ---------------------------------------------------------------- */
 
 mynest::iaf_cond_exp_ip::iaf_cond_exp_ip()
-  : nest::Archiving_Node(), 
+  : mynest::Archiving_Node_Sym(),
     P_(), 
     S_(P_),
     B_(*this)
@@ -252,7 +252,7 @@ mynest::iaf_cond_exp_ip::iaf_cond_exp_ip()
 }
 
 mynest::iaf_cond_exp_ip::iaf_cond_exp_ip(const iaf_cond_exp_ip& n)
-  : nest::Archiving_Node(n), 
+  : mynest::Archiving_Node_Sym(n),
     P_(n.P_), 
     S_(n.S_),
     B_(n.B_, *this)
@@ -282,7 +282,7 @@ void mynest::iaf_cond_exp_ip::init_buffers_()
   B_.spike_exc_.clear();          // includes resize
   B_.spike_inh_.clear();          // includes resize
   B_.currents_.clear();           // includes resize
-  nest::Archiving_Node::clear_history();
+  mynest::Archiving_Node_Sym::clear_history();
 
   B_.logger_.reset();
 
@@ -421,8 +421,8 @@ void mynest::iaf_cond_exp_ip::handle(nest::CurrentEvent& e)
 {
   assert(e.get_delay() > 0);
 
-  const double_t c=e.get_current();
-  const double_t w=e.get_weight();
+  const nest::double_t c=e.get_current();
+  const nest::double_t w=e.get_weight();
 
   // add weighted current; HEP 2002-10-04
   B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), 

@@ -3,7 +3,7 @@
  *
  *  This file is based on the iaf_cond_exp cell model distributed with NEST.
  *  
- *  Modified by: Jesœs Garrido (jgarridoalcazar at gmail.com) in 2014.
+ *  Modified by: Jesï¿½s Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
 #ifndef IAF_COND_EXP_STO_IP_H
@@ -15,7 +15,7 @@
 
 #include "nest.h"
 #include "event.h"
-#include "archiving_node.h"
+#include "archiving_node_sym.h"
 #include "ring_buffer.h"
 #include "connection.h"
 #include "universal_data_logger.h"
@@ -104,7 +104,7 @@ namespace mynest
   extern "C"
   int iaf_cond_exp_sto_ip_dynamics (double, const double*, double*, void*);
   
-  class iaf_cond_exp_sto_ip : public nest::Archiving_Node
+  class iaf_cond_exp_sto_ip : public mynest::Archiving_Node_Sym
   {
     
   public:        
@@ -244,7 +244,7 @@ namespace mynest
       // but remain unchanged during calibration. Since it is initialized with
       // step_, and the resolution cannot change after nodes have been created,
       // it is safe to place both here.
-      double_t step_;           //!< step size in ms
+      nest::double_t step_;           //!< step size in ms
       double   IntegrationStep_;//!< current integration time step, updated by GSL
 
       /** 
@@ -326,7 +326,7 @@ namespace mynest
   {
     P_.get(d);
     S_.get(d);
-    nest::Archiving_Node::get_status(d);
+    mynest::Archiving_Node_Sym::get_status(d);
 
     (*d)[nest::names::recordables] = recordablesMap_.get_list();
   }
@@ -343,7 +343,7 @@ namespace mynest
     // write them back to (P_, S_) before we are also sure that 
     // the properties to be set in the parent class are internally 
     // consistent.
-    nest::Archiving_Node::set_status(d);
+    mynest::Archiving_Node_Sym::set_status(d);
 
     // if we get here, temporaries contain consistent set of properties
     P_ = ptmp;

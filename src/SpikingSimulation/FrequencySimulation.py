@@ -3,6 +3,9 @@ Created on May 27, 2014
 
 @author: Jesus Garrido (jgarridoalcazar at gmail.com)
 '''
+# Nest has to be imported before mpi4py
+import SpikingCerebellum.NestCerebellarModel as NestGenerator
+            
 import bisect
 import ntpath
 import logging
@@ -71,7 +74,6 @@ class FrequencySimulation(object):
         # Initialize cerebellar model
         logger.debug('Creating cerebellum generator')
         if 'run_simulation' in self.config_options['simulation'] and self.config_options['simulation']['run_simulation']:
-            import SpikingCerebellum.NestCerebellarModel as NestGenerator
             self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
         else:
             self.config_options['simulation']['run_simulation'] = False

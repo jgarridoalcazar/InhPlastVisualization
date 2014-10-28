@@ -3,7 +3,7 @@
  *
  *  This file is based on the iaf_cond_exp cell model distributed with NEST.
  *  
- *  Modified by: Jesœs Garrido (jgarridoalcazar at gmail.com) in 2014.
+ *  Modified by: Jesï¿½s Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
 #include "iaf_cond_exp_sto_ip.h"
@@ -260,7 +260,7 @@ mynest::iaf_cond_exp_sto_ip::Buffers_::Buffers_(const Buffers_&, iaf_cond_exp_st
  * ---------------------------------------------------------------- */
 
 mynest::iaf_cond_exp_sto_ip::iaf_cond_exp_sto_ip()
-  : nest::Archiving_Node(), 
+  : mynest::Archiving_Node_Sym(),
     P_(), 
     S_(P_),
     B_(*this)
@@ -269,7 +269,7 @@ mynest::iaf_cond_exp_sto_ip::iaf_cond_exp_sto_ip()
 }
 
 mynest::iaf_cond_exp_sto_ip::iaf_cond_exp_sto_ip(const iaf_cond_exp_sto_ip& n)
-  : nest::Archiving_Node(n), 
+  : mynest::Archiving_Node_Sym(n),
     P_(n.P_), 
     S_(n.S_),
     B_(n.B_, *this)
@@ -299,7 +299,7 @@ void mynest::iaf_cond_exp_sto_ip::init_buffers_()
   B_.spike_exc_.clear();          // includes resize
   B_.spike_inh_.clear();          // includes resize
   B_.currents_.clear();           // includes resize
-  nest::Archiving_Node::clear_history();
+  mynest::Archiving_Node_Sym::clear_history();
 
   B_.logger_.reset();
 
@@ -424,9 +424,9 @@ void mynest::iaf_cond_exp_sto_ip::update(nest::Time const & origin, const nest::
     }
 
     // Update intrinsic plasticity parameters
-	double_t old_gain = S_.y_[State_::R_0];
-    double_t old_thres = S_.y_[State_::V_TH];
-    double_t old_alpha = S_.y_[State_::U_ALPHA];
+	nest::double_t old_gain = S_.y_[State_::R_0];
+    nest::double_t old_thres = S_.y_[State_::V_TH];
+    nest::double_t old_alpha = S_.y_[State_::U_ALPHA];
     //std::cout << "r0: " << old_gain << " Vth: " << old_thres << " Valpha: " << old_alpha << " FR: " << S_.y_[State_::GAIN] << " Vm: " << S_.y_[State_::V_M] << std::endl;
     S_.y_[State_::R_0] += P_.ip_rate * ( 1. - ( S_.y_[State_::GAIN] / P_.target_firing ) ) / old_gain;
     nest::double_t Aux = ( 1. + old_gain / P_.target_firing ) * (1. - exp(- S_.y_[State_::GAIN] / old_gain )) - 1.;
@@ -465,8 +465,8 @@ void mynest::iaf_cond_exp_sto_ip::handle(nest::CurrentEvent& e)
 {
   assert(e.get_delay() > 0);
 
-  const double_t c=e.get_current();
-  const double_t w=e.get_weight();
+  const nest::double_t c=e.get_current();
+  const nest::double_t w=e.get_weight();
 
   // add weighted current; HEP 2002-10-04
   B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), 

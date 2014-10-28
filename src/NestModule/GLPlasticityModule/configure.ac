@@ -1,5 +1,5 @@
 AC_PREREQ(2.52)
-AC_INIT([mymodule], [1.0], [nest_user@nest-initiative.org])
+AC_INIT([glplasticitymodule], [1.0], [nest_user@nest-initiative.org])
 
 # Exporting source and build directories requires full path names.
 # Thus we have to expand.
@@ -150,7 +150,7 @@ AC_SUBST(MAKE_FLAGS)
 AC_SUBST(INCLTDL)
 AC_SUBST(LIBLTDL)
 
-AC_CONFIG_HEADER(mymodule_config.h:mymodule_config.h.in)
+AC_CONFIG_HEADER(glplasticitymodule_config.h:glplasticitymodule_config.h.in)
 AC_CONFIG_FILES(Makefile)
 
 # -----------------------------------------------

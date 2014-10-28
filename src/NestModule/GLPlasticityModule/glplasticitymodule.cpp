@@ -38,7 +38,7 @@
 #include "glplasticitymodule.h"
 #include "iaf_cond_exp_ip.h"
 #include "iaf_cond_exp_sto_ip.h"
-#include "drop_odd_spike_connection.h"
+#include "stdp_sym_connection_hom.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 
@@ -104,8 +104,8 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
        Give synapse type as template argument and the name as second argument.
        The first argument is always a reference to the network.
     */
-    nest::register_prototype_connection<DropOddSpikeConnection>(nest::NestModule::get_network(),
-                                                       "drop_odd_synapse");
+   nest::register_prototype_connection_commonproperties < STDPSymConnectionHom,STDPSymHomCommonProperties>
+   	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "stdp_sym_synapse_hom");
 
   }  // GLPlasticityModule::init()
 

@@ -2,7 +2,11 @@ import nest
 import numpy as np
 import pylab as pl
 
-nest.Install('glplasticitymodule')
+try:
+    nest.Install('glplasticitymodule')
+except nest.NESTError:
+    print('NEST Error caught on loading user module. Retrying...')
+    nest.Install('glplasticitymodule')
 
 nest.ResetKernel()
 nest.SetKernelStatus({"resolution": 0.1, "print_time": True})
