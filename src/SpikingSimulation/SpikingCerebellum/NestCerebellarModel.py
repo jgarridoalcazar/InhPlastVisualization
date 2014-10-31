@@ -54,7 +54,9 @@ class NestCerebellarModel(CerebellarModel):
         'r_C': '1./(cm*1.e12)', # Inverse of the membrane capacitance
         # Stochastic IP model parameters
         'ip_rate': 'ip_rate', # IP rate
-        'target_firing': 'target_freq' # Target firing frequency
+        'target_firing': 'target_freq', # Target firing frequency
+        # Symmetric STDP parameters
+        'tau_sym': 'tau_sym*1.e3'
     }
     
     # This dictionary maps the state variables as used in the config file with the state variable names in NEST.
@@ -74,17 +76,20 @@ class NestCerebellarModel(CerebellarModel):
     
     # Learning rule translation
     ruleNameTranslatorDict = {
-        'STDP' : 'stdp_synapse_hom'
+        'STDP' : 'stdp_synapse_hom',
+        'STDPSym'   :   'stdp_sym_synapse_hom'
     }
     
     # This dictionary maps the learning rule configuration parameters into the NEST learning rule model parameters (used in the keys).
     ruleTranslatorDict = { 
         'tau_plus':'tau_plus*1.e3', # Time constant of the pre-post part in ms
-        'lambda': 'max_weight*learning_step*1.e9', # pre-post amplitude (normalized?)
+        'lambda': 'learning_step', # pre-post amplitude (normalized?)
         'alpha': 'minus_plus_ratio', # post-pre/pre-post ratio (normalized?)
         'Wmax': 'max_weight*1e9', # Maximum weight in nS
         'mu_plus': '0.0', # Exponent of the weight dependence (0 to get additive STDP, 1 for multiplicative STDP)
-        'mu_minus': '0.0' # Exponent of the weight dependence (0 to get additive STDP, 1 for multiplicative STDP)
+        'mu_minus': '0.0', # Exponent of the weight dependence (0 to get additive STDP, 1 for multiplicative STDP)
+        'tau_sym':'tau_sym*1.e3', # Time constant of the symmetric STDP in ms
+    
     }
     
     # Connectivity pattern translator
@@ -171,8 +176,12 @@ class NestCerebellarModel(CerebellarModel):
         
         super(NestCerebellarModel, self).initialize_simulation()
         
-        nest.Install('glplasticitymodule')
-
+        try:
+            nest.Install('glplasticitymodule')
+        except nest.NESTError:
+            print('NEST Error caught on loading user module. Retrying...')
+            nest.Install('glplasticitymodule')
+        
         nest.sr("M_WARNING setverbosity")
         
         nest.ResetKernel()
@@ -931,7 +940,7 @@ class NestCerebellarModel(CerebellarModel):
         
         
         if not synaptic_layer.weight_recording:
-            logger.error('Invalid synaptic layer in get_synaptic_weights function. The weights in this layer has not been recorded')
+            logger.error('Invalid synaptic layer in get_synaptic_weights function. The weights in this layer have not been recorded')
             raise Exception('InvalidSynapticLayer')
         
         # print 'Process',self.get_my_process_id(),':','Weight record:',synaptic_layer.weight_record

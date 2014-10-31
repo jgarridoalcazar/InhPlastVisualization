@@ -55,11 +55,13 @@ def visualize_results(name_list, seed_values, param1_values, param2_values):
     
     MI_Values = dict()
     Freq_Values = dict()
+    Error_Rate = dict()
     
     for param1 in param1_values:
         for param2 in param2_values:
             MI_Values[param1,param2] = []
             Freq_Values[param1,param2] = []
+            Error_Rate[param1,param2] = 0
     
     # Extract every mutual information to explore
     for index, name in enumerate(name_list):        
@@ -77,9 +79,11 @@ def visualize_results(name_list, seed_values, param1_values, param2_values):
             
             MI_Values[param1_values[index],param2_values[index]].append(0.)
             Freq_Values[param1_values[index],param2_values[index]].append(0.)
+            Error_Rate[param1_values[index],param2_values[index]] = Error_Rate[param1_values[index],param2_values[index]] + 1;
             
     MI_Av_Values = []
     Freq_Av_Values =[]
+    Error_Rate_Values = []
     
     for param1, param2 in zip(param1_values,param2_values):
         Average_MI = numpy.average(MI_Values[param1,param2])
@@ -87,6 +91,8 @@ def visualize_results(name_list, seed_values, param1_values, param2_values):
         
         Average_Freq = numpy.average(Freq_Values[param1,param2])
         Freq_Av_Values.append(Average_Freq)
+        
+        Error_Rate_Values.append(Error_Rate[param1,param2])
         
         
         if Average_MI>best_MI:
@@ -124,6 +130,25 @@ def visualize_results(name_list, seed_values, param1_values, param2_values):
     fig.savefig('mutual_information.png')
     
     # Create the figure    
+    fig = plt.figure()
+    #ax = fig.gca(projection='3d')
+    ax = fig.gca()
+    z = Error_Rate_Values
+    
+    # Interpolate; there's also method='cubic' for 2-D data such as here
+    zi = scipy.interpolate.griddata((x, y), z, (xi, yi), method='linear')
+
+    surf = ax.imshow(zi, vmin=min(z), vmax=max(z), origin='lower', extent=[min(x), max(x), min(y), max(y)])
+    #surf = ax.plot_surface(xi, yi, zi, rstride=1, cstride=1, cmap=cm.coolwarm, linewidth=0, antialiased=False)
+    ax.scatter(x, y, c=z)
+    fig.colorbar(surf, shrink=0.5, aspect=5)
+    # Interpolate the data to generate the mesh
+    ax.set_title('Simulation Error')
+    ax.set_xlabel(labels[0])
+    ax.set_ylabel(labels[1])
+    fig.savefig('simulation_error.png')
+    
+     # Create the figure    
     fig = plt.figure()
     #ax = fig.gca(projection='3d')
     ax = fig.gca()

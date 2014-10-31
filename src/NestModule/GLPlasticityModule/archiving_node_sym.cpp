@@ -212,7 +212,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
   	  // Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
   	  nest::double_t dt_tau2 = dt*inv_tau_sym2_;
 
-//  	  std::cout << "dt: " << dt << " - inv_tau_sym2: " << inv_tau_sym2_ << std::endl;
+//  	  std::cout << "Postsynaptic spike at time " << t_sp.get_ms() << " dt: " << dt << " - Kexpt1: " << Kexpt1_ << " - TauSym1: " << 1./inv_tau_sym1_ << std::endl;
 
   	  nest::double_t dt_pi_tau2 = M_PI*dt_tau2;
   	  nest::double_t aux_expon_tau2 = std::exp(2*dt_tau2);

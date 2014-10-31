@@ -187,6 +187,7 @@ namespace mynest
 inline
 nest::double_t STDPSymConnectionHom::apply_weight_change_(nest::double_t w, nest::double_t trace, const STDPSymHomCommonProperties &cp)
 {
+//  std::cout << "Weight: " << w << " Trace: " << trace << " Lambda: " << cp.lambda_ << " Wmax: " << cp.Wmax_ << std::endl;
   nest::double_t norm_w = (w / cp.Wmax_) + (cp.lambda_ * trace);
   if (norm_w > 1.0)
 	  return cp.Wmax_;
@@ -266,6 +267,8 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
 
     nest::double_t external = 0.5*(exp_t2 - cos_2_t2);
 
+//    std::cout << "Pre-post at time: " << t_lastspike + dt << " Central: " << central << " External: " << cp.sym_A_*external << " Alpha: " << cp.alpha_ << std::endl;
+
     nest::double_t trace = central - cp.alpha_ * cp.sym_A_ * external;
 
     weight_ = apply_weight_change_(weight_, trace, cp);
@@ -278,6 +281,7 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   //depression due to the incoming pre-synaptic spike
   nest::double_t central, external;
   ((mynest::Archiving_Node_Sym *)target_)->get_sym_K_value(t_spike - dendritic_delay, central, external);
+//  std::cout << "Post-pre at time: " << t_spike - dendritic_delay << " Central: " << central << " External: " << cp.sym_A_*external << " Alpha: " << cp.alpha_ << std::endl;
   weight_ = apply_weight_change_(weight_, central - cp.alpha_ * cp.sym_A_ * external, cp);
 
   e.set_receiver(*target_);

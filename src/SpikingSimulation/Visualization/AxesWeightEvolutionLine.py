@@ -118,7 +118,10 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         self.param['init_time'] = 0
         self.param['end_time'] = 0
         
-        self.connections = [[source,target] for source in source_cells for target in target_cells]
+        # Load data from the data provider
+        _,self.connections,_ = self.data_provider.get_synaptic_weights(**self.param)
+        
+        # self.connections = [[source,target] for source in source_cells for target in target_cells]
         
         # Set axes lines and legends
         data_labels = [str(syn[0]) + ' - ' + str(syn[1]) for syn in self.connections]
@@ -191,7 +194,7 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         
             # Select the values for each cell_id
             for ind in range(len(self.axesLines)):
-                indexes = [index for index in range(len(self.connections)) if (gconnections[index][0]==self.connections[ind][0]) and (gconnections[index][1]==self.connections[ind][1])]
+                indexes = [index for index in range(len(self.connections)) if (len(gconnections)>index) and (gconnections[index][0]==self.connections[ind][0]) and (gconnections[index][1]==self.connections[ind][1])]
                 time = gtime
                 value = gvalue[indexes]
                 
