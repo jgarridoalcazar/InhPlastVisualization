@@ -72,17 +72,21 @@ namespace mynest
       Kexpt2_(0.0),
       Ksin2t2_(0.0),
       Kcos2t2_(0.0)
-  { }
+  {
+//	  std::cout << "Initializing STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << this << std::endl;
+  }
 
   STDPSymConnectionHom::STDPSymConnectionHom(const STDPSymConnectionHom &rhs) :
     ConnectionHetWD(rhs)
   {
 	  Kexpt1_ = rhs.Kexpt1_;
-	  Kcos2t1_ = Kcos2t1_;
-	  Ksin2t1_ = Ksin2t1_;
-	  Kexpt2_ = Kexpt2_;
-	  Ksin2t2_ = Ksin2t2_;
-	  Kcos2t2_ = Kcos2t2_;
+	  Kcos2t1_ = rhs.Kcos2t1_;
+	  Ksin2t1_ = rhs.Ksin2t1_;
+	  Kexpt2_ = rhs.Kexpt2_;
+	  Ksin2t2_ = rhs.Ksin2t2_;
+	  Kcos2t2_ = rhs.Kcos2t2_;
+
+//	  std::cout << "Initializing from rhs STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << this << std::endl;
   }
 
   void STDPSymConnectionHom::get_status(DictionaryDatum & d) const
@@ -110,6 +114,8 @@ namespace mynest
     updateValue<nest::double_t>(d, "Kexpt2", Kexpt2_);
     updateValue<nest::double_t>(d, "Kcos2t2", Kcos2t2_);
     updateValue<nest::double_t>(d, "Ksin2t2", Ksin2t2_);
+
+//    std::cout << "Updating STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << this << std::endl;
 
     // exception throwing must happen after setting own parameters
     // this exception will be caught and ignored within generic_connector_model::set_status()
@@ -139,6 +145,8 @@ namespace mynest
     nest::set_property<nest::double_t>(d, "Kexpt2", p, Kexpt2_);
     nest::set_property<nest::double_t>(d, "Kcos2t2", p, Kcos2t2_);
     nest::set_property<nest::double_t>(d, "Ksin2t2", p, Ksin2t2_);
+
+//    std::cout << "Setting STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << this << std::endl;
   
      if (d->known("tau_syms") ||
          d->known("lambdas") ||

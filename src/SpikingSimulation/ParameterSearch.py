@@ -251,7 +251,7 @@ class ParameterSearch(object):
             # mpi_command.append(str(config_options['launcher']['num_mpi_processes']))
             mpi_command.append(str(config['launcher']['python_exec']))
             mpi_command.append('./src/LaunchSimulation.py')
-            mpi_command.append(file_name)
+            mpi_command.append('-c '+file_name)
         
             # Create, initialize and launch the simulation
             logger.info('Calling MPI process for simulation %s of %s', index, len(config_options))
@@ -326,7 +326,7 @@ class ParameterSearch(object):
         buf += '#$ -t 1-' + str(len(config_options)) + '\n'
         buf += '#$ -N ' + self.config_options['simulation']['simulation_name'] + '\n'
         buf += '#$ -o ' + self.config_options['simulation']['data_path'] + '/\n'
-        buf += '#$ -M jesusgarrido@ugr.es\n'
+        # buf += '#$ -M jesusgarrido@ugr.es\n'
         buf += '#$ -m ae\n'
         buf += '#$ -j y\n'
         buf += '#$ -cwd\n'
@@ -340,7 +340,7 @@ class ParameterSearch(object):
         buf += '\nPARAM_FILE=' + job_table_file + '\n'
         buf += 'PARAM=$(cat $PARAM_FILE | head -n $SGE_TASK_ID | tail -n 1)\n\n'
         
-        buf += 'mpirun -n ' + str(self.config_options['launcher']['num_mpi_processes']) + ' -ppn 1 ' + self.config_options['launcher']['python_exec'] + ' ./src/LaunchSimulation.py $PARAM\n'
+        buf += 'mpirun -n ' + str(self.config_options['launcher']['num_mpi_processes']) + ' -ppn 1 ' + self.config_options['launcher']['python_exec'] + ' ./src/LaunchSimulation.py -c $PARAM\n'
 
         logger.debug('Generated qsub script:')
         logger.debug(buf)        

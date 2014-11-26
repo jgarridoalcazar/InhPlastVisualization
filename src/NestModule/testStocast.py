@@ -14,7 +14,7 @@ print('iaf_cond_exp_sto_ip recordables: {0}'.format(nest.GetDefaults('iaf_cond_e
 # create neuron and multimeter
 n = nest.Create('iaf_cond_exp_sto_ip', 
                 params = {'t_ref_abs': 2.0, 't_ref': 10.0, 'V_reset': -65.0, 'g_L': 1.0, 'C_m': 50.0, 'E_L': -65.0, 'E_ex': 0.0, 'E_in': -80.0, 'tau_syn_ex': 1.0,
-                          'I_e': 0.0, 'ip_rate': 1e-4, 'target_firing': 3.0})
+                          'I_e': 0.0, 'ip_rate': 1e-7, 'target_firing': 3.0})
 nest.SetStatus(n,{'V_m':-65.0, 'V_th':-65.0, 'r_0':3.0, 'u_alpha': 2.0})
 
 g = nest.Create('sinusoidal_poisson_generator', n=1, params={'dc': 100.0, 'ac': 100.0,

@@ -2,6 +2,7 @@ import numpy
 import math
 import Analysis
 import logging
+import os
 from mpi4py import MPI
         
 logger = logging.getLogger('Simulation')
@@ -59,7 +60,7 @@ class MutualInformation(Analysis.Analysis):
         if ('pattern_index' in kwargs):
             self.pattern_index = kwargs.pop('pattern_index',None)
         else:
-            self.pattern_index = range(1,self.pattern_generator.number_of_patterns+1)
+            self.pattern_index = range(0,self.pattern_generator.number_of_patterns)
         
         # Get window_length parameter
         if ('window_length' in kwargs):
@@ -117,35 +118,33 @@ class MutualInformation(Analysis.Analysis):
         self.bin_is_pattern = numpy.empty((self.num_patterns, self.num_bins),dtype='bool')
         self.bin_is_pattern[:,:] = False
         self.bin_pattern = numpy.zeros(self.num_bins)
-        self.bin_pattern[:] = 0
         
         # Final matrix indicating which bins are registered spikes
         self.bin_has_fired = numpy.empty((self.num_cells, self.num_bins), dtype='bool')
         self.bin_has_fired[:,:] = False
         
         for key, value in enumerate(self.pattern_index):
-            if (value!=0):
-                time_of_pattern_in_bin = numpy.zeros(self.num_bins)
-                for index in self.pattern_generator.pattern_id_index[value]:
-                    init_bin = bin_init_of_pattern[index]
-                    end_bin = bin_end_of_pattern[index]
-                
-                    list_of_bins = range(init_bin,end_bin+1)
-                
-                    # Add the time of the initial bin (if exists)
-                    if init_bin!=end_bin:
-                        time_of_pattern_in_bin[list_of_bins[0]] += (bin_time_end[init_bin] - time_init_of_pattern[index])
-                
-                    # Add the time of the intermediate bins (if exist)
-                    time_of_pattern_in_bin[list_of_bins[1:-1]] += self.time_bin
-                
-                    # Add the time of the final bin
-                    time_of_pattern_in_bin[list_of_bins[-1]] += (time_end_of_pattern[index] - max(time_init_of_pattern[index],bin_time_init[end_bin]))
+            time_of_pattern_in_bin = numpy.zeros(self.num_bins)
+            for index in self.pattern_generator.pattern_id_index[value]:
+                init_bin = bin_init_of_pattern[index]
+                end_bin = bin_end_of_pattern[index]
             
-                # Those bins where the time in the pattern is longer than half of the bin are set to part of that pattern    
-                self.bin_is_pattern[key,time_of_pattern_in_bin>(self.time_bin/2.)] = True
-                self.bin_pattern[self.bin_is_pattern[key,:]] = value
+                list_of_bins = range(init_bin,end_bin+1)
+            
+                # Add the time of the initial bin (if exists)
+                if init_bin!=end_bin:
+                    time_of_pattern_in_bin[list_of_bins[0]] += (bin_time_end[init_bin] - time_init_of_pattern[index])
+            
+                # Add the time of the intermediate bins (if exist)
+                time_of_pattern_in_bin[list_of_bins[1:-1]] += self.time_bin
+            
+                # Add the time of the final bin
+                time_of_pattern_in_bin[list_of_bins[-1]] += (time_end_of_pattern[index] - max(time_init_of_pattern[index],bin_time_init[end_bin]))
         
+            # Those bins where the time in the pattern is longer than half of the bin are set to part of that pattern    
+            self.bin_is_pattern[key,time_of_pattern_in_bin>(self.time_bin/2.)] = True
+            self.bin_pattern[self.bin_is_pattern[key,:]] = self.bin_pattern[self.bin_is_pattern[key,:]] + 2**value
+    
         # Create a map of cells to index
         self.cell_map = dict()
         for key, value in enumerate(self.cell_index):
@@ -301,7 +300,10 @@ class MutualInformation(Analysis.Analysis):
         This function writes the results into a file.
         @param file_name Name of the file where the data will be stored
         '''
-        
+        dirname = os.path.dirname(os.path.abspath(file_name));
+        if (not os.path.isdir(dirname)):
+            os.makedirs(dirname)
+            
         numpy.savetxt(file_name, [self.mutual_information, self.av_firing_rate], delimiter='\t', newline='\n')
 
 def calc_Hit_Matrix(cell_firing, bin_pattern):

@@ -108,6 +108,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
 
     void mynest::Archiving_Node_Sym::get_sym_K_value(nest::double_t t, nest::double_t & central, nest::double_t & external)
     {
+    	central = external = 0.0;
       if (history_sym_.empty()) return;
       int i = history_sym_.size() - 1;
       while (i >= 0){
@@ -131,6 +132,10 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
 
       		central = 0.5*(exp_t1 + cos_2_t1);
 
+//      		if (central<0.0){
+//      			std::cout << "Error: Central<0.0. t=" << t << " exp_t1=" << exp_t1 << " and cos_2_t1=" << cos_2_t1 << std::endl;
+//      		}
+
       		// Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
       		nest::double_t dt_tau2 = dt*inv_tau_sym2_;
       		nest::double_t dt_pi_tau2 = M_PI*dt_tau2;
@@ -146,6 +151,11 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
 
   			external = 0.5*(exp_t2 - cos_2_t2);
 
+//  			if (external<0.0){
+//				std::cout << "Error: External<0.0. t=" << t << " exp_t2=" << exp_t2 << " and cos_2_t2=" << cos_2_t2 << std::endl;
+//			}
+
+//  			std::cout << "Node trace: central: " << central << " external: " << external << std::endl;
       		return;
       	}
       	i--;
@@ -227,8 +237,8 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
 
   	  last_spike_sym_ = t_sp.get_ms();
 
-//  	  std::cout << "Post-spike received at " << last_spike_sym_ << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_
-//  			  << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << std::endl;
+//	  std::cout << "Post-spike received at " << last_spike_sym_ << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_
+//			  << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << std::endl;
 
   	  history_sym_.push_back( histentry_sym( last_spike_sym_, 0.0, 0.0, Kexpt1_, Kcos2t1_, Ksin2t1_, Kexpt2_, Ksin2t2_, Kcos2t2_, 0) );
       }

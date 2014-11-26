@@ -1,0 +1,50 @@
+In file included from ../GLPlasticityModule/glplasticitymodule.cpp:41:0:
+../GLPlasticityModule/iaf_cond_exp_sym.h:135:17: error: ‘Time’ no se ha declarado
+     void update(Time const &, const long_t, const long_t);
+                 ^
+../GLPlasticityModule/iaf_cond_exp_sym.h:135:37: error: ‘long_t’ no nombra a un tipo
+     void update(Time const &, const long_t, const long_t);
+                                     ^
+../GLPlasticityModule/iaf_cond_exp_sym.h:135:51: error: ‘long_t’ no nombra a un tipo
+     void update(Time const &, const long_t, const long_t);
+                                                   ^
+../GLPlasticityModule/iaf_cond_exp_sym.h: En la función miembro ‘virtual nest::port mynest::iaf_cond_exp_sym::connect_sender(nest::SpikeEvent&, nest::port)’:
+../GLPlasticityModule/iaf_cond_exp_sym.h:280:58: error: ‘UnknownReceptorType’ no se declaró en este ámbito
+       throw UnknownReceptorType(receptor_type, get_name());
+                                                          ^
+../GLPlasticityModule/iaf_cond_exp_sym.h:280:58: nota: alternativa sugerida:
+In file included from /Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/event.h:29:0,
+                 from /Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/node.h:36,
+                 from /Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/model.h:29,
+                 from /Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/network.h:30,
+                 from ../GLPlasticityModule/glplasticitymodule.cpp:25:
+/Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/exceptions.h:254:9: nota:   ‘nest::UnknownReceptorType’
+   class UnknownReceptorType: public KernelException
+         ^
+In file included from ../GLPlasticityModule/glplasticitymodule.cpp:41:0:
+../GLPlasticityModule/iaf_cond_exp_sym.h: En la función miembro ‘virtual void mynest::iaf_cond_exp_sym::get_status(DictionaryDatum&) const’:
+../GLPlasticityModule/iaf_cond_exp_sym.h:306:11: error: ‘nest::Archiving_Node_Sym’ no se ha declarado
+     nest::Archiving_Node_Sym::get_status(d);
+           ^
+../GLPlasticityModule/iaf_cond_exp_sym.h:308:10: error: ‘names’ no se ha declarado
+     (*d)[names::recordables] = recordablesMap_.get_list();
+          ^
+In file included from ../GLPlasticityModule/glplasticitymodule.cpp:28:0:
+/Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/genericmodel.h: En la instanciación de ‘class nest::GenericModel<mynest::iaf_cond_exp_sym>’:
+/Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/genericmodel.h:233:53:   se requiere desde ‘nest::index nest::register_model(nest::Network&, const string&, bool) [with ModelT = mynest::iaf_cond_exp_sym; nest::index = long unsigned int; std::string = std::basic_string<char>]’
+../GLPlasticityModule/glplasticitymodule.cpp:110:32:   se requiere desde aquí
+/Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/genericmodel.h:102:14: error: no se puede declarar que el campo ‘nest::GenericModel<mynest::iaf_cond_exp_sym>::proto_’ sea de tipo abstracto ‘mynest::iaf_cond_exp_sym’
+     ElementT proto_;
+              ^
+In file included from ../GLPlasticityModule/glplasticitymodule.cpp:41:0:
+../GLPlasticityModule/iaf_cond_exp_sym.h:97:9: nota:   porque las siguientes funciones virtual son pure dentro de ‘mynest::iaf_cond_exp_sym’:
+   class iaf_cond_exp_sym : public Archiving_Node_Sym
+         ^
+In file included from /Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/model.h:29:0,
+                 from /Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/network.h:30,
+                 from ../GLPlasticityModule/glplasticitymodule.cpp:25:
+/Users/jgarrido/NEST/nest24/nest-2.4.2/nestkernel/node.h:392:10: nota: 	virtual void nest::Node::update(const nest::Time&, nest::long_t, nest::long_t)
+     void update(Time const &, const long_t, const long_t)=0;
+          ^
+make[1]: *** [glplasticitymodule_la-glplasticitymodule.lo] Error 1
+make: *** [all] Error 2

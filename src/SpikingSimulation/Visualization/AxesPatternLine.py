@@ -79,9 +79,9 @@ class AxesPatternLine(AxesPlot.AxesPlot):
         # Set axes lines and legends
         if self.pattern_provider:
             if not self.pattern:
-                self.pattern = range(self.pattern_provider.number_of_patterns+1)
+                self.pattern = range(self.pattern_provider.number_of_patterns)
         else:
-            self.pattern = [0]
+            self.pattern = []
         
         self.time_bin = 1.e-3
         self.inv_time_bin = 1./self.time_bin
@@ -123,11 +123,8 @@ class AxesPatternLine(AxesPlot.AxesPlot):
         # Initialize the axes
         data_labels = []
         for pat in self.pattern:
-            if pat:
-                data_labels.append('Pattern '+str(pat))
-            else:
-                data_labels.append('Noise')
-        
+            data_labels.append('Pattern '+str(pat+1))
+            
         number_of_lines = len(data_labels)
         
         self.axesLines = []
@@ -140,7 +137,7 @@ class AxesPatternLine(AxesPlot.AxesPlot):
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower right')
             
-        self.axes.set_ylim([-0.05,1.05])  
+        self.axes.set_ylim([-0.05,self.pattern_provider.number_of_patterns + 0.05])  
             
         super(AxesPatternLine, self).initialize()
             
@@ -198,8 +195,8 @@ class AxesPatternLine(AxesPlot.AxesPlot):
             
             sel_time = self.bin_time_init[init_bin:end_bin]
             
-            for index,_ in enumerate(self.pattern):
-                sel_data = self.bin_is_pattern[index,init_bin:end_bin]
+            for index,pattern_idx in enumerate(self.pattern):
+                sel_data = self.bin_is_pattern[index,init_bin:end_bin] * (pattern_idx + 1.0)
                 
                 old_time_data = self.axesLines[index].get_xdata()
                 first_index = numpy.searchsorted(old_time_data, data_init_time)
@@ -212,13 +209,13 @@ class AxesPatternLine(AxesPlot.AxesPlot):
                 self.axesLines[index].set_xdata(new_time_data)
                 self.axesLines[index].set_ydata(new_signal_data)
                 
-                if (new_signal_data.size):
-                    if (initialized):
-                        y_limits[0] = min(y_limits[0],numpy.min(new_signal_data))
-                        y_limits[1] = max(y_limits[1],numpy.max(new_signal_data))
-                    else:
-                        initialized = True
-                        y_limits[0] = numpy.min(new_signal_data)
-                        y_limits[1] = numpy.max(new_signal_data)
+#                 if (new_signal_data.size):
+#                     if (initialized):
+#                         y_limits[0] = min(y_limits[0],numpy.min(new_signal_data))
+#                         y_limits[1] = max(y_limits[1],numpy.max(new_signal_data))
+#                     else:
+#                         initialized = True
+#                         y_limits[0] = numpy.min(new_signal_data)
+#                         y_limits[1] = numpy.max(new_signal_data)
             
         return self.axesLines

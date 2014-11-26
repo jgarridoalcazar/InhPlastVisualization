@@ -27,6 +27,7 @@ class NestCerebellarModel(CerebellarModel):
     # Cell name translation
     cellNameTranslatorDict = {
          'ConductanceLIF' : 'iaf_cond_exp',
+         'ConductanceLIFSym' : 'iaf_cond_exp_sym',
          'ConductanceLIFwIP': 'iaf_cond_exp_ip',
          'ConductanceLIFStowIP': 'iaf_cond_exp_sto_ip',
          'CurrentLIF' : 'iaf_neuron'
@@ -43,9 +44,11 @@ class NestCerebellarModel(CerebellarModel):
         'g_L': 'grest*1.e9', # Resting conductance in nS
         'V_th': 'eth*1.e3', # Threshold potential in mV
         't_ref': 'tref*1.e3', # Refractory period in ms
+        't_ref_abs': 'tref_abs*1.e3', # Absolute refractory period (SRM) in ms
         'C_m': 'cm*1.e12', # Membrane capacitance in pF
         'tau_m': 'cm/grest*1.e3', # Membrane time constant in ms
         'tau_minus':'tau_minus*1.e3', # Time constant of the post-pre part in ms
+        't_ref_abs': 'tref_abs*1.e3', # Absolute refractory period (SRM) in ms
         # Intrinsic plasticity parameters
         'tau_ip':'tau_ip*1.e3', # Time constant of the intrinsic plasticity in ms
         'beta':'beta_ip*1.', # Beta parameter of the IP (unitless)

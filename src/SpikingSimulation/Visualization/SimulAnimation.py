@@ -92,7 +92,7 @@ class SimulAnimation (SimulFigure.SimulFigure,animation.TimedAnimation):
         return
     
     def new_frame_seq(self):
-        return iter(numpy.arange(self.init_time,self.end_time,1.0/self.frame_rate))
+        return iter(numpy.arange(self.init_time,self.end_time+1.e-10,1.0/self.frame_rate))
     
     def _init_draw(self):
         # Run the simulation until that time

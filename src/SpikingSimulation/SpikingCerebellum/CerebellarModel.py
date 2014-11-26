@@ -175,7 +175,7 @@ class CerebellarModel(object):
         # Check simulation options
         self.simulation_options = self.config_dict['simulation']
         if not 'seed' in self.simulation_options:
-            self.simulation_options['seed']  = time()
+            self.simulation_options['seed']  = int(time.time())
         
         # Generate random number generators for each python virtual process
         self.simulation_options['pyrngs'] = [numpy.random.RandomState(s) for s in range(self.simulation_options['seed'], self.simulation_options['seed']+self.get_number_of_virtual_processes())]

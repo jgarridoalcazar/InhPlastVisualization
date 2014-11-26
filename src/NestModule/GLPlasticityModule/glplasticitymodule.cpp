@@ -38,6 +38,7 @@
 #include "glplasticitymodule.h"
 #include "iaf_cond_exp_ip.h"
 #include "iaf_cond_exp_sto_ip.h"
+#include "iaf_cond_exp_sym.h"
 #include "stdp_sym_connection_hom.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
@@ -99,6 +100,15 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
     */
     nest::register_model<iaf_cond_exp_ip>(nest::NestModule::get_network(),
                                         "iaf_cond_exp_ip");
+
+    /* Register a neuron or device model.
+	   Give node type as template argument and the name as second argument.
+	   The first argument is always a reference to the network.
+	   Return value is a handle for later unregistration.
+	*/
+	nest::register_model<iaf_cond_exp_sym>(nest::NestModule::get_network(),
+											  "iaf_cond_exp_sym");
+
 
     /* Register a synapse type.
        Give synapse type as template argument and the name as second argument.

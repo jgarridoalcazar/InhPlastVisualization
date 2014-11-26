@@ -436,6 +436,9 @@ void mynest::iaf_cond_exp_sto_ip::update(nest::Time const & origin, const nest::
     // Check whether u_alpha is under 0
     //S_.y_[State_::U_ALPHA] = (S_.y_[State_::U_ALPHA]<=0)? std::numeric_limits<double_t>::min() : S_.y_[State_::U_ALPHA];
 
+    if ( S_.y_[State_::U_ALPHA] <= 0)
+    	throw nest::BadProperty("Nest simulation has reached an invalid state where U_Alpha is under 0. Please, consider to decrease the ip_rate parameter.");
+
     // Check whether v_th is above 0
     //S_.y_[State_::V_TH] = (S_.y_[State_::V_TH]>=0)? 0.0 : S_.y_[State_::V_TH];
 

@@ -171,7 +171,7 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
                 source_fibers = gconnections[connection_indexes,0]
                 
                 # Select the activation values
-                activation_values = self.pattern_provider.activation_levels[self.pattern_provider.pattern_id_index[pat+1][0],source_fibers]
+                activation_values = self.pattern_provider.activation_levels[self.pattern_provider.pattern_id_index[pat][0],source_fibers]
                 
                 self.axesLines[i].set_xdata(activation_values)
                 self.axesLines[i].set_ydata(weight_values)  

@@ -208,7 +208,7 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
                         y_limits[1] = numpy.max(new_signal_data)
                 
             if (self.y_window_lim is not None):
-                self.axes.set_ylim(self.y_lim)
+                self.axes.set_ylim(self.y_window_lim)
             elif initialized:
                 self.axes.set_ylim(y_limits)
             else:

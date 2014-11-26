@@ -132,6 +132,11 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower right')
             
+        if (self.y_window_lim is not None):
+            self.axes.set_ylim(self.y_lim)
+        else:
+            self.axes.set_ylim([min(self.index)-0.5,max(self.index)+0.5])  
+            
         super(AxesRasterPlot, self).initialize()
             
         return
@@ -185,29 +190,26 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
         
             y_limits = range(2)
             initialized = False
+
+            # Find the pattern of the time bin for each spike
+            if self.pattern_provider:
+                bin_indexes = numpy.array([bisect.bisect_right(self.pattern_provider.pattern_length_cum, time) for time in gtime])
+                
+                if bin_indexes.size:
+                    pattern_in_bin = numpy.array([[(pat-1) in pat_aux for pat_aux in self.pattern_provider.pattern_id[bin_indexes]] for pat in self.pattern if pat!=0])
             
-            
-            for i in range(len(self.pattern)):
-                pat = self.pattern[i]
-            
+            for i,pat in enumerate(self.pattern):
                 # Filter the activity for each pattern
-                if self.pattern_provider:
-                
-                    # Find the pattern of the time bin for each spike
-                    pattern_of_spike = numpy.array([self.pattern_provider.pattern_id[bisect.bisect_right(self.pattern_provider.pattern_length_cum, time)] for time in gtime])
-                
-                    if self.layer == self.stimulation_layer:
-                        if pat:
-                            # Select those spikes fired for the cells in the selected fibers of each pattern
-                            indexes = (pattern_of_spike==pat) & numpy.in1d(gcell_id,self.pattern_provider.fibers_in_pattern[pat-1])
-                        else:
-                            # Select those spikes fired in noise interval or those in pattern bin but are not included in the selected fibers
-                            indexes = (pattern_of_spike==pat)
-                            for pat1 in range(1,self.pattern_provider.number_of_patterns+1):
-                                indexes = indexes | ((pattern_of_spike==pat1) & ~numpy.in1d(gcell_id,self.pattern_provider.fibers_in_pattern[pat1-1]))
+                if self.pattern_provider and bin_indexes.size:
+                    if pat==0:
+                        # Select those spikes fired in noise interval or those in pattern bin but are not included in the selected fibers
+                        indexes = numpy.array([True]*bin_indexes.size)
+                        for idx,pat_in_bin in enumerate(pattern_in_bin):
+                            indexes = indexes & ~(pat_in_bin & numpy.in1d(gcell_id,self.pattern_provider.fibers_in_pattern[self.pattern[idx+1]-1]))
                     else:
-                        indexes = (pattern_of_spike==pat)
-                        
+                        # Select those spikes fired for the cells in the selected fibers of each pattern
+                        indexes = pattern_in_bin[i-1] & numpy.in1d(gcell_id,self.pattern_provider.fibers_in_pattern[pat-1])
+                    
                     sel_time = gtime[indexes]
                     sel_cell = gcell_id[indexes]
                 else:
@@ -225,20 +227,6 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
                 self.axesLines[i].set_xdata(new_time_data)
                 self.axesLines[i].set_ydata(new_signal_data)
                 
-                if (new_signal_data.size):
-                    if (initialized):
-                        y_limits[0] = min(y_limits[0],numpy.min(new_signal_data))
-                        y_limits[1] = max(y_limits[1],numpy.max(new_signal_data))
-                    else:
-                        initialized = True
-                        y_limits[0] = numpy.min(new_signal_data)
-                        y_limits[1] = numpy.max(new_signal_data)
                 
-            if (self.y_window_lim is not None):
-                self.axes.set_ylim(self.y_lim)
-            elif initialized:
-                self.axes.set_ylim(y_limits)
-            else:
-                self.axes.set_ylim([0,1])  
     
         return self.axesLines

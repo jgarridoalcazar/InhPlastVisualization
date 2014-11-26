@@ -28,6 +28,7 @@ glplasticitymodule_la_CXXFLAGS= @AM_CXXFLAGS@
 glplasticitymodule_la_SOURCES=  glplasticitymodule.cpp      glplasticitymodule.h      \
 				  iaf_cond_exp_sto_ip.cpp 	iaf_cond_exp_sto_ip.h \
                   iaf_cond_exp_ip.cpp 	iaf_cond_exp_ip.h \
+				  iaf_cond_exp_sym.cpp 	iaf_cond_exp_sym.h \
 				  histentry_sym.cpp			histentry_sym.h \
 				  archiving_node_sym.cpp	archiving_node_sym.h \
                   stdp_sym_connection_hom.cpp	stdp_sym_connection_hom.h

@@ -1,0 +1,26 @@
+#
+# This is an automatically generated UEGO configuration file.
+# Edit only if you really know, what you're doing!
+#
+# For configuration, use 'uego -c' instead.
+#
+
+[Objective function]
+
+	dimension of space:	15
+	lower bound vector:
+		0 0 0 0 0
+		0.04 0.04 0.04 0.04 0.04 
+		-3 -3 -3 -3 -3 
+	upper bound vector:
+		1 1 1 1 1 
+		6.00 6.00 6.00 6.00 6.00 
+		+3 +3 +3 +3 +3 
+
+[UEGO parameters]
+
+	function evaluations:	200
+	max. species number:	2
+	levels:			10
+	radii for levels:	2.000000e-02 
+

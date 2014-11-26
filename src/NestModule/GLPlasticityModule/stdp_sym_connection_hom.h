@@ -187,11 +187,11 @@ namespace mynest
 inline
 nest::double_t STDPSymConnectionHom::apply_weight_change_(nest::double_t w, nest::double_t trace, const STDPSymHomCommonProperties &cp)
 {
-//  std::cout << "Weight: " << w << " Trace: " << trace << " Lambda: " << cp.lambda_ << " Wmax: " << cp.Wmax_ << std::endl;
   nest::double_t norm_w = (w / cp.Wmax_) + (cp.lambda_ * trace);
-  if (norm_w > 1.0)
+//  std::cout << "Old weight: " << w << " Norm. Weight: " << norm_w << " Kexpt1: " << Kexpt1_ << " Kcos2t1: " << Kcos2t1_ << " Ksin2t1: " << Ksin2t1_ << " Kexpt2: " << Kexpt2_ << " Ksin2t2: " << Ksin2t2_ << " Kcos2t2: " << Kcos2t2_ << " Trace: " << trace << " Lambda: " << cp.lambda_ << " Wmax: " << cp.Wmax_ << this << std::endl;
+    if (norm_w > 1.0){
 	  return cp.Wmax_;
-  else if (norm_w < 0.0)
+    }else if (norm_w < 0.0)
 	  return 0.0;
 
   return norm_w * cp.Wmax_;
@@ -232,9 +232,12 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   double_t dt;
   while (start != finish)
   {
-
 	dt = t_lastspike - (start->t_ + dendritic_delay);
+	nest::double_t old_time = start->t_ + dendritic_delay;
     ++start;
+
+
+//    std::cout << Kexpt1_ << std::endl;
 
     // Update trace at the time of the postsynaptic spike
     // Calculate central = exp(-abs(dt/tau1))*cos(dt*pi/(tau1*2))^2
@@ -252,6 +255,12 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
 
     nest::double_t central = 0.5*(exp_t1 + cos_2_t1);
 
+//    if (central<0.0){
+//		std::cout << "Error: Central<0.0. dt=" << dt << " exp_t1=" << exp_t1 << " and cos_2_t1=" << cos_2_t1 << std::endl;
+//		std::cout << "Original at time " << t_lastspike << " exp_t1=" << Kexpt1_ << " Kcos2t1_=" << Kcos2t1_ << " Ksin2t1_=" << Ksin2t1_ << std::endl;
+//		std::cout << "New at time " << old_time << " aux_expon_tau1=" << aux_expon_tau1 << " aux_cos_tau1=" << aux_cos_tau1 << " aux_sin_tau1=" << aux_sin_tau1 << std::endl;
+//	}
+
     // Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
     nest::double_t dt_tau2 = dt*cp.inv_tau_sym2_;
 //    std::cout << "dt: " << dt << " - inv_tau_sym2: " << cp.inv_tau_sym2_ << std::endl;
@@ -266,6 +275,13 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
     nest::double_t cos_2_t2 = aux_expon_tau2*(Kcos2t2_*aux_cos_tau2 + Ksin2t2_*aux_sin_tau2);
 
     nest::double_t external = 0.5*(exp_t2 - cos_2_t2);
+
+//    if (external<0.0){
+//		std::cout << "Error: External<0.0. dt=" << dt << " exp_t2=" << exp_t2 << " and cos_2_t2=" << cos_2_t2 << std::endl;
+//		std::cout << "Original at time " << t_lastspike << " exp_t2=" << Kexpt2_ << " Kcos2t2_=" << Kcos2t2_ << " Ksin2t2_=" << Ksin2t2_ << std::endl;
+//		std::cout << "New at time " << old_time << " aux_expon_tau2=" << aux_expon_tau2 << " aux_cos_tau2=" << aux_cos_tau2 << " aux_sin_tau2=" << aux_sin_tau2 << std::endl;
+//
+//	}
 
 //    std::cout << "Pre-post at time: " << t_lastspike + dt << " Central: " << central << " External: " << cp.sym_A_*external << " Alpha: " << cp.alpha_ << std::endl;
 
@@ -290,21 +306,29 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   e.set_rport(rport_);
   e();
 
+//  std::cout << "Updating synapsis from time " << t_lastspike << " to " << t_spike << ". Old values: " << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_ << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << this << std::endl;
+
   dt = t_lastspike - t_spike;
 
   // Calculate central = exp(-abs(dt/tau1))*cos(dt*pi/(tau1*2))^2
   nest::double_t dt_tau1 = dt*cp.inv_tau_sym1_;
+
+//  std::cout << "dt_tau1-" << dt_tau1 << std::endl;
 
   nest::double_t dt_pi_tau1 = M_PI*dt_tau1;
   nest::double_t aux_expon_tau1 = std::exp(dt_tau1);
   nest::double_t aux_cos_tau1 = std::cos(dt_pi_tau1);
   nest::double_t aux_sin_tau1 = std::sin(dt_pi_tau1);
 
+//  std::cout << " aux_expon_tau1-" << aux_expon_tau1 << " aux_cos_tau1-" << aux_cos_tau1 << " aux_sin_tau1-" << aux_sin_tau1 << std::endl;
+
   Kexpt1_ = Kexpt1_*aux_expon_tau1 + 1.0;
 
   // Calculate cos_2_t1 = Cos(dt*pi/tau1)
   Kcos2t1_ = aux_expon_tau1*(Kcos2t1_*aux_cos_tau1 - Ksin2t1_*aux_sin_tau1) + 1.0;
   Ksin2t1_ = aux_expon_tau1*(Ksin2t1_*aux_cos_tau1 + Kcos2t1_*aux_sin_tau1);
+
+  // std::cout << "Kexpt1-" << Kexpt1_ << "Kcos2t1-" << Kcos2t1_ << "Ksin2t1-" << Ksin2t1_ << std::endl;
 
   // Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
   nest::double_t dt_tau2 = dt*cp.inv_tau_sym2_;
@@ -319,8 +343,9 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   Kcos2t2_ = aux_expon_tau2*(Kcos2t2_*aux_cos_tau2 + Ksin2t2_*aux_sin_tau2) + 1.0;
   Ksin2t2_ = aux_expon_tau2*(Ksin2t2_*aux_cos_tau2 + Kcos2t2_*aux_sin_tau2);
 
-//  std::cout << "Pre-spike received at " << t_spike << ": Trace: " << central - cp.alpha_ * cp.sym_A_ * external << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_
-//    			  << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << std::endl;
+//  std::cout << "Pre-spike received at " << t_spike << ": Trace: " << central - cp.alpha_ * cp.sym_A_ * external << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_ << " dt_tau1 - " << dt_tau1 << " dt_pi_tau1 - " << dt_pi_tau1 << " aux_expon_tau1 - " << aux_expon_tau1 << " aux_cos_tau1 - " << aux_cos_tau1 << " aux_sin_tau1 - " << aux_sin_tau1
+//		  	  	  << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << " dt_tau2 - " << dt_tau2 << " dt_pi_tau2 - " << dt_pi_tau2 << " aux_expon_tau2 - " << aux_expon_tau2 << " aux_cos_tau2 - " << aux_cos_tau2 << " aux_sin_tau2 - " << aux_sin_tau2 << std::endl;
+//  std::cout << "Calculating new STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << std::endl;
 
   }
 
