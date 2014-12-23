@@ -135,7 +135,7 @@ class AxesPatternLine(AxesPlot.AxesPlot):
             self.axesLines.append(newLine)
         
         if (self.show_legend):
-            self.axes.legend(self.axesLines,data_labels,loc='lower right')
+            self.axes.legend(self.axesLines,data_labels,loc='lower left')
             
         self.axes.set_ylim([-0.05,self.pattern_provider.number_of_patterns + 0.05])  
             

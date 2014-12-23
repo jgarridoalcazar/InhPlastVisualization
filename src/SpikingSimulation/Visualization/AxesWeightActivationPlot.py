@@ -116,7 +116,7 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
             self.axesLines.append(newLine)
         
         if (self.show_legend):
-            self.axes.legend(self.axesLines,data_labels,loc='lower right')
+            self.axes.legend(self.axesLines,data_labels,loc='lower left')
         
         synaptic_layer = self.data_provider.layer_map[self.layer]
         
@@ -126,7 +126,7 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
             max_weight = 1.
                 
         self.axes.set_xlim([0,1])
-        self.axes.set_ylim([0,max_weight])
+        self.axes.set_ylim([0,max_weight*1.10])
             
         super(AxesWeightActivationPlot, self).initialize()
             

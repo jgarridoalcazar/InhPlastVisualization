@@ -125,7 +125,7 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
             self.axesLines.append(newLine)
         
         if (self.show_legend):
-            self.axes.legend(self.axesLines,data_labels,loc='lower right')
+            self.axes.legend(self.axesLines,data_labels,loc='lower left')
             
         super(AxesNeuronPropertyLine, self).initialize()
             

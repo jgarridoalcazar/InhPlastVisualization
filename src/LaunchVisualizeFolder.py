@@ -105,12 +105,12 @@ def visualize_results(name_list, seed_values, param1_values, param2_values):
     fig = plt.figure()
     #ax = fig.gca(projection='3d')
     ax = fig.gca()
-    #x = numpy.log(numpy.array(axis[0])*10.)/numpy.log(2)
+    #x = numpy.log(numpy.array(axis[0]))/numpy.log(2)
     #print min(x), max(x)
-    x = numpy.array(axis[0])*1.e8
-    #y = numpy.log(numpy.array(axis[1])*10.)/numpy.log(2)
+    x = numpy.array(axis[0])*1.e9
+    #y = numpy.log(numpy.array(axis[1]))/numpy.log(2)
     #print min(y), max(y)
-    y = numpy.array(axis[1])*1.e1
+    y = numpy.array(axis[1])*1.e0
     z = numpy.array(MI_Av_Values)
     
     # Set up a regular grid of interpolation points

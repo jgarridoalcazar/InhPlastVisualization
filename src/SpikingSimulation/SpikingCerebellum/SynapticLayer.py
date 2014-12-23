@@ -23,6 +23,8 @@ class SynapticLayer(object):
         @param source_layer: Neuron/input source layer.
         @param target_layer: Neuron target layer.
         @param weight_recording: Whether the weights must be recorded.
+        @param weight_normalization: Whether the weights must be normalizated.
+        @param weight_sum: Total sum of the incoming connection weights for each target cell.
         @param random_generator: The random number generator to use.
         @param synaptic_delay: Transmission delay in the synapses (in seconds).
         @param connectivity_type: Pattern of connectivity in the connection. Only those patterns included in template_connectivity_parameters are allowed.
@@ -80,6 +82,19 @@ class SynapticLayer(object):
             self.weight_recording = kwargs.pop('weight_recording')
         else:
             self.weight_recording = False
+        
+        # Read synaptic type
+        if ('weight_normalization' in kwargs):
+            self.weight_normalization = kwargs.pop('weight_normalization')
+            
+            if self.weight_normalization:
+                if ('weight_sum' in kwargs):
+                    self.weight_total_sum = kwargs.pop('weight_sum')
+                else:
+                    logger.warning('Non-specified weight sum for normalization. Using default value 1e-9')
+                    self.weight_total_sum = 1.e-9            
+        else:
+            self.weight_normalization = False
             
         # Read synaptic delay
         if ('synaptic_delay' in kwargs):

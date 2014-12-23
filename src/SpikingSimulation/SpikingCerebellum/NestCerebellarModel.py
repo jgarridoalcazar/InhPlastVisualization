@@ -270,6 +270,29 @@ class NestCerebellarModel(CerebellarModel):
         
         return
     
+    def _initialize_weight_normalization(self):
+        # Check if weight_normalization_step is above 0
+        if self.simulation_options['weight_normalization_step'] >= float("inf"):
+            return
+        
+        for layer in self.synaptic_layers:
+            if layer.weight_normalization:
+                layer.weight_sum = dict()
+                
+                layer.weight_sum['con'] = nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)
+                layer.weight_sum['targets'] = numpy.array(nest.GetStatus(layer.weight_sum['con'],'target'))
+                layer.weight_sum['sum'] = dict()
+                target_set = set(layer.weight_sum['targets'])
+                for elem in target_set:
+                    layer.weight_sum['sum'][elem] = 0.0
+        
+        
+        self.next_normalization_step = 0
+                
+        # Normalize weights
+        self._normalize_weights()
+        
+        return
     
     def _initialize_weight_recording_buffer(self):
         
@@ -348,6 +371,9 @@ class NestCerebellarModel(CerebellarModel):
         # print 'Process:', self.get_my_process_id(),'Network created:',nest.GetStatus(nest.GetConnections(), ['source', 'target', 'weight'])
         
         # print 'Process:', self.get_my_process_id(),'Current netword:',nest.PrintNetwork()
+        
+        # Initialize weight normalization
+        self._initialize_weight_normalization()
         
         # Initialize weight recording buffer
         self._initialize_weight_recording_buffer()
@@ -616,6 +642,29 @@ class NestCerebellarModel(CerebellarModel):
                 
 
         self.next_weight_step += 1
+        
+    def _normalize_weights(self):
+        
+        # Check if recording_time_step is above 0
+        for layer in self.synaptic_layers:
+            if layer.weight_normalization:
+                # Record the weights
+                scaled_weights = [weight for weight in nest.GetStatus(layer.weight_sum['con'],'weight')]
+                
+                # Initialize the weight sum to 0
+                for target in layer.weight_sum['sum']:
+                    layer.weight_sum['sum'][target] = 0
+                
+                for weight,target_cell in zip(scaled_weights,layer.weight_sum['targets']):
+                    layer.weight_sum['sum'][target_cell] = layer.weight_sum['sum'][target_cell] + weight
+                    
+                normalized_weight = [weight*layer.weight_total_sum*1.e9/layer.weight_sum['sum'][target_cell]
+                                     for weight,target_cell in zip(scaled_weights,layer.weight_sum['targets'])]
+                
+                # Set new weights
+                nest.SetStatus(layer.weight_sum['con'], 'weight', normalized_weight)
+                                
+        self.next_normalization_step += 1
     
     def simulate_network(self,time):
         '''
@@ -624,11 +673,12 @@ class NestCerebellarModel(CerebellarModel):
         '''
         
         end_time = self.simulation_time + time
-        next_weight_recording = self.next_weight_step * self.simulation_options['weight_recording_step'] 
+        next_weight_recording = self.next_weight_step * self.simulation_options['weight_recording_step']
+        next_normalization = self.next_normalization_step * self.simulation_options['weight_normalization_step'] 
         
         # Simulate until recording weight
         while (end_time-self.simulation_time>=self.nest_options['resolution']):
-            next_stop = min(next_weight_recording,end_time)
+            next_stop = min(next_weight_recording,next_normalization,end_time)
             sim_time = next_stop-self.simulation_time
             
             # Simulate the step (in ms)
@@ -636,10 +686,15 @@ class NestCerebellarModel(CerebellarModel):
             # nest.Simulate(math.ceil(sim_time*1.e3))
             nest.Simulate(sim_time*1.e3)
             
-            # If it is time to record the weights
+            # If it is time to normalize the weights
             if next_stop==next_weight_recording:
                 self._save_weights()
                 next_weight_recording = self.next_weight_step * self.simulation_options['weight_recording_step'] 
+            
+            # If it is time to record the weights
+            if next_stop==next_normalization:
+                self._normalize_weights()
+                next_normalization = self.next_normalization_step * self.simulation_options['weight_normalization_step'] 
             
             # Get the simulation time from the kernel to avoid inconsistencies between both times
             self.simulation_time = nest.GetKernelStatus('time')/1.e3

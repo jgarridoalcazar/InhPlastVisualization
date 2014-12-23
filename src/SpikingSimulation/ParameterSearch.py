@@ -164,7 +164,7 @@ class ParameterSearch(object):
                 values = list(numpy.logspace(min_exponent, max_exponent, num=int(max_exponent-min_exponent)+1, base=parameter['step']))
             elif parameter['type']=='arithmetic':
                 # Arithmetic series
-                values = list(numpy.linspace(parameter['min_value'], parameter['max_value'], num=int((parameter['max_value']-parameter['min_value'])/float(parameter['step']))+1))
+                values = list(numpy.linspace(parameter['min_value'], parameter['max_value'], num=(parameter['max_value']-parameter['min_value'])/float(parameter['step'])+1))
             else:
                 logger.error('Parameter evolution type %s has not been implemented. Only geometric and arithmetic are allowed so far',parameter['type'])
                 raise Exception('InvalidType')
@@ -327,7 +327,7 @@ class ParameterSearch(object):
         buf += '#$ -N ' + self.config_options['simulation']['simulation_name'] + '\n'
         buf += '#$ -o ' + self.config_options['simulation']['data_path'] + '/\n'
         # buf += '#$ -M jesusgarrido@ugr.es\n'
-        buf += '#$ -m ae\n'
+        # buf += '#$ -m ae\n'
         buf += '#$ -j y\n'
         buf += '#$ -cwd\n'
         buf += '#$ -V\n'
