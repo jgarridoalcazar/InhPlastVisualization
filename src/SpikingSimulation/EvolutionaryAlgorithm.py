@@ -318,7 +318,7 @@ class EvolutionaryAlgorithm(object):
         self.num_generator = numpy.random.RandomState()
         
         # Create multiobjective optimization (maximize average MI and minimize Std)
-        creator.create("FitnessMulti", base.Fitness, weights=(1.0,0.0))
+        creator.create("FitnessMulti", base.Fitness, weights=(1.0,))
         
         # Each individual inherits from list and add the FitnessMulti fitness function
         creator.create("Individual", list, fitness=creator.FitnessMulti)
@@ -380,7 +380,7 @@ class EvolutionaryAlgorithm(object):
         # Calculate the average fitnesses
         fit_reshape = numpy.reshape(fitnesses, (len(population),self.config_options['algorithm']['number_of_repetitions']), order='F').tolist()
         for ind, row in zip(population, fit_reshape):
-            ind.fitness.values = (numpy.average(row),numpy.std(row))
+            ind.fitness.values = (numpy.average(row),)
             
         logger.debug("Evaluated %i individuals",len(population))
                 
