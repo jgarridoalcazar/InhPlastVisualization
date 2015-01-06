@@ -300,12 +300,18 @@ class MutualInformation(Analysis.Analysis):
         This function writes the results into a file.
         @param file_name Name of the file where the data will be stored
         '''
-        dirname = os.path.dirname(os.path.abspath(file_name));
-        if (not os.path.isdir(dirname)):
-            logger.debug(str("Creating directory:")+str(dirname))
-            os.makedirs(dirname)
-            
-        numpy.savetxt(file_name, [self.mutual_information, self.av_firing_rate], delimiter='\t', newline='\n')
+        
+        comm = MPI.COMM_WORLD
+        
+        process_id = comm.Get_rank()
+        
+        if (process_id==0):
+            dirname = os.path.dirname(os.path.abspath(file_name));
+            if (not os.path.isdir(dirname)):
+                logger.debug(str("Creating directory:")+str(dirname))
+                os.makedirs(dirname)
+                
+            numpy.savetxt(file_name, [self.mutual_information, self.av_firing_rate], delimiter='\t', newline='\n')
 
 def calc_Hit_Matrix(cell_firing, bin_pattern):
     '''

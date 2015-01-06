@@ -4,18 +4,31 @@ Created on May 12, 2014
 @author: Jesus Garrido (jgarridoalcazar at gmail.com)
 '''
 
-import nest
 import abc
 from CerebellarModel import CerebellarModel
 import shutil
+import sys
 import numpy
 import os
+import time
 import logging
 from SpikingSimulation.Utils.Utils import WriteConfigFile
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
+if (logger.getEffectiveLevel()>logging.INFO):
+    sys.argv.append('--quiet')
+        
+import nest
+
+from mpi4py import MPI
+
+class TimeoutError(Exception):
+    def __init__(self, value):
+        self.value = value
+    def __str__(self):
+        return repr(self.value)
+        
 class NestCerebellarModel(CerebellarModel):
     '''
     This class defines an inherited class including all the methods
@@ -179,13 +192,15 @@ class NestCerebellarModel(CerebellarModel):
         
         super(NestCerebellarModel, self).initialize_simulation()
         
+        nest.sr("M_WARNING setverbosity")
+        
         try:
             nest.Install('glplasticitymodule')
         except nest.NESTError:
-            print('NEST Error caught on loading user module. Retrying...')
-            nest.Install('glplasticitymodule')
+            logger.warning('NEST Error caught on loading user module. Skiping...')
+            #nest.Install('glplasticitymodule')
         
-        nest.sr("M_WARNING setverbosity")
+        logger.debug('NEST module loaded')
         
         nest.ResetKernel()
         
@@ -212,6 +227,9 @@ class NestCerebellarModel(CerebellarModel):
         
         if not 'record_to_file' in self.simulation_options:
             self.simulation_options['record_to_file'] = False
+            
+        if 'simulation_timeout' not in self.simulation_options:
+            self.simulation_options['simulation_timeout'] = None
         
         if self.simulation_options['record_to_file']:        
             if 'data_path' in self.simulation_options:
@@ -234,21 +252,22 @@ class NestCerebellarModel(CerebellarModel):
                         os.makedirs(data_path)
                     except OSError:
                         pass
-                    
-                     
+
         # Synchronize all the processes to avoid start writting before deleting the folder
         comm = MPI.COMM_WORLD
         
         comm.Barrier()   
             
-        
         nest.SetKernelStatus(nest_options_dict)
         
         # Set random seeds
         nest_options_dict = dict()
         nest_options_dict['grng_seed'] = self.simulation_options['seed'] + self.get_number_of_virtual_processes()
+        logger.debug('Setting Global NEST Seed: %s', nest_options_dict['grng_seed'])
         nest_options_dict['rng_seeds'] = range(self.simulation_options['seed'] + self.get_number_of_virtual_processes() + 1,
                                                self.simulation_options['seed'] + 2*self.get_number_of_virtual_processes() + 1)
+        logger.debug('Setting Per-Process NEST Seeds: %s', nest_options_dict['rng_seeds'])
+        
         nest.SetKernelStatus(nest_options_dict)
         
         # Set record_to_file in spike_detectors to the value    
@@ -267,6 +286,9 @@ class NestCerebellarModel(CerebellarModel):
         if self.simulation_options['record_to_file']:
             # Copy configuration file of this simulation
             WriteConfigFile(self.config_dict, data_path+'/'+'SimulationConfig.cfg')
+            
+        if self.simulation_options['simulation_timeout']:
+            self.init_time = time.time()
         
         return
     
@@ -606,11 +628,10 @@ class NestCerebellarModel(CerebellarModel):
         if 'amplitude' in kwargs:
             iThreshold = (self.mflayer.cell_model_parameters['eth']-self.mflayer.cell_model_parameters['erest'])*self.mflayer.cell_model_parameters['grest']
             
-            amp = kwargs.pop('amplitude')*iThreshold
+            amp = kwargs.pop('amplitude')*iThreshold*1.e12
             
             if len(amp)==self.mflayer.number_of_neurons:
-                amplitude = amp*1.e12
-                nest.SetStatus(nodes=self.dc_current, params='amplitude', val=amplitude)
+                nest.SetStatus(nodes=self.dc_current, params='amplitude', val=amp)
                 # We could check and set status only of the local nodes   
             else:
                 logger.error('dc_current amplitude has to be a list with the same length of the number of MFs')
@@ -666,13 +687,13 @@ class NestCerebellarModel(CerebellarModel):
                                 
         self.next_normalization_step += 1
     
-    def simulate_network(self,time):
+    def simulate_network(self,time_to_evolve):
         '''
         Simulate the network for the specified time (in seconds).
         @param time Length to be simulated (in seconds)
         '''
         
-        end_time = self.simulation_time + time
+        end_time = self.simulation_time + time_to_evolve
         next_weight_recording = self.next_weight_step * self.simulation_options['weight_recording_step']
         next_normalization = self.next_normalization_step * self.simulation_options['weight_normalization_step'] 
         
@@ -697,7 +718,18 @@ class NestCerebellarModel(CerebellarModel):
                 next_normalization = self.next_normalization_step * self.simulation_options['weight_normalization_step'] 
             
             # Get the simulation time from the kernel to avoid inconsistencies between both times
-            self.simulation_time = nest.GetKernelStatus('time')/1.e3
+            #self.simulation_time = nest.GetKernelStatus('time')/1.e3
+            self.simulation_time = self.simulation_time + sim_time
+            
+            # Calculate the simulation timeout
+            if self.simulation_options['simulation_timeout']:
+                current_time = time.time()
+                elapsed_time = current_time - self.init_time
+                
+                if (elapsed_time > self.simulation_options['simulation_timeout']):
+                    logger.error('Timeout Error in simulation. Elapsed time: %s',elapsed_time)
+                    raise TimeoutError(elapsed_time)
+        
             
         return
     

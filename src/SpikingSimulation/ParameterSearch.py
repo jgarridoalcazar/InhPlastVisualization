@@ -113,16 +113,13 @@ class ParameterSearch(object):
         
         return
     
-    def _generate_config_dicts(self):
-        
+    def _extract_parameters(self):
         # Extract every parameter to explore
         self.parameter_keys = [key for key in self.config_options.keys() if key.startswith('parameter')]
         self.parameter_dic = []        
         for key in self.parameter_keys:
             self.parameter_dic.append(self.config_options.pop(key))
-        
-        # Generate the combinations of values
-        value_list = []
+            
         for key,parameter in zip(self.parameter_keys,self.parameter_dic):
             # Check if the section and parameter exists
             if not 'section' in parameter:
@@ -157,6 +154,18 @@ class ParameterSearch(object):
                 logger.error('Parameter evolution type has not been specified in %s',key)
                 raise Exception('NonSpecifiedType')
             
+            if parameter['type'] not in ['geometric','arithmetic']:
+                logger.error('Parameter evolution type %s has not been implemented. Only geometric and arithmetic are allowed so far',parameter['type'])
+                raise Exception('InvalidType')
+            
+        
+    
+    def _generate_config_dicts(self):
+        self._extract_parameters()
+        
+        # Generate the combinations of values
+        value_list = []
+        for key,parameter in zip(self.parameter_keys,self.parameter_dic):
             if parameter['type']=='geometric':
                 # Geometric series
                 min_exponent = math.log(parameter['min_value'],parameter['step'])
@@ -165,9 +174,6 @@ class ParameterSearch(object):
             elif parameter['type']=='arithmetic':
                 # Arithmetic series
                 values = list(numpy.linspace(parameter['min_value'], parameter['max_value'], num=(parameter['max_value']-parameter['min_value'])/float(parameter['step'])+1))
-            else:
-                logger.error('Parameter evolution type %s has not been implemented. Only geometric and arithmetic are allowed so far',parameter['type'])
-                raise Exception('InvalidType')
             
             value_list.append(values)
         

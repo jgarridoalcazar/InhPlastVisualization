@@ -3,14 +3,12 @@ Created on May 27, 2014
 
 @author: Jesus Garrido (jgarridoalcazar at gmail.com)
 '''
-# Nest has to be imported before mpi4py
-import SpikingCerebellum.NestCerebellarModel as NestGenerator
             
 import bisect
 import ntpath
 import logging
 from Utils.Utils import ReadConfigFile
-from Utils.Logger import InitializeLogger
+from Utils.Logger import InitializeLogger, Logger2File
 
 InitializeLogger('Simulation')
 
@@ -31,7 +29,7 @@ class FrequencySimulation(object):
         '''
         
         if 'config_options' in kwargs:
-            self.config_options = kwargs.pop('config_options')                         
+            self.config_options = kwargs.pop('config_options')  
         elif 'config_file' in kwargs:
             self.config_file = kwargs.pop('config_file')
             logger.info('Parsing configuration file %s',self.config_file)
@@ -49,31 +47,46 @@ class FrequencySimulation(object):
         Initialize all the objects needed for running the simulation.
         '''
         # Read simulation general options
-        if 'simulation' in self.config_options:
-            if 'time' in self.config_options['simulation']:
-                self.simulation_time = self.config_options['simulation']['time']
-            else:
-                self.simulation_time = 1
-                
-            if 'debug' in self.config_options['simulation'] and self.config_options['simulation']['debug']:
-                logger.setLevel(logging.DEBUG)
-            else:
-                logger.setLevel(logging.INFO)
-                
-            if 'visualize_animation' not in self.config_options['simulation']:
-                self.config_options['simulation']['visualize_animation'] = False
-                
-            if 'visualize_results' not in self.config_options['simulation']:
-                self.config_options['simulation']['visualize_results'] = False
-       
+        if 'simulation' not in self.config_options:
+            self.config_options['simulation'] = dict()
+            
+        if 'log_file' in self.config_options['simulation']:
+            Logger2File(logger, self.config_options['simulation']['log_file'])
+        
+        if 'verbosity' not in self.config_options['simulation']:
+            self.config_options['simulation']['verbosity'] = 'debug'  
+            logger.warning('Non-specified simulation verbosity. Using default value %s',self.config_options['simulation']['verbosity']) 
+    
+        numeric_level = getattr(logging, self.config_options['simulation']['verbosity'].upper(), None)
+        if not isinstance(numeric_level, int):
+            self.config_options['simulation']['verbosity'] = 'info'
+            numeric_level = getattr(logging, self.config_options['simulation']['verbosity'].upper(), None)
+            logger.warning('Invalid simulation verbosity. Using default value %s',self.config_options['verbosity']['verbosity']) 
+            raise ValueError('Invalid log level: %s' % self.config_options['simulation']['verbosity'])
+        
+        logger.setLevel(numeric_level)
+        
+        if 'time' in self.config_options['simulation']:
+            self.simulation_time = self.config_options['simulation']['time']
         else:
             self.simulation_time = 1
+                
+                
+        if 'visualize_animation' not in self.config_options['simulation']:
+            self.config_options['simulation']['visualize_animation'] = False
+            
+        if 'visualize_results' not in self.config_options['simulation']:
+            self.config_options['simulation']['visualize_results'] = False
+   
             
         logger.debug('Simulation time fixed to %ss',self.simulation_time)
         
         # Initialize cerebellar model
         logger.debug('Creating cerebellum generator')
         if 'run_simulation' in self.config_options['simulation'] and self.config_options['simulation']['run_simulation']:
+            # Nest has to be imported before mpi4py
+            import SpikingCerebellum.NestCerebellarModel as NestGenerator
+
             self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
         else:
             self.config_options['simulation']['run_simulation'] = False
@@ -421,6 +434,7 @@ class FrequencySimulation(object):
         
         # Extract every mutual information to explore
         parameter_keys = [key for key in self.config_options.keys() if key.startswith('mutual_information')]
+        mutual_information = []
         for key in parameter_keys:
             
             if not 'layer' in self.config_options[key]:
@@ -444,14 +458,12 @@ class FrequencySimulation(object):
                                                              window_length=self.config_options[key]['window_length'], time_bin = self.config_options[key]['time_bin'])
             MIAnalysis.initialize()
             MIAnalysis.runAtTime(self.simulation_time)
+            mutual_information.append(MIAnalysis.mutual_information/MIAnalysis.max_mutual_information)
             if self.config_options[key]['record_to_file']:
                 filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key 
                 logger.debug('Writing mutual information from section %s to file %s',key,filename)
                 MIAnalysis.writeToFile(file_name=filename)
                 
-        return
+        return mutual_information
     
-        
-        
-    
-    
+ 

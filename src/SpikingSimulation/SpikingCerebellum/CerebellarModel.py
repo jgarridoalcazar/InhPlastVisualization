@@ -30,7 +30,7 @@ class CerebellarModel(object):
         '''
         
         if ('config_dict' in kwargs):
-            self.config_dict = kwargs.pop('config_dict')                         
+            self.config_dict = kwargs.pop('config_dict')                 
         else:
             logger.error('Non-specified cerebellum config file')
             raise Exception('Non-DefinedCerebellumModel')
@@ -177,13 +177,17 @@ class CerebellarModel(object):
         if not 'seed' in self.simulation_options:
             self.simulation_options['seed']  = int(time.time())
         
+        
         # Generate random number generators for each python virtual process
         self.simulation_options['pyrngs'] = [numpy.random.RandomState(s) for s in range(self.simulation_options['seed'], self.simulation_options['seed']+self.get_number_of_virtual_processes())]
+        
+        logger.debug('Numpy random seeds set')
         
         # Check weight recording time step
         if not 'weight_recording_step' in self.simulation_options:
             self.simulation_options['weight_recording_step'] = float("inf")
     
+        logger.debug('Cerebellar simulation initialized')
         
         return
     
@@ -274,8 +278,9 @@ class CerebellarModel(object):
         '''
         Return the number of virtual processes. It might be used to decide the number of   
         '''
+        
         return
-
+        
     @abc.abstractmethod
     def get_my_process_id(self):
         '''

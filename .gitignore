@@ -166,3 +166,21 @@ src/NestModule/mmb/Makefile
 src/NestModule/mmb/stamp-h1
 
 src/NestModule/GLPlasticityModule/libltdl/*
+
+*.prof
+
+*.pkl
+
+SimulationConfigTest2.cfg
+
+SimulationConfigTest.cfg
+
+*.in~
+
+src/NestModule/GLPlasticityModule/glplasticitymodule_config.h.in~
+
+src/NestModule/mmb/.libs/libglplasticitymodule.0.dylib
+
+TestSignal.py
+
+TestSignal.sh

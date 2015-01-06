@@ -393,7 +393,7 @@ void mynest::iaf_cond_exp_ip::update(nest::Time const & origin, const nest::long
 	      //std::cout << "Spike elicited: I_total=" << I_total << " rC=" << S_.y_[State_::R_C] << "DeltarC=" << DeltaRC << std::endl;
 	      // Check if R_C goes to 0 or negative
 	      if ( S_.y_[State_::R_C] <= 0)
-	          throw nest::BadProperty("Nest simulation has reached an invalid state where rC is under 0. Please, consider to decrease the epsilon_rC parameter.");
+	          throw nest::NumericalInstability(get_name());
 	    }
     
     // set new input current

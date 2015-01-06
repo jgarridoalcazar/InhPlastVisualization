@@ -1,6 +1,14 @@
 # This file should be imported after nest. Otherwise nest might not work as expected
 import logging
+import socket
+import os
 from mpi4py import MPI
+
+log_files = []
+
+handler_list = dict()
+
+formatter = None
 
 def InitializeLogger(name):
     
@@ -21,8 +29,15 @@ def InitializeLogger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
 
+    global handler_list
+    
+    if name not in handler_list.keys():
+        handler_list[name] = []
+
     # Create formatter
-    formatter = logging.Formatter('%(asctime)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
+    global formatter
+    if formatter is None:
+        formatter = logging.Formatter('%(asctime)s - P%(process)s - %(name)s - %(levelname)s: %(message)s')
 
     # Create stdout handler
     handler = logging.StreamHandler()
@@ -36,3 +51,33 @@ def InitializeLogger(name):
     logger.addFilter(filter1)
     logger.addHandler(handler)
 
+def Logger2File(logger, filename):
+    # Check if a file handler exists with the same file name
+    global log_files
+    global formatter
+    global handler_list
+        
+    file_handler = [file_hand['handler'] for file_hand in log_files if file_hand['filename']==filename]
+    
+    # If there is no file_handler with that name
+    if not file_handler:
+        # Add the hostname and the PID to the filename
+        new_filename = filename + '.' + socket.gethostname() + '.' + str(os.getpid())
+        handler = logging.FileHandler(new_filename, mode='w')
+        log_files.append(dict({'filename': filename,
+                               'handler': handler}))
+        file_handler = [handler]
+        
+        if formatter is None:
+            formatter = logging.Formatter('%(asctime)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
+
+        handler.setFormatter(formatter)
+        
+    for handler in file_handler:
+        if handler not in handler_list[logger.name]:
+            logger.addHandler(handler)
+            handler_list[logger.name].append(handler)
+        
+    
+    
+    
