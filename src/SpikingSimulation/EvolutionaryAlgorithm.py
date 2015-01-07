@@ -16,6 +16,8 @@ from deap import base, creator, tools
 from Utils.Utils import ReadConfigFile
 from Utils.Logger import InitializeLogger, Logger2File
 import multiprocessing
+from deap.gp import mutUniform
+from random import random
 
 InitializeLogger('EvolutionaryAlgorithm')
 
@@ -23,6 +25,26 @@ InitializeLogger('EvolutionaryAlgorithm')
 logger = logging.getLogger('EvolutionaryAlgorithm')
 
 toolbox = base.Toolbox()
+
+def mutUniformCustom(individual, indpb, rand_generator):
+    """This function applies a random uniform mutation between 0 and 1
+     on the input individual. This mutation expects a
+    :term:`sequence` individual composed of real valued attributes.
+    The *indpb* argument is the probability of each attribute to be mutated.
+    
+    :param individual: Individual to be mutated.
+    :param indpb: Independent probability for each attribute to be mutated.
+    :returns: A tuple of one individual.
+    
+    
+    """
+    size = len(individual)
+    
+    for i in xrange(size):
+        if rand_generator.rand() < indpb:
+            individual[i] = rand_generator.rand()
+    
+    return individual,
 
 class EvolutionaryAlgorithm(object):
     '''
@@ -35,6 +57,7 @@ class EvolutionaryAlgorithm(object):
          'OnePoint' : tools.cxOnePoint,
          'TwoPoint' : tools.cxTwoPoint,
          'Gaussian' : tools.mutGaussian,
+         'MutUniform' : mutUniformCustom,
          'Tournament' : tools.selTournament
     }
     
@@ -42,13 +65,15 @@ class EvolutionaryAlgorithm(object):
          'OnePoint' : [],
          'TwoPoint' : [],
          'Gaussian' : ['gaussian_mu','gaussian_sigma','gaussian_indpb'],
-         'Tournament' : ['tournament_size']
+         'Tournament' : ['tournament_size'],
+         'MutUniform' : ['uniform_indpb']
     }
     
     paramTranslatorDict = {
          'gaussian_mu' : 'mu',
          'gaussian_sigma' : 'sigma',
          'gaussian_indpb' : 'indpb',
+         'uniform_indpb'  : 'indpb',
          'tournament_size' : 'tournsize'    
     }
     
@@ -360,7 +385,7 @@ class EvolutionaryAlgorithm(object):
         filled_nodes = (len(invalid_ind)*self.config_options['algorithm']['number_of_repetitions'])%self.config_options['algorithm']['number_of_cores']
         if filled_nodes!=0:
             new_size = int((self.config_options['algorithm']['number_of_cores'] - filled_nodes)/self.config_options['algorithm']['number_of_repetitions'])
-            logger.debug('Adding %s new random individual to fill idle nodes', new_size)
+            logger.info('Adding %s new random individual to fill idle nodes', new_size)
             new_pop = toolbox.population(n=new_size)
             population.extend(new_pop)
             
@@ -382,7 +407,7 @@ class EvolutionaryAlgorithm(object):
         for ind, row in zip(population, fit_reshape):
             ind.fitness.values = numpy.average(row),numpy.std(row)
             
-        logger.debug("Evaluated %i individuals",len(population))
+        logger.info("Evaluated %i individuals",len(population))
                 
 
     def execute_search(self):
@@ -440,7 +465,7 @@ class EvolutionaryAlgorithm(object):
 
         # Begin the evolution
         for gen in range(start_gen, self.config_options['algorithm']['number_of_generations']):
-            logger.debug("Generation %i", gen)
+            logger.info("Generation %i", gen)
         
             # Select the next generation individuals
             offspring = toolbox.select(population, k=self.config_options['algorithm']['number_of_individual'])
@@ -456,7 +481,7 @@ class EvolutionaryAlgorithm(object):
 
             for mutant in offspring:
                 if self.num_generator.rand() < self.config_options['algorithm']['mutation_probability']:
-                    toolbox.mutate(mutant)
+                    toolbox.mutate(mutant, rand_generator=self.num_generator)
                     del mutant.fitness.values
     
             # Fill idle nodes with new random individual
@@ -470,7 +495,9 @@ class EvolutionaryAlgorithm(object):
             self._evaluate_population(invalid_ind)
         
             # The population is entirely replaced by the offspring
-            population[:] = offspring
+            # population[:] = offspring
+            # The population is extended with the offspring
+            population.extend(invalid_ind)
             
             halloffame.update(population)
             record = stats.compile(population)
@@ -498,7 +525,7 @@ class EvolutionaryAlgorithm(object):
             for ind in halloffame:
                 logger.info('Individual: %s. Fitness: %s', self._get_unnormalized_values(ind), ind.fitness.values)
     
-            logger.debug("-- End of (successful) evolution --")
+            logger.info("-- End of (successful) evolution --")
 
 # Function to check the bounds of the attributes in the interval
 def checkBounds():
@@ -585,6 +612,9 @@ def helper_simulation(local_config_options):
         logger.info('Using default mutual information value %s', mutual_information)
         
     return mutual_information
+
+
+
     
 
     
