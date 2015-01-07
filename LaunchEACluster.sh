@@ -7,6 +7,6 @@
 #$ -V
 #$ -v OMP_NUM_THREADS=1
 #$ -q 24H
-#$ -pe openmpi 128
+#$ -pe openmpi 256
 
-python -m scoop --prolog /SCRATCH/TIC117/jesusgarrido/SpikingGranularLayer/.env_var_ld -vvv -n 128 ./src/LaunchEvolutionaryAlgorithm.py SimulationConfigEACluster.cfg
+python -m scoop --prolog /SCRATCH/TIC117/jesusgarrido/SpikingGranularLayer/.env_var_ld -vvv -n 256 ./src/LaunchEvolutionaryAlgorithm.py SimulationConfigEACluster.cfg
