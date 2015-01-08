@@ -422,10 +422,10 @@ class EvolutionaryAlgorithm(object):
             
         # Initialize stats
         stats = tools.Statistics(lambda ind: ind.fitness.values)
-        stats.register("avg", numpy.mean)
-        stats.register("max", numpy.max)
-        stats.register("min", numpy.min)
-        stats.register("std", numpy.std)
+        stats.register("avg", numpy.average, axis=0)
+        stats.register("max", numpy.max, axis=0)
+        stats.register("min", numpy.min, axis=0)
+        stats.register("std", numpy.std, axis=0)
         
         # Initialize mapping to distribute the evaluations to the workers
         toolbox.register("map", futures.map)
