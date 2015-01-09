@@ -37,7 +37,7 @@ def InitializeLogger(name):
     # Create formatter
     global formatter
     if formatter is None:
-        formatter = logging.Formatter('%(asctime)s - P%(process)s - %(name)s - %(levelname)s: %(message)s')
+        formatter = logging.Formatter('%(asctime)s - P%(process)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
 
     # Create stdout handler
     handler = logging.StreamHandler()
