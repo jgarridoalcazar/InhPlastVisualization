@@ -29,7 +29,15 @@ class FrequencySimulation(object):
         '''
         
         if 'config_options' in kwargs:
-            self.config_options = kwargs.pop('config_options')  
+            self.config_options = kwargs.pop('config_options')
+            # This code forces exception in the GSLSolver
+#             self.config_options['goclayer']['epsilon_rr_ip'] = 5.7832127
+#             self.config_options['mfgocsynapsis']['max_weight'] = 1.49209e-9
+#             self.config_options['mfgocsynapsis']['learning_step'] = 1.0142578e-5
+#             self.config_options['goclayer']['beta_ip'] = 1.713656
+#             self.config_options['mfgocsynapsis']['minus_plus_ratio'] = 1.77053
+#             self.config_options['goclayer']['epsilon_rc_ip'] = 476.5509369
+#             self.config_options['goclayer']['tau_ip'] =111.14285
         elif 'config_file' in kwargs:
             self.config_file = kwargs.pop('config_file')
             logger.info('Parsing configuration file %s',self.config_file)
@@ -66,6 +74,9 @@ class FrequencySimulation(object):
         
         logger.setLevel(numeric_level)
         
+        if 'use_mpi' not in self.config_options['simulation']:
+            self.config_options['simulation']['use_mpi'] = False
+        
         if 'time' in self.config_options['simulation']:
             self.simulation_time = self.config_options['simulation']['time']
         else:
@@ -85,8 +96,11 @@ class FrequencySimulation(object):
         logger.debug('Creating cerebellum generator')
         if 'run_simulation' in self.config_options['simulation'] and self.config_options['simulation']['run_simulation']:
             # Nest has to be imported before mpi4py
-            import SpikingCerebellum.NestCerebellarModel as NestGenerator
-
+            if self.config_options['simulation']['use_mpi']:
+                import SpikingCerebellum.NestCerebellarModel as NestGenerator
+            else:
+                import SpikingCerebellum.NestCerebellarModelNoMPI as NestGenerator
+            
             self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
         else:
             self.config_options['simulation']['run_simulation'] = False
@@ -430,7 +444,10 @@ class FrequencySimulation(object):
         Analyze the estimators that have been set in the configuration file
         '''
         
-        import Analysis.MutualInformation as MutualInformation
+        if self.config_options['simulation']['use_mpi']:
+            import Analysis.MutualInformation as MutualInformation
+        else:
+            import Analysis.MutualInformationNoMPI as MutualInformation
         
         # Extract every mutual information to explore
         parameter_keys = [key for key in self.config_options.keys() if key.startswith('mutual_information')]

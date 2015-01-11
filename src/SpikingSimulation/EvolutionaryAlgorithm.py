@@ -309,30 +309,33 @@ class EvolutionaryAlgorithm(object):
             
         logger.info('Running evaluation with seed %s and parameters %s', seed, self._get_unnormalized_values(individual))
         
-        parent_conn, child_conn = multiprocessing.Pipe()
-        p = multiprocessing.Process(target=helper_subprocess_simulation, args=(child_conn,local_config_options))
-         
-        p.start()
+#         parent_conn, child_conn = multiprocessing.Pipe()
+#         p = multiprocessing.Process(target=helper_subprocess_simulation, args=(child_conn,local_config_options))
+#          
+#         p.start()
+#         
+# #         # Catch SIGNINT just in case the parent process is killed before.
+# #         import signal
+# #         import sys
+# #      
+# #         def signal_term_handler(signal, frame):
+# #             logger.info('Got %s. Killing running subprocesses',signal)
+# #             if p.is_alive(): # Child still around?
+# #                 p.terminate() # kill it
+# #                 p.join()
+# #             sys.exit(0)
+# #      
+# #         signal.signal(signal.SIGUSR2, signal_term_handler)
+# #         signal.signal(signal.SIGINT, signal_term_handler)
+# #         signal.signal(signal.SIGKILL, signal_term_handler)
+# #         signal.signal(signal.SIGTERM, signal_term_handler)
+#         
+#         mutual_information = parent_conn.recv()
+#         p.join()
+        mutual_information = helper_simulation(local_config_options)
         
-#         # Catch SIGNINT just in case the parent process is killed before.
-#         import signal
-#         import sys
-#      
-#         def signal_term_handler(signal, frame):
-#             logger.info('Got %s. Killing running subprocesses',signal)
-#             if p.is_alive(): # Child still around?
-#                 p.terminate() # kill it
-#                 p.join()
-#             sys.exit(0)
-#      
-#         signal.signal(signal.SIGUSR2, signal_term_handler)
-#         signal.signal(signal.SIGINT, signal_term_handler)
-#         signal.signal(signal.SIGKILL, signal_term_handler)
-#         signal.signal(signal.SIGTERM, signal_term_handler)
-        
-        mutual_information = parent_conn.recv()
-        p.join()
-#         mutual_information = helper_simulation(local_config_options)
+        logger.info('Mutual information with seed %s and parameters %s: %s', seed, self._get_unnormalized_values(individual), mutual_information)
+
         return mutual_information
             
     def _initialize_algorithm(self):
@@ -586,13 +589,13 @@ def helper_subprocess_simulation(pipe, local_config_options):
 def helper_simulation(local_config_options):
     import SpikingSimulation.FrequencySimulation as FrequencySimulation
     
-    logger.debug('Simulation parameter dictionary: %s', local_config_options)
+    # logger.debug('Simulation parameter dictionary: %s', local_config_options)
         
     try:
         simulation = FrequencySimulation.FrequencySimulation(config_options = local_config_options)
-
+    
         simulation.initialize()
-
+    
         if simulation.config_options['simulation']['visualize_animation']:
             simulation.visualize_animation()
         else:
@@ -600,19 +603,18 @@ def helper_simulation(local_config_options):
         
         if simulation.config_options['simulation']['visualize_results']:
             simulation.visualize_results()
-
+    
         [mutual_information] = simulation.analyze_results()
     except KeyboardInterrupt:
         logger.warning('Received SIGNINT signal. Ending simulation')
         import sys
         sys.exit(0)
-    except:
+    except Exception as err:
         mutual_information = 0.0
-        logger.debug('Exception caught on individual simulation %s', local_config_options)
+        logger.debug('Exception caught on individual simulation %s: %s', local_config_options, err)
         logger.info('Using default mutual information value %s', mutual_information)
-        
+         
     return mutual_information
-
 
 
     

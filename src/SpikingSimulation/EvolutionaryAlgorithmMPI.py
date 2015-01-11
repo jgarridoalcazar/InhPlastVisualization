@@ -15,7 +15,6 @@ from mpi4py import MPI
 from deap import base, creator, tools
 from Utils.Utils import ReadConfigFile
 from Utils.Logger import InitializeLogger, Logger2File
-import multiprocessing
 from deap.gp import mutUniform
 import threading
 import Queue
@@ -158,11 +157,6 @@ class EvolutionaryAlgorithm(object):
             self.config_options['algorithm']['number_of_generations'] = 1
             logger.warning('Non-specified number_of_generations parameter. Using default value %s', self.config_options['algorithm']['number_of_generations'])
             
-        # If number of individual is not defined, the number of available cores will be used.
-        if 'number_of_cores' not in self.config_options['algorithm']:
-            self.config_options['algorithm']['number_of_cores'] = 1
-            logger.warning('Non-specified number_of_cores parameter. Using default value %s', self.config_options['algorithm']['number_of_cores'])
-        
         # If number of individual is not defined, the number of available cores will be used.
         if 'number_of_individual' not in self.config_options['algorithm']:
             self.config_options['algorithm']['number_of_individual'] = 64
@@ -369,31 +363,34 @@ class EvolutionaryAlgorithm(object):
             
         logger.info('Running evaluation with seed %s and parameters %s', seed, self._get_unnormalized_values(individual))
         
-        parent_conn, child_conn = multiprocessing.Pipe()
+#         parent_conn, child_conn = multiprocessing.Pipe()
+#         
+#         p = multiprocessing.Process(target=helper_subprocess_simulation, args=(child_conn,local_config_options))
+#         p.start()
+#         
+#                 
+# #         # Catch SIGNINT just in case the parent process is killed before.
+# #         import signal
+# #         import sys
+# #        
+# #         def signal_term_handler(signal, frame):
+# #             logger.info('Got %s. Killing running subprocesses',signal)
+# #             if p.is_alive(): # Child still around?
+# #                 p.terminate() # kill it
+# #                 p.join()
+# #             sys.exit(0)
+# #        
+# #         signal.signal(signal.SIGUSR2, signal_term_handler)
+# #         signal.signal(signal.SIGINT, signal_term_handler)
+# # #         signal.signal(signal.SIGKILL, signal_term_handler)
+# #         signal.signal(signal.SIGTERM, signal_term_handler)
+#         
+#         mutual_information = parent_conn.recv()
+#         p.join()
+        mutual_information = helper_simulation(local_config_options)
         
-        p = multiprocessing.Process(target=helper_subprocess_simulation, args=(child_conn,local_config_options))
-        p.start()
-        
-                
-#         # Catch SIGNINT just in case the parent process is killed before.
-#         import signal
-#         import sys
-#        
-#         def signal_term_handler(signal, frame):
-#             logger.info('Got %s. Killing running subprocesses',signal)
-#             if p.is_alive(): # Child still around?
-#                 p.terminate() # kill it
-#                 p.join()
-#             sys.exit(0)
-#        
-#         signal.signal(signal.SIGUSR2, signal_term_handler)
-#         signal.signal(signal.SIGINT, signal_term_handler)
-# #         signal.signal(signal.SIGKILL, signal_term_handler)
-#         signal.signal(signal.SIGTERM, signal_term_handler)
-        
-        mutual_information = parent_conn.recv()
-        p.join()
-#         mutual_information = helper_simulation(local_config_options)
+        logger.info('Mutual information with seed %s and parameters %s: %s', seed, self._get_unnormalized_values(individual), mutual_information)
+
         return mutual_information
             
     def _initialize_algorithm(self):
@@ -443,6 +440,8 @@ class EvolutionaryAlgorithm(object):
         self.simulationQueue.put(population)
         self.simulationQueue.task_done()
         
+        self.end_simulation = self.last_generation
+        
         logger.info("Evaluating %i individuals",len(population))
         return self.completeQueue.get()
         
@@ -456,16 +455,18 @@ class EvolutionaryAlgorithm(object):
         # Initialize SimulationMap and RunningDict
         simulationMap = dict()
         availableProcs = range(1,self.mpi_size)
+        endedProcs = []
         for ind in availableProcs:
             simulationMap[ind] = None
             
         runningDict = dict()
+        individualDict = dict()
         
         # List with the simulations to be executed in this "batch"
         simulationList = []
         
         request = None
-        status = None
+        status = MPI.Status()
         population_size = 0
         output_population = toolbox.population(n=0)
         data = numpy.empty(1, dtype=numpy.float64)
@@ -475,36 +476,47 @@ class EvolutionaryAlgorithm(object):
         ########################################
         request = self.comm.Irecv([data, MPI.DOUBLE], source=MPI.ANY_SOURCE, tag=MPI.ANY_TAG)
         
-        while True:
-            if request.Test(status = status):
+        # This loop end when every worker process has been finished
+        while (len(endedProcs)!=(self.mpi_size-1)):
+            Job_finished = request.Test(status)
+            
+            if Job_finished or (not availableProcs):
+                if (not Job_finished):
+                    logger.debug('Waiting for something finished')
+                    request.Wait(status)
                 # There is at least one simulation finished
                 mpi_process = status.Get_source()
                 tuple_ind = simulationMap[mpi_process]
-                runningDict[tuple_ind][0].append(data[0])
-                
                 logger.debug('%s mutual information has been received from %s: %s', tuple_ind, mpi_process, data[0])
+                
+                if tuple_ind not in runningDict:
+                    logger.warning('Error in data received from process %s',mpi_process)
+                    logger.warning('%s not exist in runningDict %s',tuple_ind,runningDict)
+                else:
+                    runningDict[tuple_ind][0].append(data[0])
+                    
+                    # If all the simulations with these parameters are done, get the average and std
+                    if (len(runningDict[tuple_ind][0])==self.config_options['algorithm']['number_of_repetitions']):
+                        individual = individualDict.pop(tuple_ind)
+                        individual.fitness.values = numpy.average(runningDict[tuple_ind][0]), numpy.std(runningDict[tuple_ind][0])
+                        logger.debug('Fitness value calculated for individual %s: %s', individual, individual.fitness.values)
+                        output_population.append(individual)
+                        is_from_queue = runningDict[tuple_ind][1]
+                        runningDict.pop(tuple_ind)
+                        logger.debug('%s extracted from the running dictionary', tuple_ind)
+                        # Check the number of individual to finish before unlocking the EA.
+                        if is_from_queue:
+                            population_size -= 1
+                            if population_size==0:
+                                self.completeQueue.put(output_population)
+                                output_population = toolbox.population(n=0)
+                                self.completeQueue.task_done()
+                                logger.debug('Simulation batch has been finished')
+                
                 
                 # Set the process as available
                 simulationMap[mpi_process] = None
                 availableProcs.append(mpi_process)
-                
-                # If all the simulations with these parameters are done, get the average and std
-                if (len(runningDict[tuple_ind][0])==self.config_options['algorithm']['number_of_repetitions']):
-                    individual = list(tuple_ind)
-                    individual.fitness.value = numpy.average(runningDict[tuple_ind][0]), numpy.std(runningDict[tuple_ind][0])
-                    individual.fitness.valid = True
-                    output_population.append(individual)
-                    is_from_queue = runningDict[tuple_ind][1]
-                    runningDict.pop(tuple_ind)
-                    # Check the number of individual to finish before unlocking the EA.
-                    if is_from_queue:
-                        population_size -= 1
-                        if population_size==0:
-                            self.completeQueue.put(output_population)
-                            output_population = toolbox.population(n=0)
-                            self.completeQueue.task_done()
-                            logger.debug('Simulation batch has been finished')
-                
                 
                 ########################################
                 # Create requests with MPI.Irecv(....)
@@ -521,8 +533,9 @@ class EvolutionaryAlgorithm(object):
                     
                     if param_tuple not in runningDict:
                         runningDict[param_tuple] = ([],from_queue)
+                        logger.debug('%s inserted in the running dictionary', param_tuple)
                         
-                    simulationMap[proc_rank] = parameters
+                    simulationMap[proc_rank] = param_tuple
                     
                     ########################################
                     # Send through MPI the parameters and the seed
@@ -536,23 +549,42 @@ class EvolutionaryAlgorithm(object):
                 elif not self.simulationQueue.empty():
                     # There are available batch simulations in the simulation queue.
                     # Add every individual/seed combination to the simulationList
-                    logger.debug('New population to be evaluated received')
                     population = self.simulationQueue.get()
-                    population_size += len(population)
+                    logger.debug('New population to be evaluated received: %s',population)
                     for ind in population:
-                        for seed in range(self.config_options['simulation']['seed'],self.config_options['simulation']['seed']+self.config_options['algorithm']['number_of_repetitions'])*len(population):
-                            simulationList.append((ind,seed,True))
+                        ind_key = tuple(ind)
+                        # Skip those individual already under evaluation
+                        if ind_key not in individualDict:
+                            population_size += 1
+                            individualDict[ind_key] = ind
+                            for seed in range(self.config_options['simulation']['seed'],self.config_options['simulation']['seed']+self.config_options['algorithm']['number_of_repetitions']):
+                                simulationList.append((ind,seed,True))
+                elif self.end_simulation:
+                    proc_rank = availableProcs.pop(0)
+                    ########################################
+                    # Send and ending signal to the worker
+                    ########################################
+                    logger.debug('Sending ending signal to process %s', proc_rank)
+                    data_send = numpy.empty(len(self.parameter_dic)+1, dtype=numpy.float64)
+                    self.comm.Send([data_send, MPI.DOUBLE], dest=proc_rank, tag=SIM_EXIT)
+                    endedProcs.append(proc_rank)
                 elif self.config_options['algorithm']['fill_idle_nodes']:
                     # There is nothing to simulate. Generate a new individual
                     logger.debug('There are idle nodes. Creating random individuals.')
-                    individual = toolbox.Individual()
-                    for seed in range(self.config_options['simulation']['seed'],self.config_options['simulation']['seed']+self.config_options['algorithm']['number_of_repetitions'])*len(population):
-                        simulationList.append((individual,seed,False))
+                    individual = toolbox.individual()
+                    ind_key = tuple(individual)
+                    # Skip those individual already under evaluation
+                    if ind_key not in individualDict:
+                        individualDict[ind_key] = individual
+                        for seed in range(self.config_options['simulation']['seed'],self.config_options['simulation']['seed']+self.config_options['algorithm']['number_of_repetitions']):
+                            simulationList.append((individual,seed,False))
                 else:
                     # Nothing to do
+                    logger.debug('Sleeping 1')
                     time.sleep(0.1)
             else:
                 # Nothing to do
+                logger.debug('Sleeping 2')
                 time.sleep(0.1)
 
     def execute_search(self):
@@ -588,6 +620,11 @@ class EvolutionaryAlgorithm(object):
         # Initialize mapping to distribute the evaluations to the workers
         #toolbox.register("map", futures.map)
         
+        # If we are in the last generation activate the flag
+        self.last_generation = False
+        self.end_simulation = False
+        
+        
         # Load the previous algorithm state
         if self.config_options['algorithm']['load_from_file']:
             with open(self.config_options['algorithm']['load_from_file'], "r") as cp_file:
@@ -614,9 +651,8 @@ class EvolutionaryAlgorithm(object):
         
             # Start simulation thread
             self.managerThread.start()
-            
             self.population = self._evaluate_population(self.population)
-        
+            
             halloffame.update(self.population)
             
             logger.info('Parameter sequence: %s', param_names)
@@ -627,6 +663,9 @@ class EvolutionaryAlgorithm(object):
         # Begin the evolution
         for gen in range(start_gen, self.config_options['algorithm']['number_of_generations']):
             logger.info("Generation %i", gen)
+            
+            # If we are in the last generation activate the flag
+            self.last_generation = (gen == self.config_options['algorithm']['number_of_generations']-1)
         
             # Select the next generation individuals
             offspring = toolbox.select(self.population, k=self.config_options['algorithm']['number_of_individual'])
@@ -695,20 +734,20 @@ class EvolutionaryAlgorithm(object):
         Worker nodes receive parameter lists and simulate the network.
         '''
         stay_working = True
-        my_status = None
+        my_status = MPI.Status()
         while stay_working:
-            logger.debug('Receiving data in worker.')
             # Receive the simulation parameters and seed
             data_recv = numpy.empty(len(self.parameter_keys)+1, dtype=numpy.float64)
             self.comm.Recv([data_recv, MPI.DOUBLE], source=0, tag=MPI.ANY_TAG, status = my_status)
-#             tag = my_status.get_tag()
-#             
-#             # Check the tag
-#             if tag == SIM_EXIT:
-#                 stay_working = False
-#                 continue
-#             elif tag != SIM_DATA:
-#                 logger.warning('Unknown tag %s received in worker', tag)
+            tag = my_status.Get_tag()
+             
+            # Check the tag
+            if tag == SIM_EXIT:
+                stay_working = False
+                continue
+            
+            if tag != SIM_DATA:
+                logger.warning('Unknown tag %s received in worker', tag)
             
             cur_seed = int(data_recv[-1])
             parameters = data_recv[:-1].tolist()
@@ -745,7 +784,7 @@ def checkBounds():
 def helper_subprocess_simulation(pipe, local_config_options):
     import SpikingSimulation.FrequencySimulation as FrequencySimulation
     
-    logger.debug('Simulation parameter dictionary: %s', local_config_options)
+    #logger.debug('Simulation parameter dictionary: %s', local_config_options)
         
     try:
         simulation = FrequencySimulation.FrequencySimulation(config_options = local_config_options)
@@ -779,13 +818,13 @@ def helper_subprocess_simulation(pipe, local_config_options):
 def helper_simulation(local_config_options):
     import SpikingSimulation.FrequencySimulation as FrequencySimulation
     
-    logger.debug('Simulation parameter dictionary: %s', local_config_options)
+    # logger.debug('Simulation parameter dictionary: %s', local_config_options)
         
     try:
         simulation = FrequencySimulation.FrequencySimulation(config_options = local_config_options)
-
+    
         simulation.initialize()
-
+    
         if simulation.config_options['simulation']['visualize_animation']:
             simulation.visualize_animation()
         else:
@@ -793,17 +832,17 @@ def helper_simulation(local_config_options):
         
         if simulation.config_options['simulation']['visualize_results']:
             simulation.visualize_results()
-
+    
         [mutual_information] = simulation.analyze_results()
     except KeyboardInterrupt:
         logger.warning('Received SIGNINT signal. Ending simulation')
         import sys
         sys.exit(0)
-    except:
+    except Exception as err:
         mutual_information = 0.0
-        logger.debug('Exception caught on individual simulation %s', local_config_options)
+        logger.debug('Exception caught on individual simulation %s: %s', local_config_options, err)
         logger.info('Using default mutual information value %s', mutual_information)
-        
+         
     return mutual_information
 
 
