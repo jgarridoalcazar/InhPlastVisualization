@@ -624,6 +624,9 @@ class EvolutionaryAlgorithm(object):
         self.last_generation = False
         self.end_simulation = False
         
+        # Start simulation thread
+        self.managerThread.start()
+            
         
         # Load the previous algorithm state
         if self.config_options['algorithm']['load_from_file']:
@@ -649,8 +652,6 @@ class EvolutionaryAlgorithm(object):
         
             logger.debug("Start of evolution")
         
-            # Start simulation thread
-            self.managerThread.start()
             self.population = self._evaluate_population(self.population)
             
             halloffame.update(self.population)
