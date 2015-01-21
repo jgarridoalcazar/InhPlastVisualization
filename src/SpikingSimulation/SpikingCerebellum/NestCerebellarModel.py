@@ -42,6 +42,7 @@ class NestCerebellarModel(CerebellarModel):
          'ConductanceLIF' : 'iaf_cond_exp',
          'ConductanceLIFSym' : 'iaf_cond_exp_sym',
          'ConductanceLIFwIP': 'iaf_cond_exp_ip',
+         'ConductanceLIFwIPSym': 'iaf_cond_exp_ip_sym',
          'ConductanceLIFStowIP': 'iaf_cond_exp_sto_ip',
          'CurrentLIF' : 'iaf_neuron'
     }
@@ -93,7 +94,8 @@ class NestCerebellarModel(CerebellarModel):
     # Learning rule translation
     ruleNameTranslatorDict = {
         'STDP' : 'stdp_synapse_hom',
-        'STDPSym'   :   'stdp_sym_synapse_hom'
+        'STDPSym'   :   'stdp_sym_synapse_hom',
+        'STDPSymExp'    :   'stdp_sym_exp_synapse_hom'
     }
     
     # This dictionary maps the learning rule configuration parameters into the NEST learning rule model parameters (used in the keys).

@@ -1,13 +1,13 @@
 /*
- *  iaf_cond_exp_ip.h
+ *  iaf_cond_exp_ip_sym.h
  *
  *  This file is based on the iaf_cond_exp cell model distributed with NEST.
  *  
  *  Modified by: Jes�s Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
-#ifndef IAF_COND_EXP_IP_H
-#define IAF_COND_EXP_IP_H
+#ifndef IAF_COND_EXP_IP_SYM_H
+#define IAF_COND_EXP_IP_SYM_H
 
 #include "config.h"
 
@@ -15,7 +15,7 @@
 
 #include "nest.h"
 #include "event.h"
-#include "archiving_node.h"
+#include "archiving_node_sym.h"
 #include "ring_buffer.h"
 #include "connection.h"
 #include "universal_data_logger.h"
@@ -26,10 +26,10 @@
 #include <gsl/gsl_odeiv.h>
 
 /* BeginDocumentation
-Name: iaf_cond_exp_ip - Conductance based leaky integrate-and-fire neuron model with intrinsic plasticity.
+Name: iaf_cond_exp_ip_sym - Conductance based leaky integrate-and-fire neuron model with intrinsic plasticity.
 
 Description:
-iaf_cond_exp is an implementation of a spiking neuron using IAF dynamics with
+iaf_cond_exp_sym is an implementation of a spiking neuron using IAF dynamics with
 conductance-based synapses and intrinsic plasticity. Incoming spike events induce a post-synaptic change 
 of conductance modelled by an exponential function. The exponential function 
 is normalised such that an event of weight 1.0 results in a peak conductance of 1 nS.
@@ -98,16 +98,16 @@ namespace mynest
    * @param void* Pointer to model neuron instance.
    */
   extern "C"
-  int iaf_cond_exp_ip_dynamics (double, const double*, double*, void*);
+  int iaf_cond_exp_ip_sym_dynamics (double, const double*, double*, void*);
   
-  class iaf_cond_exp_ip : public nest::Archiving_Node
+  class iaf_cond_exp_ip_sym : public mynest::Archiving_Node_Sym
   {
     
   public:        
     
-    iaf_cond_exp_ip();
-    iaf_cond_exp_ip(const iaf_cond_exp_ip&);
-    ~iaf_cond_exp_ip();
+    iaf_cond_exp_ip_sym();
+    iaf_cond_exp_ip_sym(const iaf_cond_exp_ip_sym&);
+    ~iaf_cond_exp_ip_sym();
 
     /**
      * Import sets of overloaded virtual functions.
@@ -145,11 +145,11 @@ namespace mynest
     // Friends --------------------------------------------------------
 
     // make dynamics function quasi-member
-    friend int iaf_cond_exp_ip_dynamics(double, const double*, double*, void*);
+    friend int iaf_cond_exp_ip_sym_dynamics(double, const double*, double*, void*);
 
     // The next two classes need to be friends to access the State_ class/member
-    friend class nest::RecordablesMap<iaf_cond_exp_ip>;
-    friend class nest::UniversalDataLogger<iaf_cond_exp_ip>;
+    friend class nest::RecordablesMap<iaf_cond_exp_ip_sym>;
+    friend class nest::UniversalDataLogger<iaf_cond_exp_ip_sym>;
 
   private:
 
@@ -215,11 +215,11 @@ namespace mynest
      * Buffers of the model.
      */
     struct Buffers_ {
-      Buffers_(iaf_cond_exp_ip&);                   //!<Sets buffer pointers to 0
-      Buffers_(const Buffers_&, iaf_cond_exp_ip&);  //!<Sets buffer pointers to 0
+      Buffers_(iaf_cond_exp_ip_sym&);                   //!<Sets buffer pointers to 0
+      Buffers_(const Buffers_&, iaf_cond_exp_ip_sym&);  //!<Sets buffer pointers to 0
 
       //! Logger for all analog data
-      nest::UniversalDataLogger<iaf_cond_exp_ip> logger_;
+      nest::UniversalDataLogger<iaf_cond_exp_ip_sym> logger_;
 
       /** buffers and sums up incoming spikes/currents */
       nest::RingBuffer spike_exc_;
@@ -272,12 +272,12 @@ namespace mynest
     Buffers_    B_;
 
     //! Mapping of recordables names to access functions
-    static nest::RecordablesMap<iaf_cond_exp_ip> recordablesMap_;
+    static nest::RecordablesMap<iaf_cond_exp_ip_sym> recordablesMap_;
   };
 
   
   inline
-  nest::port iaf_cond_exp_ip::check_connection(nest::Connection& c, nest::port receptor_type)
+  nest::port iaf_cond_exp_ip_sym::check_connection(nest::Connection& c, nest::port receptor_type)
   {
 	nest::SpikeEvent e;
     e.set_sender(*this);
@@ -286,7 +286,7 @@ namespace mynest
   }
 
   inline
-  nest::port iaf_cond_exp_ip::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
+  nest::port iaf_cond_exp_ip_sym::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
   {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
@@ -294,7 +294,7 @@ namespace mynest
   }
  
   inline
-  nest::port iaf_cond_exp_ip::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
+  nest::port iaf_cond_exp_ip_sym::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
   {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
@@ -302,7 +302,7 @@ namespace mynest
   }
 
   inline
-  nest::port iaf_cond_exp_ip::connect_sender(nest::DataLoggingRequest& dlr, 
+  nest::port iaf_cond_exp_ip_sym::connect_sender(nest::DataLoggingRequest& dlr,
 		  nest::port receptor_type)
   {
     if (receptor_type != 0)
@@ -311,17 +311,17 @@ namespace mynest
   }
  
   inline
-  void iaf_cond_exp_ip::get_status(DictionaryDatum &d) const
+  void iaf_cond_exp_ip_sym::get_status(DictionaryDatum &d) const
   {
     P_.get(d);
     S_.get(d);
-    nest::Archiving_Node::get_status(d);
+    mynest::Archiving_Node_Sym::get_status(d);
 
     (*d)[nest::names::recordables] = recordablesMap_.get_list();
   }
 
   inline
-  void iaf_cond_exp_ip::set_status(const DictionaryDatum &d)
+  void iaf_cond_exp_ip_sym::set_status(const DictionaryDatum &d)
   {
     Parameters_ ptmp = P_;  // temporary copy in case of errors
     ptmp.set(d);                       // throws if BadProperty
@@ -332,7 +332,7 @@ namespace mynest
     // write them back to (P_, S_) before we are also sure that 
     // the properties to be set in the parent class are internally 
     // consistent.
-    nest::Archiving_Node::set_status(d);
+    mynest::Archiving_Node_Sym::set_status(d);
 
     // if we get here, temporaries contain consistent set of properties
     P_ = ptmp;

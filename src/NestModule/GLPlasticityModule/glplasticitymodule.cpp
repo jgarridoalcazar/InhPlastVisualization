@@ -37,9 +37,11 @@
 // include headers with your own stuff
 #include "glplasticitymodule.h"
 #include "iaf_cond_exp_ip.h"
+#include "iaf_cond_exp_ip_sym.h"
 #include "iaf_cond_exp_sto_ip.h"
 #include "iaf_cond_exp_sym.h"
 #include "stdp_sym_connection_hom.h"
+#include "stdp_sym_exp_connection_hom.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 
@@ -102,6 +104,14 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
                                         "iaf_cond_exp_ip");
 
     /* Register a neuron or device model.
+           Give node type as template argument and the name as second argument.
+           The first argument is always a reference to the network.
+           Return value is a handle for later unregistration.
+    */
+    nest::register_model<iaf_cond_exp_ip_sym>(nest::NestModule::get_network(),
+                                            "iaf_cond_exp_ip_sym");
+
+    /* Register a neuron or device model.
 	   Give node type as template argument and the name as second argument.
 	   The first argument is always a reference to the network.
 	   Return value is a handle for later unregistration.
@@ -116,6 +126,13 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
     */
    nest::register_prototype_connection_commonproperties < STDPSymConnectionHom,STDPSymHomCommonProperties>
    	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "stdp_sym_synapse_hom");
+
+   /* Register a synapse type.
+          Give synapse type as template argument and the name as second argument.
+          The first argument is always a reference to the network.
+       */
+      nest::register_prototype_connection_commonproperties < STDPSymExpConnectionHom,STDPSymExpHomCommonProperties>
+      	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "stdp_sym_exp_synapse_hom");
 
   }  // GLPlasticityModule::init()
 

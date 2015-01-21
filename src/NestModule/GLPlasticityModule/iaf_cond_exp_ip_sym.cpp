@@ -1,12 +1,12 @@
 /*
- *  iaf_cond_exp_ip.cpp
+ *  iaf_cond_exp_ip_sym.cpp
  *
  *  This file is based on the iaf_cond_exp cell model distributed with NEST.
  *  
  *  Modified by: Jes�s Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
-#include "iaf_cond_exp_ip.h"
+#include "iaf_cond_exp_ip_sym.h"
 
 #ifdef HAVE_GSL
 
@@ -30,49 +30,38 @@
  * Recordables map
  * ---------------------------------------------------------------- */
 
-nest::RecordablesMap<mynest::iaf_cond_exp_ip> mynest::iaf_cond_exp_ip::recordablesMap_;
-
+nest::RecordablesMap<mynest::iaf_cond_exp_ip_sym> mynest::iaf_cond_exp_ip_sym::recordablesMap_;
 
 namespace nest  // template specialization must be placed in namespace
 {
-  // Override the create() method with one call to RecordablesMap::insert_() 
+  // Override the create() method with one call to RecordablesMap::insert_()
   // for each quantity to be recorded.
   template <>
-  void RecordablesMap<mynest::iaf_cond_exp_ip>::create()
+  void RecordablesMap<mynest::iaf_cond_exp_ip_sym>::create()
   {
     // use standard names whereever you can for consistency!
-    insert_(names::V_m, 
-	    &mynest::iaf_cond_exp_ip::get_y_elem_<mynest::iaf_cond_exp_ip::State_::V_M>);
-    insert_(names::g_ex, 
-	    &mynest::iaf_cond_exp_ip::get_y_elem_<mynest::iaf_cond_exp_ip::State_::G_EXC>);
-    insert_(names::g_in, 
-	    &mynest::iaf_cond_exp_ip::get_y_elem_<mynest::iaf_cond_exp_ip::State_::G_INH>);
-    insert_(names::g_L, 
-    	    &mynest::iaf_cond_exp_ip::get_y_elem_<mynest::iaf_cond_exp_ip::State_::G_L>);
-    insert_(names::r_C, 
-    	    &mynest::iaf_cond_exp_ip::get_y_elem_<mynest::iaf_cond_exp_ip::State_::R_C>);
-  }
-  
-  namespace names
-  {
-
-  	  const Name r_C("r_C");
-      const Name tau_ip("tau_ip");
-      const Name epsilon_rC("epsilon_rC");
-      const Name epsilon_rR("epsilon_rR");
-      const Name beta("beta");
+    insert_(names::V_m,
+	    &mynest::iaf_cond_exp_ip_sym::get_y_elem_<mynest::iaf_cond_exp_ip_sym::State_::V_M>);
+    insert_(names::g_ex,
+	    &mynest::iaf_cond_exp_ip_sym::get_y_elem_<mynest::iaf_cond_exp_ip_sym::State_::G_EXC>);
+    insert_(names::g_in,
+	    &mynest::iaf_cond_exp_ip_sym::get_y_elem_<mynest::iaf_cond_exp_ip_sym::State_::G_INH>);
+    insert_(names::g_L,
+    	    &mynest::iaf_cond_exp_ip_sym::get_y_elem_<mynest::iaf_cond_exp_ip_sym::State_::G_L>);
+    insert_(names::r_C,
+    	    &mynest::iaf_cond_exp_ip_sym::get_y_elem_<mynest::iaf_cond_exp_ip_sym::State_::R_C>);
   }
 }
 
 extern "C"
-inline int mynest::iaf_cond_exp_ip_dynamics(double, const double y[], double f[], void* pnode)
+inline int mynest::iaf_cond_exp_ip_sym_dynamics(double, const double y[], double f[], void* pnode)
 { 
   // a shorthand
-  typedef mynest::iaf_cond_exp_ip::State_ S;
+  typedef mynest::iaf_cond_exp_ip_sym::State_ S;
 
   // get access to node so we can almost work as in a member function
   assert(pnode);
-  const mynest::iaf_cond_exp_ip& node =  *(reinterpret_cast<mynest::iaf_cond_exp_ip*>(pnode));
+  const mynest::iaf_cond_exp_ip_sym& node =  *(reinterpret_cast<mynest::iaf_cond_exp_ip_sym*>(pnode));
 
   // y[] here is---and must be---the state vector supplied by the integrator,
   // not the state vector in the node, node.S_.y[]. 
@@ -99,7 +88,7 @@ inline int mynest::iaf_cond_exp_ip_dynamics(double, const double y[], double f[]
  * Default constructors defining default parameters and state
  * ---------------------------------------------------------------- */
     
-mynest::iaf_cond_exp_ip::Parameters_::Parameters_()
+mynest::iaf_cond_exp_ip_sym::Parameters_::Parameters_()
   : V_th_      (-55.0    ),  // mV
     V_reset_   (-60.0    ),  // mV
     t_ref_     (  2.0    ),  // ms
@@ -118,7 +107,7 @@ mynest::iaf_cond_exp_ip::Parameters_::Parameters_()
 {
 }
 
-mynest::iaf_cond_exp_ip::State_::State_(const Parameters_& p)
+mynest::iaf_cond_exp_ip_sym::State_::State_(const Parameters_& p)
   : r_(0)
 {
   y_[V_M] = p.E_L;
@@ -127,14 +116,14 @@ mynest::iaf_cond_exp_ip::State_::State_(const Parameters_& p)
   y_[G_L] = p.g_L;
 }
 
-mynest::iaf_cond_exp_ip::State_::State_(const State_& s)
+mynest::iaf_cond_exp_ip_sym::State_::State_(const State_& s)
   : r_(s.r_)
 {
   for ( size_t i = 0 ; i < STATE_VEC_SIZE ; ++i )
     y_[i] = s.y_[i];
 }
 
-mynest::iaf_cond_exp_ip::State_& mynest::iaf_cond_exp_ip::State_::operator=(const State_& s)
+mynest::iaf_cond_exp_ip_sym::State_& mynest::iaf_cond_exp_ip_sym::State_::operator=(const State_& s)
 {
   assert(this != &s);  // would be bad logical error in program
   
@@ -148,7 +137,7 @@ mynest::iaf_cond_exp_ip::State_& mynest::iaf_cond_exp_ip::State_::operator=(cons
  * Parameter and state extractions and manipulation functions
  * ---------------------------------------------------------------- */
 
-void mynest::iaf_cond_exp_ip::Parameters_::get(DictionaryDatum &d) const
+void mynest::iaf_cond_exp_ip_sym::Parameters_::get(DictionaryDatum &d) const
 {
   def<double>(d,nest::names::V_th,         V_th_);
   def<double>(d,nest::names::V_reset,      V_reset_);
@@ -167,7 +156,7 @@ void mynest::iaf_cond_exp_ip::Parameters_::get(DictionaryDatum &d) const
   def<double>(d,nest::names::beta,         beta);
 }
 
-void mynest::iaf_cond_exp_ip::Parameters_::set(const DictionaryDatum& d)
+void mynest::iaf_cond_exp_ip_sym::Parameters_::set(const DictionaryDatum& d)
 {
   // allow setting the membrane potential
   updateValue<double>(d,nest::names::V_th,    V_th_);
@@ -204,21 +193,21 @@ void mynest::iaf_cond_exp_ip::Parameters_::set(const DictionaryDatum& d)
     throw nest::BadProperty("All time constants must be strictly positive.");
 }
 
-void mynest::iaf_cond_exp_ip::State_::get(DictionaryDatum &d) const
+void mynest::iaf_cond_exp_ip_sym::State_::get(DictionaryDatum &d) const
 {
   def<double>(d, nest::names::V_m, y_[V_M]); // Membrane potential
   def<double>(d, nest::names::r_C, y_[R_C]);
   def<double>(d, nest::names::g_L, y_[G_L]);
 }
 
-void mynest::iaf_cond_exp_ip::State_::set(const DictionaryDatum& d, const Parameters_&)
+void mynest::iaf_cond_exp_ip_sym::State_::set(const DictionaryDatum& d, const Parameters_&)
 {
   updateValue<double>(d, nest::names::V_m, y_[V_M]);
   updateValue<double>(d, nest::names::r_C, y_[R_C]);
   updateValue<double>(d, nest::names::g_L, y_[G_L]);
 }
 
-mynest::iaf_cond_exp_ip::Buffers_::Buffers_(mynest::iaf_cond_exp_ip& n)
+mynest::iaf_cond_exp_ip_sym::Buffers_::Buffers_(mynest::iaf_cond_exp_ip_sym& n)
   : logger_(n),
     s_(0),
     c_(0),
@@ -228,7 +217,7 @@ mynest::iaf_cond_exp_ip::Buffers_::Buffers_(mynest::iaf_cond_exp_ip& n)
   // init_buffers_().
 }
 
-mynest::iaf_cond_exp_ip::Buffers_::Buffers_(const Buffers_&, iaf_cond_exp_ip& n)
+mynest::iaf_cond_exp_ip_sym::Buffers_::Buffers_(const Buffers_&, iaf_cond_exp_ip_sym& n)
   : logger_(n),
     s_(0),
     c_(0),
@@ -242,8 +231,8 @@ mynest::iaf_cond_exp_ip::Buffers_::Buffers_(const Buffers_&, iaf_cond_exp_ip& n)
  * Default and copy constructor for node, and destructor
  * ---------------------------------------------------------------- */
 
-mynest::iaf_cond_exp_ip::iaf_cond_exp_ip()
-  : nest::Archiving_Node(),
+mynest::iaf_cond_exp_ip_sym::iaf_cond_exp_ip_sym()
+  : mynest::Archiving_Node_Sym(),
     P_(), 
     S_(P_),
     B_(*this)
@@ -251,15 +240,15 @@ mynest::iaf_cond_exp_ip::iaf_cond_exp_ip()
   recordablesMap_.create();
 }
 
-mynest::iaf_cond_exp_ip::iaf_cond_exp_ip(const iaf_cond_exp_ip& n)
-  : nest::Archiving_Node(n),
+mynest::iaf_cond_exp_ip_sym::iaf_cond_exp_ip_sym(const iaf_cond_exp_ip_sym& n)
+  : mynest::Archiving_Node_Sym(n),
     P_(n.P_), 
     S_(n.S_),
     B_(n.B_, *this)
 {
 }
 
-mynest::iaf_cond_exp_ip::~iaf_cond_exp_ip()
+mynest::iaf_cond_exp_ip_sym::~iaf_cond_exp_ip_sym()
 {
   // GSL structs may not have been allocated, so we need to protect destruction
   if ( B_.s_ ) gsl_odeiv_step_free(B_.s_);
@@ -271,18 +260,18 @@ mynest::iaf_cond_exp_ip::~iaf_cond_exp_ip()
  * Node initialization functions
  * ---------------------------------------------------------------- */
 
-void mynest::iaf_cond_exp_ip::init_state_(const Node& proto)
+void mynest::iaf_cond_exp_ip_sym::init_state_(const Node& proto)
 {
-  const iaf_cond_exp_ip& pr = downcast<iaf_cond_exp_ip>(proto);
+  const iaf_cond_exp_ip_sym& pr = downcast<iaf_cond_exp_ip_sym>(proto);
   S_ = pr.S_;
 }
 
-void mynest::iaf_cond_exp_ip::init_buffers_()
+void mynest::iaf_cond_exp_ip_sym::init_buffers_()
 {
   B_.spike_exc_.clear();          // includes resize
   B_.spike_inh_.clear();          // includes resize
   B_.currents_.clear();           // includes resize
-  nest::Archiving_Node::clear_history();
+  mynest::Archiving_Node_Sym::clear_history();
 
   B_.logger_.reset();
 
@@ -306,7 +295,7 @@ void mynest::iaf_cond_exp_ip::init_buffers_()
   else 
     gsl_odeiv_evolve_reset(B_.e_);
   
-  B_.sys_.function  = iaf_cond_exp_ip_dynamics; 
+  B_.sys_.function  = iaf_cond_exp_ip_sym_dynamics;
   B_.sys_.jacobian  = NULL;
   B_.sys_.dimension = State_::STATE_VEC_SIZE;
   B_.sys_.params    = reinterpret_cast<void*>(this);
@@ -314,7 +303,7 @@ void mynest::iaf_cond_exp_ip::init_buffers_()
   B_.I_stim_ = 0.0;
 }
 
-void mynest::iaf_cond_exp_ip::calibrate()
+void mynest::iaf_cond_exp_ip_sym::calibrate()
 {
   B_.logger_.init();  // ensures initialization in case mm connected after Simulate
 
@@ -326,7 +315,7 @@ void mynest::iaf_cond_exp_ip::calibrate()
  * Update and spike handling functions
  * ---------------------------------------------------------------- */
 
-void mynest::iaf_cond_exp_ip::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to)
+void mynest::iaf_cond_exp_ip_sym::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to)
 {
    
   assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
@@ -405,7 +394,7 @@ void mynest::iaf_cond_exp_ip::update(nest::Time const & origin, const nest::long
   }
 }
 
-void mynest::iaf_cond_exp_ip::handle(nest::SpikeEvent & e)
+void mynest::iaf_cond_exp_ip_sym::handle(nest::SpikeEvent & e)
 {
   assert(e.get_delay() > 0);
 
@@ -417,7 +406,7 @@ void mynest::iaf_cond_exp_ip::handle(nest::SpikeEvent & e)
 			    -e.get_weight() * e.get_multiplicity() );  // ensure conductance is positive
 }
 
-void mynest::iaf_cond_exp_ip::handle(nest::CurrentEvent& e)
+void mynest::iaf_cond_exp_ip_sym::handle(nest::CurrentEvent& e)
 {
   assert(e.get_delay() > 0);
 
@@ -429,7 +418,7 @@ void mynest::iaf_cond_exp_ip::handle(nest::CurrentEvent& e)
 		      w *c);
 }
 
-void mynest::iaf_cond_exp_ip::handle(nest::DataLoggingRequest& e)
+void mynest::iaf_cond_exp_ip_sym::handle(nest::DataLoggingRequest& e)
 {
   B_.logger_.handle(e);
 }

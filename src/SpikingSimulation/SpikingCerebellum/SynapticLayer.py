@@ -38,7 +38,8 @@ class SynapticLayer(object):
         # Specific parameters for each learning rule
         self.template_rule_parameters = {
                          'STDP': ['tau_plus','learning_step','minus_plus_ratio','max_weight'],
-                         'STDPSym': ['tau_sym','learning_step','minus_plus_ratio','max_weight']
+                         'STDPSym': ['tau_sym','learning_step','minus_plus_ratio','max_weight'],
+                         'STDPSymExp': ['tau_plus','learning_step','minus_plus_ratio','max_weight']
                          }
     
         # Specific parameters of the connectivity algorithm (and function implementing each one)

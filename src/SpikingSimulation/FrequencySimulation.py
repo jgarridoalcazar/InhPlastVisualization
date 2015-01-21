@@ -369,7 +369,7 @@ class FrequencySimulation(object):
                                               'layer':'goclayer',
                                               'visible_data_only':True,
                                               'show_legend':False})
-        for i in range(2):
+        for i in range(4):
             animation.add_subplot(fig_position=i+9,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'pattern_provider': self.pattern_generator,
