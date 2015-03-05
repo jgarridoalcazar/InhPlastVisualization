@@ -1,0 +1,22 @@
+#!/bin/bash
+#SBATCH -J Beale.2
+#SBATCH --output=./result-Beale.2.o
+#SBATCH --error=./result-Beale.2.e
+#SBATCH -N 1
+#SBATCH --ntasks-per-node=2
+##SBATCH -v
+#SBATCH --mail-type=END
+#SBATCH --mail-user=jlredondo@ual.es
+
+##----------------------------------------
+# SUBMISTION TO QUEUE
+# sbatch -N 1 -p ibmulticore script.sbatch
+##----------------------------------------
+
+echo "The current job ID is $SLURM_JOB_ID"
+echo "Running on $SLURM_NNODES nodes"
+echo "Using $SLURM_NTASKS_PER_NODE tasks per node"
+
+mpirun -mca btl ^openib -np 2 ./uego  Beale > result-Beale_2nodes.o
+
+exit 0
