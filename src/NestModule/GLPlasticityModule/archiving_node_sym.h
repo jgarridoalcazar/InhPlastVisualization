@@ -86,7 +86,7 @@ namespace mynest {
    * \fn void get_history(long_t t1, long_t t2, std::deque<Archiver::histentry_sym>::iterator* start, std::deque<Archiver::histentry_sym>::iterator* finish)
    * return the spike times (in steps) of spikes which occurred in the range (t1,t2].
    */
-  void get_sym_history(double_t t1, double_t t2,
+  void get_sym_history(nest::double_t t1, nest::double_t t2,
                std::deque<histentry_sym>::iterator* start,
     		   std::deque<histentry_sym>::iterator* finish);
 
