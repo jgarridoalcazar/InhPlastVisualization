@@ -74,7 +74,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
      last_spike_sym_(n.last_spike_sym_)
   {}
 
-  void Archiving_Node_Sym::register_stdp_connection(double_t t_first_read)
+  void Archiving_Node_Sym::register_stdp_connection(nest::double_t t_first_read)
   {
     // Mark all entries in the deque, which we will not read in future as read by this input
     // input, so that we savely increment the incoming number of
@@ -90,7 +90,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
     n_incoming_sym_++;
   }
 
-  void Archiving_Node_Sym::unregister_stdp_connection(double_t t_last_read)
+  void Archiving_Node_Sym::unregister_stdp_connection(nest::double_t t_last_read)
   {
     // Mark all entries in the deque we have read as unread
     // so that we can savely decrement the incoming number of
