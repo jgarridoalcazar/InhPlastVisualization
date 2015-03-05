@@ -220,20 +220,24 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   
   // t_lastspike_ = 0 initially
   
+  //std::cout << "Spike sent to " << target_ << " in time " << t_spike << std::endl;
 
 	nest::double_t dendritic_delay = nest::Time(nest::Time::step(delay_)).get_ms();
     
   //get spike history in relevant range (t1, t2] from post-synaptic neuron
   std::deque<mynest::histentry_sym>::iterator start;
   std::deque<mynest::histentry_sym>::iterator finish;
-  ((mynest::Archiving_Node_Sym *)target_)->get_sym_history(t_lastspike - dendritic_delay, t_spike - dendritic_delay,
-			       &start, &finish);
+  //((mynest::Archiving_Node_Sym *)target_)->get_sym_history(t_lastspike - dendritic_delay, t_spike - dendritic_delay,&start, &finish);
+  ((mynest::Archiving_Node_Sym *)target_)->get_sym_history(t_lastspike, t_spike,&start, &finish);
   //weight change due to post-synaptic spikes since last pre-synaptic spike
   double_t dt;
   while (start != finish)
   {
-	dt = t_lastspike - (start->t_ + dendritic_delay);
-	nest::double_t old_time = start->t_ + dendritic_delay;
+
+	//dt = t_lastspike - (start->t_ + dendritic_delay);
+	dt = t_lastspike - start->t_;
+	//nest::double_t old_time = start->t_ + dendritic_delay;
+	nest::double_t old_time = start->t_;
     ++start;
 
 
@@ -285,9 +289,13 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
 
 //    std::cout << "Pre-post at time: " << t_lastspike + dt << " Central: " << central << " External: " << cp.sym_A_*external << " Alpha: " << cp.alpha_ << std::endl;
 
-    nest::double_t trace = central - cp.alpha_ * cp.sym_A_ * external;
+    //std::cout << "Pre-post traces. Central: " << central << " Expt1: " << exp_t1 << " Cos2t1: " << cos_2_t1 << " External: " << external << " Expt2: " << exp_t2 << " Cos2t2: " << cos_2_t2 << std::endl;
 
+    nest::double_t trace = central - cp.alpha_ * cp.sym_A_ * external;
+    nest::double_t old_weight = weight_;
     weight_ = apply_weight_change_(weight_, trace, cp);
+
+    //std::cout << "Weight change (pre->post) from pre at " << t_lastspike << " to post at time " << t_lastspike-dt << ": " << weight_-old_weight << ". Current value: " << weight_ << std::endl;
 
 //    std::cout << "Post-spike received at dt" << dt << ": Trace: " << trace << " - Kexpt1 - " << exp_t1 << " Kcos2t1 - " << cos_2_t1 <<
 //    	    	" Kexpt2 - " << exp_t2 << " Kcos2t2 - " << cos_2_t2 << std::endl;
@@ -296,9 +304,16 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
 
   //depression due to the incoming pre-synaptic spike
   nest::double_t central, external;
-  ((mynest::Archiving_Node_Sym *)target_)->get_sym_K_value(t_spike - dendritic_delay, central, external);
+  //((mynest::Archiving_Node_Sym *)target_)->get_sym_K_value(t_spike - dendritic_delay, central, external);
+  ((mynest::Archiving_Node_Sym *)target_)->get_sym_K_value(t_spike, central, external);
 //  std::cout << "Post-pre at time: " << t_spike - dendritic_delay << " Central: " << central << " External: " << cp.sym_A_*external << " Alpha: " << cp.alpha_ << std::endl;
+
+  nest::double_t old_weight = weight_;
   weight_ = apply_weight_change_(weight_, central - cp.alpha_ * cp.sym_A_ * external, cp);
+
+  //std::cout << "Weight change (post->pre) from pre at " << t_spike-dendritic_delay << " to post accumulated: " << weight_-old_weight << ". Current value: " << weight_ << std::endl;
+  //std::cout << "Weight change (post->pre) from pre at " << t_spike << " to post accumulated: " << weight_-old_weight << ". Current value: " << weight_ << std::endl;
+
 
   e.set_receiver(*target_);
   e.set_weight(weight_);
@@ -342,6 +357,8 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   // Calculate cos_2_t2 = Cos(dt*pi/tau2)
   Kcos2t2_ = aux_expon_tau2*(Kcos2t2_*aux_cos_tau2 + Ksin2t2_*aux_sin_tau2) + 1.0;
   Ksin2t2_ = aux_expon_tau2*(Ksin2t2_*aux_cos_tau2 + Kcos2t2_*aux_sin_tau2);
+
+  //std::cout << "Updated presynaptic trace from " << t_lastspike << " to " << t_spike << ". Expt1: " << Kexpt1_ << " Cos2t1: " << Kcos2t1_ << "Sin2t1: " << Ksin2t1_ << " Expt2: " << Kexpt2_ << " Cos2t2: " << Kcos2t2_ << " Sin2t2: " << Ksin2t2_ << std::endl;
 
 //  std::cout << "Pre-spike received at " << t_spike << ": Trace: " << central - cp.alpha_ * cp.sym_A_ * external << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_ << " dt_tau1 - " << dt_tau1 << " dt_pi_tau1 - " << dt_pi_tau1 << " aux_expon_tau1 - " << aux_expon_tau1 << " aux_cos_tau1 - " << aux_cos_tau1 << " aux_sin_tau1 - " << aux_sin_tau1
 //		  	  	  << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << " dt_tau2 - " << dt_tau2 << " dt_pi_tau2 - " << dt_pi_tau2 << " aux_expon_tau2 - " << aux_expon_tau2 << " aux_cos_tau2 - " << aux_cos_tau2 << " aux_sin_tau2 - " << aux_sin_tau2 << std::endl;

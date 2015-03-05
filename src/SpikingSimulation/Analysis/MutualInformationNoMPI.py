@@ -193,13 +193,24 @@ class MutualInformation(Analysis.Analysis):
     #             
     #             # Calculate probability of pattern
     #             pattern_prob = numpy.sum(self.bin_is_pattern[:,init_bin:end_bin],axis=1) / float(end_bin-init_bin)
+        # Calculate hit matrix for each pattern
+        cr_matrix, hit_matrix, miss_matrix, fa_matrix = calc_Ind_Pattern_Hit_Matrix(self.bin_has_fired[:,init_bin:end_bin], self.bin_is_pattern[:,init_bin:end_bin])
         
-        # Calculate hit matrix
+        logger.info('Individual pattern hit matrix:')
+        logger.info('%s', hit_matrix)
+        logger.info('Individual pattern correct rejection matrix:')
+        logger.info('%s', cr_matrix)
+        logger.info('Individual pattern miss matrix:')
+        logger.info('%s', miss_matrix)
+        logger.info('Individual pattern false alarm matrix:')
+        logger.info('%s', fa_matrix)
+        
+        # Calculate hit matrix considering pattern combinations
         patterns, hit_matrix = calc_Hit_Matrix(self.bin_has_fired[:,init_bin:end_bin], self.bin_pattern[init_bin:end_bin])
         
-        logger.info('Pattern list %s', str(patterns))
+        logger.info('Pattern list %s', patterns)
         logger.info('Hit matrix')
-        logger.info(str(hit_matrix))
+        logger.info('%s',hit_matrix)
         
         # Calculate the firing state of the cell population
         cell_state = calc_Firing_State(self.bin_has_fired[:,init_bin:end_bin])
@@ -208,10 +219,10 @@ class MutualInformation(Analysis.Analysis):
         self.mutual_information, self.max_mutual_information = calc_MI(self.bin_pattern[init_bin:end_bin],cell_state)
         
         logger.info('Mutual information')
-        logger.info(str(self.mutual_information))
+        logger.info('%s',self.mutual_information)
         
         logger.info('Theoretical maximum of MI')
-        logger.info(str(self.max_mutual_information))
+        logger.info('%s',self.max_mutual_information)
     
         
     #             # Calculate probability of hits
@@ -303,7 +314,7 @@ class MutualInformation(Analysis.Analysis):
 
 def calc_Hit_Matrix(cell_firing, bin_pattern):
     '''
-    Calculate the hit matrix with 1 line for each cell and 1 column for each pattern (including noise).
+    Calculate the hit matrix with 1 line for each cell and 1 column for each pattern combination (including noise).
     @param cell_firing Boolean matrix including 1 line for each cell and 1 column for each time bin.
     @param bin_pattern Array with the index of the pattern for each bin.
     '''
@@ -319,6 +330,29 @@ def calc_Hit_Matrix(cell_firing, bin_pattern):
     
     return patterns, hit_matrix
     
+def calc_Ind_Pattern_Hit_Matrix(cell_firing, pattern_present):
+    '''
+    Calculate the correct rejection, hit, miss and false alarm matrisses with 1 line for each cell and 1 column for each pattern (including noise).
+    @param cell_firing Boolean matrix including 1 line for each cell and 1 column for each time bin.
+    @param pattern_present Boolean matrix including 1 line for each pattern and 1 column for each time bin.
+    '''
+    hit_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
+    cr_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
+    miss_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
+    fa_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
+    
+    for index_pat, pattern in enumerate(pattern_present):
+        if (numpy.count_nonzero(pattern)):
+            for index_cell, firing in enumerate(cell_firing):
+                hit_matrix[index_pat,index_cell] = numpy.count_nonzero(firing&pattern)/float(numpy.count_nonzero(pattern))
+                cr_matrix[index_pat,index_cell] = numpy.count_nonzero(~firing&~pattern)/float(numpy.count_nonzero(~pattern))
+                miss_matrix[index_pat,index_cell] = numpy.count_nonzero(~firing&pattern)/float(numpy.count_nonzero(pattern))
+                fa_matrix[index_pat,index_cell] = numpy.count_nonzero(firing&~pattern)/float(numpy.count_nonzero(~pattern))
+        else:
+            logger.warning('Pattern %s never occurs. Statistics will not be calculated', index_pat)
+               
+        
+    return cr_matrix, hit_matrix, miss_matrix, fa_matrix 
     
      
 
@@ -371,5 +405,6 @@ def shan_entropy(c):
     '''
     c_normalized = c/float(numpy.sum(c))
     c_normalized = c_normalized[numpy.nonzero(c_normalized)]
+    logger.debug('Occurrence distribution: %s', c_normalized)
     H = -sum(c_normalized*numpy.log2(c_normalized))  
     return H

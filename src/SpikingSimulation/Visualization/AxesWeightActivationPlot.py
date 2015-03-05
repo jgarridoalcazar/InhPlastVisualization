@@ -22,6 +22,7 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         @param source_indexes Indexes of the source cells of the synapses to get the activity.
         @param target_indexes Indexes of the target cells of the synapses to get the activity.
         @param pattern: List of patterns to highlight. From 0 to number of patterns-1. Optional parameter. If nothing is specified, all the patterns will be shown.
+        @param y_window_lim: Window limits in the Y-axis. Optional parameter.
         @param show_legend: True if the legend will be shown. Optional parameter. Default: True
         '''
         super(AxesWeightActivationPlot, self).__init__(**kwargs)
@@ -63,6 +64,12 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
             self.target_indexes = kwargs.pop('target_indexes',None)
         else:
             self.target_indexes = None
+            
+        # Get y_window_lim parameter 
+        if ('y_window_lim' in kwargs):
+            self.y_window_lim = kwargs.pop('y_window_lim',None)
+        else:
+            self.y_window_lim = None
         
         # Get number of patterns to highlight 
         if ('pattern' in kwargs):
@@ -126,7 +133,11 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
             max_weight = 1.
                 
         self.axes.set_xlim([0,1])
-        self.axes.set_ylim([0,max_weight*1.10])
+        
+        if (self.y_window_lim is not None):
+            self.axes.set_ylim(self.y_window_lim)
+        else:
+            self.axes.set_ylim([0,max_weight*1.10])
             
         super(AxesWeightActivationPlot, self).initialize()
             

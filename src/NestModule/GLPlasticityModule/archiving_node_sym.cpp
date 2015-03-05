@@ -55,7 +55,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym() :
 		Ksin2t2_(0.0),
 		Kcos2t2_(0.0),
 		inv_tau_sym1_(5.e-2),
-		last_spike_sym_(-1.0)
+		last_spike_sym_(0.0)
 		{
 		inv_tau_sym2_ = inv_tau_sym1_*(std::atan(M_PI/2)*2./M_PI);
 		}
@@ -151,6 +151,9 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
 
   			external = 0.5*(exp_t2 - cos_2_t2);
 
+  			//std::cout << "Post-pre traces. Central: " << central << " Expt1: " << exp_t1 << " Cos2t1: " << cos_2_t1 << " External: " << external << " Expt2: " << exp_t2 << " Cos2t2: " << cos_2_t2 << std::endl;
+
+
 //  			if (external<0.0){
 //				std::cout << "Error: External<0.0. t=" << t << " exp_t2=" << exp_t2 << " and cos_2_t2=" << cos_2_t2 << std::endl;
 //			}
@@ -202,7 +205,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
   	      else
   		break;
   	  }
-
+  	  //std::cout << "Updating postsynaptic neuron from time " << last_spike_sym_ << " to " << t_sp.get_ms() << std::endl;
   	  nest::double_t dt = last_spike_sym_ - t_sp.get_ms();
 
   	  // Calculate central = exp(-abs(dt/tau1))*cos(dt*pi/(tau1*2))^2
@@ -236,6 +239,9 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
   	  Ksin2t2_ = aux_expon_tau2*(Ksin2t2_*aux_cos_tau2 + Kcos2t2_*aux_sin_tau2);
 
   	  last_spike_sym_ = t_sp.get_ms();
+
+  	  //std::cout << "Updated postsynaptic trace. Expt1: " << Kexpt1_ << " Cos2t1: " << Kcos2t1_ << "Sin2t1: " << Ksin2t1_ << " Expt2: " << Kexpt2_ << " Cos2t2: " << Kcos2t2_ << " Sin2t2: " << Ksin2t2_ << std::endl;
+
 
 //	  std::cout << "Post-spike received at " << last_spike_sym_ << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_
 //			  << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << std::endl;
@@ -283,7 +289,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
     {
 	  	Archiving_Node::clear_history();
 
-        last_spike_sym_ = -1.0;
+        last_spike_sym_ = 0.0;
         Kexpt1_ = 0.0;
         Kcos2t1_ = 0.0;
         Ksin2t1_ = 0.0;

@@ -133,7 +133,7 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
             self.axes.legend(self.axesLines,data_labels,loc='lower left')
             
         if (self.y_window_lim is not None):
-            self.axes.set_ylim(self.y_lim)
+            self.axes.set_ylim(self.y_window_lim)
         else:
             self.axes.set_ylim([min(self.index)-0.5,max(self.index)+0.5])  
             
