@@ -40,7 +40,7 @@ class FrequencySimulation(object):
 #             self.config_options['goclayer']['tau_ip'] =111.14285
         elif 'config_file' in kwargs:
             self.config_file = kwargs.pop('config_file')
-            logger.info('Parsing configuration file %s',self.config_file)
+#             logger.info('Parsing configuration file %s',self.config_file)
             self.config_options = ReadConfigFile(self.config_file)
         else:
             logger.error('Non-specified simulation configuration options or configuration file')
@@ -100,7 +100,7 @@ class FrequencySimulation(object):
                 import SpikingCerebellum.NestCerebellarModel as NestGenerator
             else:
                 import SpikingCerebellum.NestCerebellarModelNoMPI as NestGenerator
-            
+             
             self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
         else:
             self.config_options['simulation']['run_simulation'] = False

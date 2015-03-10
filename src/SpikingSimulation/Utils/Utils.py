@@ -58,6 +58,25 @@ def ReadConfigParameters(argv):
     
     return config_options
 
+def ExpandConfigParameters(**kwargs):
+    '''
+    It expands the configuration options from dict[section.key]=value to dict[section][key]=value 
+    '''
+    
+    config_options = dict()
+    
+    for id_param in kwargs:
+        param = id_param.split('.')
+        if len(param)!=2:
+            msg = "%r invalid section.param pattern" % id_param
+            raise argparse.ArgumentTypeError(msg)
+        
+        if param[0] not in config_options:
+            config_options[param[0]] = dict()
+        config_options[param[0]][param[1]] = kwargs[id_param]
+        
+    return config_options
+
 def name_value_pair(string):
     value = string.split('=')
     if len(value)!=2:

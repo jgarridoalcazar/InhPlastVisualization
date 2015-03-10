@@ -328,21 +328,20 @@ void	Master::_Go(char * file) {
 		}*/
 		
 		//---Fusion
-		/*printf("%----------------------------------------------------------------%\n");
-		printf("%-------------------------Fusion---------------------------------%\n");
-		printf("%----------------------------------------------------------------%\n");
-		*/
+//		printf("%----------------------------------------------------------------%\n");
+//		printf("%-------------------------Fusion---------------------------------%\n");
+//		printf("%----------------------------------------------------------------%\n");
 		if (myid ==0 ) {
-			printf("\n Longitud lista= %ld::\n",length);
-			for( tmp = head; tmp->next != NULL; tmp = tmp->next )
-			{
-				double x[2];
-				tmp->next->center->GetX(x);
-				printf("%lf %lf  Obj= %lf %d\n",x[0],x[1],tmp->next->center->CurrValue(),tmp->next->level);
-			}
-		
 			//---Fusion
 			Fuse();		if( Fail() ) return;
+
+//			printf("\n Longitud lista= %ld::\n",length);
+//			for( tmp = head; tmp->next != NULL; tmp = tmp->next ){
+//				double x[2];
+//				tmp->next->center->GetX(x);
+//				printf("%lf %lf  Obj= %lf %d\n",x[0],x[1],tmp->next->center->CurrValue(),tmp->next->level);
+//			}
+
 		}
 		//getchar();
 		
@@ -384,7 +383,7 @@ void	Master::_Go(char * file) {
 		OptimizeParal(file);	if( Fail() ) return;
 
 		if (myid ==0 ) {
-			printf("\n Longitud lista= %ld::\n",length);
+			printf("\n After optimization. Longitud lista= %ld::\n",length);
 			for( tmp = head; tmp->next != NULL; tmp = tmp->next )
 			{
 				double x[2];

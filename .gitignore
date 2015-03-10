@@ -210,3 +210,7 @@ src/NestModule/mmb/mymodule_config.h
 src/NestModule/mmb/makelog.txt
 
 src/NestModule/mmb/1
+
+src/UEGO/Parallel/output.log
+
+src/UEGO/Parallel/results.log

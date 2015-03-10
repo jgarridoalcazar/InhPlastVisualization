@@ -129,12 +129,6 @@ void	Master::NewSpeciesParal(char *file) {
 	sendBuf=(char*)malloc(Nbytes*sizeof(char));
 	recvBuf=(char*)malloc(Nbytes*sizeof(char));
 		
-	
-	printf(" Hola \n");
-
-
-			
-
 	if(myid == 0)
 	{	
 		//printf("****************************************************\n");
@@ -148,14 +142,12 @@ void	Master::NewSpeciesParal(char *file) {
 		
 		NewSpeciesOptiParamCereb(file);
 
-
-		printf("\n Longitud lista= %ld::\n",length);
-		for( tmp = head; tmp->next != NULL; tmp = tmp->next )
-		{
-			double x[2];
-			tmp->next->center->GetX(x);
-			printf("%lf %lf  Obj= %lf %d\n",x[0],x[1],tmp->next->center->CurrValue(),tmp->next->level);
-		}
+//		for( tmp = head; tmp->next != NULL; tmp = tmp->next )
+//		{
+//			double x[2];
+//			tmp->next->center->GetX(x);
+//			printf("%lf %lf  Obj= %lf %d\n",x[0],x[1],tmp->next->center->CurrValue(),tmp->next->level);
+//		}
 		//getchar();
 		
 		//************************************************************
@@ -247,7 +239,7 @@ void	Master::NewSpeciesParal(char *file) {
 		//-- ajustamos el valor objetivo a las que me quedan
 		//-- y las engancho a la lista con end
 
-		printf(" Master :: enviadas especies correctamente \n"); 
+		//printf(" Master :: enviadas especies correctamente \n");
 		totalSpRecv = 0;
 		tmp = newspechead.next;
 		while(tmp!=NULL)
@@ -271,8 +263,8 @@ void	Master::NewSpeciesParal(char *file) {
 		//timer[lider->level][step][1] = MPI_Wtime();
 		//************************************************************
 				
-		printf(" Master :: evaluadas especies correctamente \n");		
-			
+//		printf(" Master :: evaluadas especies correctamente \n");
+//
 				
 		//************************************************************
 		//step=4;
@@ -287,7 +279,7 @@ void	Master::NewSpeciesParal(char *file) {
 			{	
 				id_recv = status.MPI_SOURCE;	
 				MPI_Recv(&numSpRecv,1, MPI_INT, id_recv, 12, MPI_COMM_WORLD,&status); 						
-				printf("\n#### Slave %d	numSpRecv %d\n", status.MPI_SOURCE, numSpRecv);
+//				printf("\n#### Slave %d	numSpRecv %d\n", status.MPI_SOURCE, numSpRecv);
 				numslaves--;
 						
 				Nbytes = numSpRecv * (dim*sizeof(double) + sizeof(double) );				
@@ -303,13 +295,13 @@ void	Master::NewSpeciesParal(char *file) {
 					//	tmpx[0],tmpx[1],value);
 					end->center = INI.Prototype()->updateCenter(tmpx, value);
 					end->level = level;
-					printf("Valor objetivo end %lf \n", end->center->CurrValue());
+//					printf("Valor objetivo end %lf \n", end->center->CurrValue());
 					//getchar();
 		
 					totalSpRecv++;
 																
 				}
-				printf(" Master :: recibidas especies correctamente \n");					
+//				printf(" Master :: recibidas especies correctamente \n");
 				//if(recvBuf!=NULL) free(recvBuf);
 			}																	
 		};//end_while_numslaves_fin
@@ -390,17 +382,17 @@ void	Master::NewSpeciesParal(char *file) {
 				MPI_Pack(tmpx, dim, MPI_DOUBLE, sendBuf, Nbytes,&position,MPI_COMM_WORLD);
 				MPI_Pack(&value, 1, MPI_DOUBLE, sendBuf, Nbytes,&position,MPI_COMM_WORLD);	
 						
-				printf("P %2d::Slave = %.10le %.10le %.10le level %d\tFollower = %.10le %.10le %.10le %.10le\n",myid, tmpx[0],tmpx[1],value, tmplevel);												
+//				printf("P %2d::Slave = %.10le %.10le %.10le level %d\tFollower = %.10le %.10le %.10le %.10le\n",myid, tmpx[0],tmpx[1],value, tmplevel);
 				tmp=tmp->next; i++;					
 			};//end_while_Go
-			printf(" Slave: Species empaquetas correctamente \n");
+//			printf(" Slave: Species empaquetas correctamente \n");
 		
 			if( MPI_Send(&totalSpRecv, 1, MPI_INT, 0, 12, MPI_COMM_WORLD) != MPI_SUCCESS)
 				printf("An error in MPI_Send() Master :: send list to master\n");
 			printf(" Slave: Total enviadas = %ld \n", totalSpRecv);
 			if( MPI_Send(sendBuf, position, MPI_PACKED, 0, 13, MPI_COMM_WORLD) != MPI_SUCCESS)
 				printf("An error in MPI_Send() send list to master\n");				
-			printf(" Slave: Species enviadas = %ld \n", totalSpRecv);		
+//			printf(" Slave: Species enviadas = %ld \n", totalSpRecv);
 			//if(sendBuf!=NULL) free(sendBuf);sendBuf = NULL;	
 			newend=0;
 		}
@@ -515,8 +507,7 @@ void	Master::OptimizeParal(char *file){
 				newend->next= new SpeciesList(newSp_center, tmplevel);				
 				if( newend->next != NULL ) newend->next->prev = newend;
 				newend=newend->next;						
-				printf("\tKeep cont %d:: Solution= %.10le %.10le  %.10le  %d\n",
-					cont, tmpx[0],tmpx[1],value, tmplevel);
+//				printf("\tKeep cont %d:: Solution= %.10le %.10le  %.10le  %d\n",cont, tmpx[0],tmpx[1],value, tmplevel);
 				totalSpRecv++;	
 				cont++;		
 			}else{
@@ -533,8 +524,7 @@ void	Master::OptimizeParal(char *file){
 				if( MPI_Send(sendBufOpt, position, MPI_PACKED, numslaves, 31, MPI_COMM_WORLD) != MPI_SUCCESS)
 					printf("An error in MPI_Send() Master :: sendSpToSlaves\n");
 						
-				printf("\tSend %d::Solution = %.10le %.10le %.10le  %d\n",
-					numslaves, tmpx[0],tmpx[1],value, tmplevel);
+//				printf("\tSend %d::Solution = %.10le %.10le %.10le  %d\n",numslaves, tmpx[0],tmpx[1],value, tmplevel);
 			}
 			totalSpSend++;
 					
@@ -611,7 +601,7 @@ void	Master::OptimizeParal(char *file){
 			{	
 				id_recv = status.MPI_SOURCE;	
 				MPI_Recv(&numSpRecv, 1,MPI_INT, id_recv, 40,  MPI_COMM_WORLD,&status); 						
-				printf("\n#### Slave %d	numSpRecv %d\n", status.MPI_SOURCE, numSpRecv);
+//				printf("\n#### Slave %d	numSpRecv %d\n", status.MPI_SOURCE, numSpRecv);
 				numslaves--;
 						
 				Nbytes = numSpRecv * (dim*sizeof(double) + sizeof(short) + sizeof(double) )+ sizeof(long)  ;
@@ -623,8 +613,7 @@ void	Master::OptimizeParal(char *file){
 					MPI_Unpack(recvBuf,Nbytes,&position,tmpx,dim,MPI_DOUBLE,MPI_COMM_WORLD); 
 					MPI_Unpack(recvBuf,Nbytes,&position,&value,1,MPI_DOUBLE,MPI_COMM_WORLD); 			
 					MPI_Unpack(recvBuf,Nbytes,&position,&tmplevel,1,MPI_SHORT,MPI_COMM_WORLD);			
-					//printf("\tRecvM::Lider = %.10le %.10le %.10le %.10le  %d\tFollower = %.10le %.10le %.10le %.10le\n",
-					//	tmpxL[0],tmpxL[1],tmpxL[2],valueL, tmplevel, tmpxF[0],tmpxF[1],tmpxF[2], valueF);
+//					printf("\tRecvM::Lider = %.10le %.10le %.10le %.10le  %d\tFollower = %.10le %.10le %.10le %.10le\n",tmpxL[0],tmpxL[1],tmpxL[2],valueL, tmplevel, tmpxF[0],tmpxF[1],tmpxF[2], valueF);
 					
 					end->center = ini().Prototype()->SetNew(value,tmpx);
 					end->level = tmplevel;
@@ -679,8 +668,7 @@ void	Master::OptimizeParal(char *file){
 				MPI_Unpack(recvBufOpt,NbytesOpt,&position,tmpx,dim,MPI_DOUBLE,MPI_COMM_WORLD); 
 				MPI_Unpack(recvBufOpt,NbytesOpt,&position,&value,1,MPI_DOUBLE,MPI_COMM_WORLD); 			
 				MPI_Unpack(recvBufOpt,NbytesOpt,&position,&tmplevel,1,MPI_SHORT,MPI_COMM_WORLD);
-				printf("\tRecv::Solution = %.10le %.10le  %.10le  %d\n",
-					tmpx[0],tmpx[1], value, tmplevel);
+//				printf("\tRecv::Solution = %.10le %.10le  %.10le  %d\n",tmpx[0],tmpx[1], value, tmplevel);
 				
 				newSp_center=INI.Prototype()->SetNew(value,tmpx);    // Nuevo centro = tmpx1L
 				
@@ -703,7 +691,7 @@ void	Master::OptimizeParal(char *file){
 		if(totalSpRecv > 0)
 		{
 
-			printf("Optimizing... myid= %i \n", myid);
+//			printf("Optimizing... myid= %i \n", myid);
 			Nbytes = totalSpRecv * (dim*sizeof(double) + sizeof(short) + sizeof(double) )+sizeof(long);
 			sendBuf=(char*)malloc(Nbytes*sizeof(char));			
 			position=0;
@@ -731,8 +719,7 @@ void	Master::OptimizeParal(char *file){
 				MPI_Pack(&value, 1, MPI_DOUBLE, sendBuf, Nbytes,&position,MPI_COMM_WORLD);	
 				MPI_Pack(&tmplevel,1,MPI_SHORT, sendBuf, Nbytes,&position,MPI_COMM_WORLD);
 																
-				printf("P %2d::Solution = %.10le %.10le %.10le level %d\n",
-					myid, tmpx[0],tmpx[1], value, tmplevel);
+//				printf("P %2d::Solution = %.10le %.10le %.10le level %d\n",myid, tmpx[0],tmpx[1], value, tmplevel);
 						
 				//--- Avanzamos en la lista
 				tmp = tmp->next;

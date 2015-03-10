@@ -34,22 +34,21 @@ def InitializeLogger(name):
     if name not in handler_list.keys():
         handler_list[name] = []
 
-    # Create formatter
-    global formatter
-    if formatter is None:
-        formatter = logging.Formatter('%(asctime)s - P%(process)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
-
-    # Create stdout handler
-    handler = logging.StreamHandler()
-    handler.setLevel(logging.DEBUG)
-    handler.setFormatter(formatter)
-
-
-    # Create filter to add the MPI process id
-    filter1 = ContextFilter()
-
-    logger.addFilter(filter1)
-    logger.addHandler(handler)
+        # Create formatter
+        global formatter
+        if formatter is None:
+            formatter = logging.Formatter('%(asctime)s - P%(process)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
+    
+        # Create stdout handler
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        handler.setFormatter(formatter)
+    
+        # Create filter to add the MPI process id
+        filter1 = ContextFilter()
+    
+        logger.addFilter(filter1)
+        logger.addHandler(handler)
 
 def Logger2File(logger, filename):
     # Check if a file handler exists with the same file name

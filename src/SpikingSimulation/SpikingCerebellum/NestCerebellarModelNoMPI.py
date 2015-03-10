@@ -16,7 +16,11 @@ from SpikingSimulation.Utils.Utils import WriteConfigFile
 
 logger = logging.getLogger('Simulation')
 
-if (logger.getEffectiveLevel()>logging.INFO):
+# In case sys.argv does not exist we create it since this is required by NEST.
+if not hasattr(sys, 'argv'):
+    sys.argv = [__file__]
+ 
+if (logger.getEffectiveLevel()>logging.DEBUG):
     sys.argv.append('--quiet')
 
 import nest

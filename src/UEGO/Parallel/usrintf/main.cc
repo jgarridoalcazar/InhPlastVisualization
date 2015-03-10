@@ -1,5 +1,6 @@
 #include "time.h"
 #include <string.h>
+#include <Python.h>
 #include "usrintf.h"
 #include "uego.h"
 #include "configur.h"
@@ -83,7 +84,7 @@ char	GetPars( int argc, char** argv ) {
 //-----------------------------------------------------------------------
 
 
-int	main( int argc, char** argv ) {
+int	main( int argc, char** argv, char** envp ) {
 
 	int	errcode = 0;
 	Ini	*ini = NULL;
@@ -97,19 +98,6 @@ int	main( int argc, char** argv ) {
 	int	namelen=0,
 		myid=0, numproc=0;			
 	char	name[25];
-	
-
-	//---------------------		
-	MPI_Init(&argc,&argv);	
-	MPI_Get_processor_name(name, &namelen);
-	if(MPI_Comm_rank(MPI_COMM_WORLD,&myid)!=MPI_SUCCESS) 		
-		printf("An error in: Ini::INI --> MPI_Comm_Rank\n");
-	
-	if (MPI_Comm_size(MPI_COMM_WORLD,&numproc)!=MPI_SUCCESS)	
-		printf("An error in: Ini::INI --> MPI_Comm_size\n");
-	//---------------------		
-	
-
 
 	setMsgLevel( MSG_INFORMATION );
 
@@ -141,6 +129,19 @@ int	main( int argc, char** argv ) {
 		if( Configure::Fail() ) return 7;
 		else return 0;
 	};
+
+	//---------------------
+	// Initialize Python. This is required to avoid PyInitialization crashing everytime a simulation is done (numpy found to crash).
+	Py_Initialize();
+
+	//---------------------
+	// When using MPI_INIT(*argc,***argv) it removes the values in argc and argv. MPI_INIT delayed until argc and argv are not needed anymore
+	MPI_Init(&argc, &argv);
+	MPI_Get_processor_name(name, &namelen);
+	if(MPI_Comm_rank(MPI_COMM_WORLD,&myid)!=MPI_SUCCESS)
+		printf("An error in: Ini::INI --> MPI_Comm_Rank\n");
+	if (MPI_Comm_size(MPI_COMM_WORLD,&numproc)!=MPI_SUCCESS)
+		printf("An error in: Ini::INI --> MPI_Comm_size\n");
 
 	// --- Starting optimalization -------------------------------------
 	message((char*)"Reading ini file.",MSG_INFORMATION);
@@ -206,8 +207,13 @@ int	main( int argc, char** argv ) {
 	if( trace != NULL ) delete trace;
 	
 
-	MPI_Barrier( MPI_COMM_WORLD );	
+	MPI_Barrier( MPI_COMM_WORLD );
 	MPI_Finalize();
+
+	// Finalize Python. This is required to avoid PyInitialization crashes everytime a simulation is done.
+	Py_Finalize();
+
+
 
 	return errcode;
 };

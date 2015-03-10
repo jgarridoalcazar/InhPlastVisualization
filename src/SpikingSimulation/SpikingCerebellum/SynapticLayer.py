@@ -3,7 +3,6 @@ Created on April 23, 2014
 
 @author: Jesus Garrido (jgarridoalcazar at gmail.com)
 '''
-
 import numpy
 import time
 import logging

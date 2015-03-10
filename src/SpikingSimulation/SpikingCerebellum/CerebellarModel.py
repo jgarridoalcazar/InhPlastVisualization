@@ -11,7 +11,8 @@ import SynapticLayer
 import time
 import numpy
 import logging
-
+ 
+ 
 logger = logging.getLogger('Simulation')
 
 class CerebellarModel(object):
@@ -21,7 +22,7 @@ class CerebellarModel(object):
     are thought to implement the translation of the network into the
     target-simulator language (e.g., EDLUT, Nest, PyNN, ...)
     '''
-    __metaclass__ = abc.ABCMeta
+#    __metaclass__ = abc.ABCMeta
     
     def __init__(self,**kwargs):
         '''

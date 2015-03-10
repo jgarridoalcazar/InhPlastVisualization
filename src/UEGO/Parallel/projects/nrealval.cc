@@ -27,6 +27,7 @@
 //------------------------------------------------------------------
 
 
+/*
 double	NDimRealElement::Value() {
 // INI.Fnum() can be used to select a funcion
 // INI.Lowb(i) and INI.Upb(i) are lower and upper bounds on x[i]
@@ -61,24 +62,24 @@ double	NDimRealElement::Value() {
 	
 	
 	//-- Los retardos----------------------
-	/*rel1=clock();
+	rel1=clock();
 	rel2=clock();
  	res=(double)(rel2-rel1)/(double)CLOCKS_PER_SEC;
 	 while (res< 0.003) {
 		rel2=clock();
 		res=(double)(rel2-rel1)/(double)CLOCKS_PER_SEC;
- 	};*/
+ 	};
 
 
 	 // Levy 3 [-10,10]^2
 	//N∫ 16 tesis
-/*	y=0.0;
+	y=0.0;
 	for( long j=1; j<6; ++j ) y += j * cos((j-1)*x[0]+j);
 	z=0.0;
 	for( long j=1; j<6; ++j ) z += j * cos((j+1)*x[1]+j);
 	return -y*z;
 
-*/
+
 	//Beale
 
 	//x[0] = 3;
@@ -92,43 +93,34 @@ double	NDimRealElement::Value() {
 	return -y;
 
 };
-
-
-
-
+*/
 
 // INI.Lowb(i) and INI.Upb(i) are lower and upper bounds on x[i] max(i)=dim-1;
-/*double	NDimRealElement::Value()
+double	NDimRealElement::Value()
 {
 
-char ** param_names;
-double *param_values =new double[INI.Dimension()];
+std::vector<std::string> param_names(INI.Dimension());
+std::vector<double> param_values(INI.Dimension());
 double  med_fobj, sigma,varObj;
-int count = 5;
+int count = 1;
 double *objFunc=new double[count];
 double finalFitness;
+unsigned int seed = 12345;
 
 //---Allocation memory
-param_names=(char**)malloc(INI.Dimension()*sizeof(char*));
-for(int i=0;i<INI.Dimension();i++) param_names[i]=new char[102];
-
-
-//---Setting values
-for(int i=0;i<INI.Dimension();i++)  param_names[i] = INI.ParameterName(i);
-for(int i=0;i<INI.Dimension();i++)  param_values[i] = x[i];
-
-//---Showing values
-//for(int i=0;i<INI.Dimension();i++)  printf(" %s ", param_names[i]);
-//for(int i=0;i<INI.Dimension();i++)  printf(" %lf ", param_values[i]);
+for(int i=0;i<INI.Dimension();i++){
+	param_names[i]=INI.ParameterName(i);
+	param_values[i]=x[i];
+}
 
 
 //---Computing objective function value
  med_fobj = 0;
 for(int i=0;i<count;i++){
-	//objFunc[i] = fitness("simulation_test",param_names, param_values));
-	objFunc[i] = i;
+	objFunc[i] = fitness(seed,param_names, param_values);
+	//objFunc[i] = i;
 	med_fobj += objFunc[i];
-
+	seed++;
 };
 
 //---Computing average fitness value
@@ -142,13 +134,8 @@ for (long i=0;i<count;i++)
 varObj /= (double)count;
 sigma = sqrt(varObj);
 
-finalFitness = med_fobj/sigma;
+//finalFitness = med_fobj/sigma;
+finalFitness = med_fobj;
 return finalFitness;
-
-//return(fitness("simulation_test",param_names, param_values));
-//getchar();
-
-delete param_names;
-delete param_values;
-}*/
+}
 

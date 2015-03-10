@@ -19,8 +19,8 @@ PRJLIBS=
 # -------------------------------------------------------------------
 
 CCC=mpic++
-CFLAGS=-O2 -Iinclude 
-CLIBS= -lm 
+CFLAGS=-O2 -Iinclude `python-config --include`
+CLIBS= -lm `python-config --ldflags` 
 
 uego: $(INTFO) $(UEGOO) $(PRJO) 
 	$(CCC) $(INTFO) $(UEGOO) $(PRJO) $(PRJLIBS) -o $@ $(CLIBS)
