@@ -1,7 +1,8 @@
 #include <string.h>
+#include <time.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "uego.h"
-
-
 
 short   MsgLevel;
 
@@ -13,6 +14,9 @@ void    message( char *msg, short level ) {
         int     pos;
         char    tempMsg[1000];
 
+        time_t current_time;
+        char* c_time_string;
+
         strcpy(tempMsg,msg);
 
 	// ------- deleting whitespace from end --
@@ -22,17 +26,20 @@ void    message( char *msg, short level ) {
                 tempMsg[pos] = 0 ;
                 while( pos>0 && (tempMsg[--pos]==' ' || tempMsg[pos]=='\t' ) )
                         tempMsg[pos] = 0;
+
+        current_time = time(NULL);
+        c_time_string = ctime(&current_time);
         };
 
 	switch( level )
 	{
 		case MSG_INFORMATION:
 			if( MsgLevel >= MSG_INFORMATION )
-				fprintf( stderr, "uego: -- %s\n", tempMsg );
+				fprintf( stderr, "%s -- uego: -- %s\n", c_time_string, tempMsg );
 			break;
 		case MSG_ERROR:
 			if( MsgLevel >= MSG_ERROR )
-				fprintf( stderr, "uego: !! %s\n", tempMsg );
+				fprintf( stderr, "%s -- uego: !! %s\n", c_time_string, tempMsg );
 			break;
 		default:
 			if( MsgLevel >= MSG_NOTHING ) fprintf( stderr, tempMsg );

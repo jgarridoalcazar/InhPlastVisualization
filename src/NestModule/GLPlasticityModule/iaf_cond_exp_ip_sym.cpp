@@ -79,7 +79,6 @@ inline int mynest::iaf_cond_exp_ip_sym_dynamics(double, const double y[], double
   f[2] = -y[S::G_INH] / node.P_.tau_synI; // Ginh diff. equation
   f[3] = ( -y[S::G_L] - node.P_.beta) / node.P_.tau_ip; // g_L differential equation
   f[4] = (1./y[S::R_C] + node.P_.beta*I_total) / node.P_.tau_ip; // r_C differential equation
-  //std::cout << "Integrating activity: Vm=" << y[S::V_M] << " I_total=" << I_total << " rC=" << y[S::R_C] << " DeltarC=" << f[4] << std::endl;
 
   return GSL_SUCCESS;
 }

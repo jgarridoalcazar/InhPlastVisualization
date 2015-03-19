@@ -1,9 +1,9 @@
 #! /usr/bin/env python
-import logging
 import sys
 import os
-
 sys.path.append(os.path.dirname(__file__))
+import logging
+
 
 from SpikingSimulation.Utils.Logger import InitializeLogger
 from SpikingSimulation.Utils.Utils import ExpandConfigParameters

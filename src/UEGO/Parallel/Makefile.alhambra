@@ -10,7 +10,7 @@ UEGOH=$(wildcard include/*.h)
 
 # PRJO defines the optimizers and the opbjective functions
 # for search spaces; change if necessary
-PRJO=projects/nrealopt.o projects/nbinval.o projects/testval.o
+PRJO=projects/nrealopt.o projects/nbinval.o projects/nrealval.o
 
 # PRJLIBS defines additional libraries that must be linked to the project
 # defined by PRJO; change when needed
@@ -18,13 +18,16 @@ PRJLIBS=
 
 # -------------------------------------------------------------------
 
-CCC=g++
-CFLAGS=-O2 -Iinclude 
-CLIBS=-lm -lgcc
+PYTHON_CFLAGS = -I/usr/local/apps/alhambra/python-2.7.6/include/python2.7
+PYTHON_LFLAGS = -L/usr/local/apps/alhambra/python-2.7.6/lib/python2.7/config -lpython2.7 -ldl -lutil -Xlinker -export-dynamic
+
+CCC=mpicxx
+CFLAGS=-O2 -Iinclude $(PYTHON_CFLAGS) -DMPICH_IGNORE_CXX_SEEK
+CLIBS= -lm  $(PYTHON_LFLAGS)
 
 uego: $(INTFO) $(UEGOO) $(PRJO) 
-	$(CCC) $(INTFO) $(UEGOO) $(PRJO) $(PRJLIBS) -s -o $@ $(CLIBS)
-
+	$(CCC) $(INTFO) $(UEGOO) $(PRJO) $(PRJLIBS) -o $@ $(CLIBS)
+	
 %.o: %.cc $(UEGOH)
 	$(CCC) $(CFLAGS) -c $< -o $@
 

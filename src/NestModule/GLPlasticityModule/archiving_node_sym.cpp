@@ -170,7 +170,8 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
   				   std::deque<histentry_sym>::iterator* start,
   				   std::deque<histentry_sym>::iterator* finish)
     {
-      *finish = history_sym_.end();
+
+	  *finish = history_sym_.end();
       if (history_sym_.empty())
         {
   	*start = *finish;
@@ -289,7 +290,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
     {
 	  	Archiving_Node::clear_history();
 
-        last_spike_sym_ = 0.0;
+	  	last_spike_sym_ = 0.0;
         Kexpt1_ = 0.0;
         Kcos2t1_ = 0.0;
         Ksin2t1_ = 0.0;

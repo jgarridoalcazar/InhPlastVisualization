@@ -17,4 +17,4 @@ export PYTHONPATH=/SCRATCH/TIC117/jesusgarrido/NEST/nest24/insNoMPI/lib/python2.
 export LD_LIBRARY_PATH=/SCRATCH/TIC117/jesusgarrido/NEST/nest24/insNoMPI/lib/nest/:$LD_LIBRARY_PATH
 
 #python -m scoop --prolog /SCRATCH/TIC117/jesusgarrido/SpikingGranularLayer/.env_var_ld -vvv -n 256 ./src/LaunchEvolutionaryAlgorithm.py SimulationConfigEACluster.cfg
-mpirun -np $NSLOTS python ./src/LaunchEvolutionaryAlgorithmMPI.py SimulationConfigEACluster7p4p4c10t.cfg
+mpirun -np $NSLOTS python ./src/LaunchEvolutionaryAlgorithmMPI.py ./config/SimulationConfigEACluster7p4p4c10t.cfg

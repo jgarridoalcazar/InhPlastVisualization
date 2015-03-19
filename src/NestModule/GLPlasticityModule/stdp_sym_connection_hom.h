@@ -220,9 +220,7 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   
   // t_lastspike_ = 0 initially
   
-  //std::cout << "Spike sent to " << target_ << " in time " << t_spike << std::endl;
-
-	nest::double_t dendritic_delay = nest::Time(nest::Time::step(delay_)).get_ms();
+  nest::double_t dendritic_delay = nest::Time(nest::Time::step(delay_)).get_ms();
     
   //get spike history in relevant range (t1, t2] from post-synaptic neuron
   std::deque<mynest::histentry_sym>::iterator start;

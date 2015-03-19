@@ -10,10 +10,10 @@
 #include <Python.h>
 #include <uego.h>
 
-#define PYTHON_FILE_NAME "/Users/jgarrido/Documents/GitHubRepository/SpikingGranularLayer/src/CInterface.py"
+#define PYTHON_FILE_NAME "./src/CInterface.py"
 #define MODULE_NAME "CInterface"
 #define FUNCTION_NAME "RunSimulation"
-#define CONFIG_FILE_NAME "/Users/jgarrido/Documents/GitHubRepository/SpikingGranularLayer/config/SimulationConfig.cfg"
+#define CONFIG_FILE_NAME "./config/SimulationConfigUego1p1c.cfg"
 
 // Simula la red usando el NEST llamado desde python. Configura la red de acuerdo a los valores
 // pasados como parámetro a esta función.
@@ -35,7 +35,7 @@ double fitness(unsigned int seed, std::vector<std::string> param_names, std::vec
 	char msg[1000];
 	sprintf(msg, "Simulating with seed %ld",seed);
 	for (i=0; i<param_names.size(); ++i){
-		sprintf(msg, "%s, %s=%f", msg, param_names[i].c_str(), param_values[i]);
+		sprintf(msg, "%s, %s=%e", msg, param_names[i].c_str(), param_values[i]);
 	}
 	sprintf(msg, "%s\n", msg);
 	message(msg, MSG_INFORMATION);

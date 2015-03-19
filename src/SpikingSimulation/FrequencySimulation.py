@@ -269,7 +269,7 @@ class FrequencySimulation(object):
         else:
             frame_rate = 0.1
         
-        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=2,numColumns=4,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
+        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=3,numColumns=4,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
 #         animation.add_subplot(fig_position=1,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'property':'Vm',
@@ -367,7 +367,7 @@ class FrequencySimulation(object):
                                               'layer':'goclayer',
                                               'visible_data_only':True,
                                               'show_legend':False})
-        for i in range(2):
+        for i in range(4):
             animation.add_subplot(fig_position=i+7,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'pattern_provider': self.pattern_generator,

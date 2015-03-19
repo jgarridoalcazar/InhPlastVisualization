@@ -112,10 +112,9 @@ int	main( int argc, char** argv, char** envp ) {
 	}
 	else if( argv[1][0] != '-' ) // assuming ini filename extension
 	{
-		sprintf( msg, "Opening ini file %s.%s",UEGO_ININAME,argv[1]);
+		sprintf( msg, "Opening ini file %s",argv[1]);
 		message( msg, MSG_INFORMATION );
-		sprintf( msg, "%s.%s", UEGO_ININAME, argv[1] );
-		inifile = fopen( msg, "rt" );
+		inifile = fopen( argv[1], "rt" );
 	}
 	else if( argv[1][1] != 'c' )
 	{
