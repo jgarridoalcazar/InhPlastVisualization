@@ -48,6 +48,7 @@ public:
 	
 
 	virtual SearchSpElement* MutateNew( short, SearchSpElement* s=NULL );
+	virtual SearchSpElement* MutateNewParal(short, SearchSpElement* s=NULL ){};
 	virtual SearchSpElement* BetweenNew( SearchSpElement*,
 					     SearchSpElement* s=NULL );
 

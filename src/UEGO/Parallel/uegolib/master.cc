@@ -1,4 +1,6 @@
-#include <string.h>
+#include <cstring>
+#include <iostream>
+#include <fstream>
 #include "uego.h"
 
 
@@ -11,13 +13,9 @@ void	Master::ReInit( Ini* ini, char* trace, char *file) {
 
 	FailFlag = 1==1;
 
-	
-
 	_ini = ini;		// only storing pointer!
 	tracename = trace;	// only storing pointer!
 
-	
-	
 	// --- initializing species list with root:
 	// --- 1 random element from space
 	head = new SpeciesList;
@@ -31,18 +29,19 @@ void	Master::ReInit( Ini* ini, char* trace, char *file) {
 
 	BestObj = root->CurrValue();
 	BestX = head->next;
-	
+
 	head->next->prev = head;
 	length = 1;
 	FunctionEvals = 1;
-	
-	//printf(" %e %ld \n", BestObj, FunctionEvals); 
+
+	//printf(" %e %ld \n", BestObj, FunctionEvals);
 	//SaveBest(file);
 
-	
+
 	level = 0;
 	FailFlag = 1==0;
 };
+
 
 
 // -----------------------------------------------------------------------
@@ -273,14 +272,42 @@ void	Master::Optimize(char *file) {
 
 void	Master::CheckLength( long new_length ) {
 
-	SpeciesList	*end;
+	SpeciesList	*end, *tmp, *tmp2, *remaining;
 
 	if( new_length == -1 ) new_length = _ini->MaxSpecNumber();
+
+	// Ordering the species list avoid removing better species
+	remaining = head->next;
+	head->next = NULL;
+
+	while (remaining!=NULL){
+		//printf("Checking %d\n", remaining);
+		tmp = remaining;
+		remaining = remaining->next;
+		tmp2 = head;
+		while (tmp2->next!=NULL && tmp2->next->center->CurrValue()>tmp->center->CurrValue()){
+			//printf("%d is bigger than %d\n", tmp2->next, tmp);
+			tmp2 = tmp2->next;
+		}
+
+		//printf("Inserting: %d -> %d -> %d\n", tmp2, tmp, tmp2->next);
+		// Insert the species list
+		tmp->prev = tmp2;
+		tmp->next = tmp2->next;
+		tmp2->next = tmp;
+		if (tmp->next!=NULL){
+			tmp->next->prev = tmp;
+		}
+	}
+
 	if( length > new_length )
 	{
 		message((char*) "Too many species, shortening species list.",
 							MSG_INFORMATION);
+
+		// Remove the worst species until the length matches the maximum number of species
 		end = head;
+
 		while( end->next != NULL ) end = end->next;
 
 		// --- deleting from end of list
@@ -305,72 +332,79 @@ void	Master::_Go(char * file) {
 
 	SpeciesList *tmp;
 
-	int myid = INI.getmyidIni();
-		
-	for( level=1; level < _ini->Levels(); ++level )
+	double * x = new double [this->_ini->Dimension()];
+	char msg[25000];
+
+	for(; level < _ini->Levels(); ++level )
 	{
-		
-		//printf("\n \n LEVEL = %i \n \n", level);
-		//---Creation
-		printf("----------------------------------------------------------------\n");
-		printf("-------------------------NewSpecies-----------------------------\n");
-		printf("----------------------------------------------------------------\n");
-//if (myid ==0 ) {NewSpecies(file);	if( Fail() ) return;}
-		NewSpeciesParal(file); if( Fail() ) return;
-		
-		/*printf("\n Longitud lista= %ld::\n",length);
-		for( tmp = head; tmp->next != NULL; tmp = tmp->next )
-		{
-			double x[30];
-			tmp->next->center->GetX(x);
-			printf("%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  				Obj= %lf %ld\n",x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9],x[10],x[11],x[12],x[13],x[14],x[15],x[16],x[17],x[18],x[19],
-			x[20],x[21],x[22],x[23],x[24],x[25],x[26],x[27],x[28],x[29],tmp->next->center->CurrValue(),tmp->next->level);
-		}*/
-		
-		//---Fusion
-//		printf("%----------------------------------------------------------------%\n");
-//		printf("%-------------------------Fusion---------------------------------%\n");
-//		printf("%----------------------------------------------------------------%\n");
-		if (myid ==0 ) {
-			//---Fusion
-			Fuse();		if( Fail() ) return;
 
-//			printf("\n Longitud lista= %ld::\n",length);
-//			for( tmp = head; tmp->next != NULL; tmp = tmp->next ){
-//				double x[2];
-//				tmp->next->center->GetX(x);
-//				printf("%lf %lf  Obj= %lf %d\n",x[0],x[1],tmp->next->center->CurrValue(),tmp->next->level);
-//			}
-
+		// Save the current state of the execution
+		if (_ini->SaveStateFile()!=NULL){
+			printf("Saving algorith state in file %s\n",_ini->SaveStateFile());
+			this->SaveState(_ini->SaveStateFile());
 		}
-		//getchar();
-		
-		/*printf("\n Longitud lista= %ld::\n",length);
+
+
+		if (!this->generated_species){
+			//---Creation
+			printf("----------------------------------------------------------------\n");
+			printf("-------------------------NewSpecies-----------------------------\n");
+			printf("----------------------------------------------------------------\n");
+
+			NewSpeciesParal(file);
+
+			if( Fail() ) return;
+
+			sprintf(msg,"After NewSpecies. Longitud lista= %ld::\n",length);
+			for( tmp = head; tmp->next != NULL; tmp = tmp->next )
+			{
+				tmp->next->center->GetX(x);
+				for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
+					double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+					sprintf(msg,"%s%e\t",msg,value);
+				}
+				sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
+			}
+			printf("%s",msg);
+
+			//---Fusion
+			Fuse();
+
+			sprintf(msg,"After NewSpecies and Fusion. Longitud lista= %ld::\n",length);
+			for( tmp = head; tmp->next != NULL; tmp = tmp->next )
+			{
+				tmp->next->center->GetX(x);
+				for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
+					double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+					sprintf(msg,"%s%e\t",msg,value);
+				}
+				sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
+			}
+			printf("%s",msg);
+
+			if( Fail() ) return;
+
+			CheckLength();
+
+			this->generated_species = true;
+			// Save the current state of the execution
+			if (_ini->SaveStateFile()!=NULL){
+				printf("Saving algorith state in file %s\n",_ini->SaveStateFile());
+				this->SaveState(_ini->SaveStateFile());
+			}
+		}
+
+		sprintf(msg,"After Checking Length. Longitud lista= %ld::\n",length);
 		for( tmp = head; tmp->next != NULL; tmp = tmp->next )
 		{
-			double x[30];
 			tmp->next->center->GetX(x);
-			printf("%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  				Obj= %lf %ld\n",x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9],x[10],x[11],x[12],x[13],x[14],x[15],x[16],x[17],x[18],x[19],
-			x[20],x[21],x[22],x[23],x[24],x[25],x[26],x[27],x[28],x[29],tmp->next->center->CurrValue(),tmp->next->level);
-		}*/
-
-
-		//---CheckLength
-		/*printf("%----------------------------------------------------------------%\n");
-		printf("%-------------------------CheckLength----------------------------%\n");
-		printf("%----------------------------------------------------------------%\n");*/
-
-		if (myid ==0 ) {CheckLength();}
-
-		/*printf("\n Longitud lista= %ld::\n",length);
-		for( tmp = head; tmp->next != NULL; tmp = tmp->next )
-		{
-			double x[30];
-			tmp->next->center->GetX(x);
-			printf("%lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  %lf %lf %lf %lf %lf %lf %lf %lf %lf %lf  				Obj= %lf %ld\n",x[0],x[1],x[2],x[3],x[4],x[5],x[6],x[7],x[8],x[9],x[10],x[11],x[12],x[13],x[14],x[15],x[16],x[17],x[18],x[19],
-			x[20],x[21],x[22],x[23],x[24],x[25],x[26],x[27],x[28],x[29],tmp->next->center->CurrValue(),tmp->next->level);
-		}*/
-		
+			for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
+				double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+				sprintf(msg,"%s%e\t",msg,value);
+			}
+			sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
+		}
+		printf("%s",msg);
 
 		//---Optimization
 
@@ -382,20 +416,43 @@ void	Master::_Go(char * file) {
 
 		OptimizeParal(file);	if( Fail() ) return;
 
-		if (myid ==0 ) {
-			printf("\n After optimization. Longitud lista= %ld::\n",length);
-			for( tmp = head; tmp->next != NULL; tmp = tmp->next )
-			{
-				double x[2];
-				tmp->next->center->GetX(x);
-				printf("%lf %lf  Obj= %lf %d\n",x[0],x[1],tmp->next->center->CurrValue(),tmp->next->level);
+		sprintf(msg,"After optimization. Longitud lista= %ld::\n",length);
+		for( tmp = head; tmp->next != NULL; tmp = tmp->next )
+		{
+			tmp->next->center->GetX(x);
+			for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
+				double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+				sprintf(msg,"%s%e\t",msg,value);
 			}
-		
-			//---Fusion
-			Fuse();		if( Fail() ) return;
+			sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
 		}
+		printf("%s",msg);
+
+		//---Fusion
+		Fuse();		if( Fail() ) return;
 		//SaveGeneration(file);
+
+		sprintf(msg,"After optimization and fusion. Longitud lista= %ld::\n",length);
+		for( tmp = head; tmp->next != NULL; tmp = tmp->next )
+		{
+			tmp->next->center->GetX(x);
+			for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
+				double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+				sprintf(msg,"%s%e\t",msg,value);
+			}
+			sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
+		}
+		printf("%s",msg);
+
+		this->generated_species = false;
 	};
+
+	if (_ini->SaveStateFile()!=NULL){
+		printf("Saving algorith state in file %s\n",_ini->SaveStateFile());
+		this->SaveState(_ini->SaveStateFile());
+	}
+
+	this->FinalizeParal();
 };
 
 // -----------------------------------------------------------------------
@@ -584,6 +641,37 @@ void	Master::Save( FILE* stream, double tiempo,unsigned long flags ) {
 	};
 
 	FailFlag = 1==0;
+};
+
+// -----------------------------------------------------------------------
+void	Master::SaveState( char * FileName) {
+
+	SpeciesList	*tmp,*tmp_best;
+	double		best, best_x0,best_x1;
+
+	std::ofstream myfile;
+	myfile.open (FileName);
+	if (!myfile){
+		message((char*)"Error opening state file.",MSG_ERROR);
+		return;
+	};
+
+	myfile << FunctionEvals << "\t" << length << "\t" << level << "\t" << generated_species << std::endl;
+	if (!myfile){
+		message((char*)"Error saving state.",MSG_ERROR);
+		return;
+	};
+
+	// --- saving species
+	tmp = head->next;
+	while( tmp != NULL ){
+		tmp->Save(myfile);
+		myfile << std::endl;
+		if(!myfile) return;
+		tmp = tmp->next;
+	};
+
+	myfile.close();
 };
 
 // -----------------------------------------------------------------------

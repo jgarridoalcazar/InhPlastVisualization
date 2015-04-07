@@ -21,4 +21,3 @@ long	SearchSpElement::Optimize( short radind, long maxeval ) {
 
 	return maxeval;
 };
-

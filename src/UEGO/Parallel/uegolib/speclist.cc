@@ -1,5 +1,7 @@
 #include "uego.h"
 
+#include <fstream>
+
 
 // -----------------------------------------------------------------------
 
@@ -28,6 +30,24 @@ long	SpeciesList::Optimize( long maxevals )   { //short tmplevel,
 	FailFlag = center->Fail();
 	return l;
 };
+
+// -----------------------------------------------------------------------
+
+SearchSpElement	* SpeciesList::InitializeOptimize()   { //short tmplevel,
+
+
+	return center->InitOptimizeParal(level);
+};
+
+
+// -----------------------------------------------------------------------
+
+SearchSpElement *	SpeciesList::ResumeOptimize(SearchSpElement * tmp)   { //short tmplevel,
+
+
+	return center->ResumeOptimize( tmp );
+};
+
 
 
 // -----------------------------------------------------------------------
@@ -347,6 +367,32 @@ CLEAN:	if( base != NULL )
 
 	return evals;
 };
+
+// -----------------------------------------------------------------------
+
+
+ofstream&	SpeciesList::Save( ofstream & myfile ) {
+
+	this->center->Save(myfile);
+
+	myfile << "\t" << level;
+};
+
+SpeciesList*	SpeciesList::LoadFromFile(ifstream & file){
+
+	long l;
+
+	SearchSpElement * newCenter = NDimRealElement::LoadFromFile(file);
+
+	file >> l;
+
+	if (!file){
+		message((char*)"Error reading SpeciesList.",MSG_ERROR);
+	}
+
+	return new SpeciesList(newCenter,l);
+}
+
 
 // -----------------------------------------------------------------------
 

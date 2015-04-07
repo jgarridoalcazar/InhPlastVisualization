@@ -1,6 +1,11 @@
 #ifndef MASTER_H
 #define MASTER_H
 
+#include "wqueue.h"
+
+class CommunicationManager;
+
+
 ////////////////////////////////////////////////////////////
 // $Id: master.h,v 2.6 1998/03/29 10:39:46 jelasity Exp $
 // master.h
@@ -34,6 +39,14 @@ private:
 	
 	short		level;		// actual strict level
 
+	// Thread synchronization
+	wqueue<SearchSpElement *> to_simulate_queue;
+	wqueue<SearchSpElement *> simulated_queue;
+	CommunicationManager* ComManager;
+
+	bool 	end_simulation;
+	bool	generated_species;
+
 	void	CheckLength( long=-1 );	// if list too long, shortens it
 	void	Fuse();			// fuses species list using 'level'
 	void	_NewSpecies( long, char*);
@@ -50,21 +63,24 @@ private:
 
 	// --- this is needed for performing more than 1 experiments -------
 	void	ReInit( Ini*, char*,char*);
+	void	ReInitParal( Ini*, char*, char *);
 	void	Clean();
-	void	NewSearch(char * file) { Clean(); ReInit( _ini, tracename,file); };
+	void	NewSearch(char * file) { Clean();ReInitParal( _ini, tracename,file);}
 	void	_Go(char * file); // performs the optimization process
 
 	char	FailFlag;
 
 public:
 
-	Master( Ini* ini, char* trace,char *file ) {tracenum=0; ReInit( ini, trace, file ); };
+	Master( Ini* ini, char* trace,char *file ) {tracenum=0; ComManager=0; _ini = ini; tracename = trace; head = NULL; FailFlag = 1==0;};
 	~Master() { Clean(); };
 
-	void	Go(char * file) { NewSearch(file);  if( !Fail() ) _Go(file); };
+	void	Go(char * file) { NewSearch(_ini->LoadStateFile());  if( !Fail() ) _Go(file); };
 	void	Save( FILE*,double= 0UL, unsigned long = 0UL ); // saves status of search
 	void    SaveGeneration(char * file);
 	void	SaveBest( char * file);
+	void	SaveState(char * FileName); // Save the current status of the search
+
 
 	static Ini&	ini() { return *_ini; }; // safe access to _ini
 	static char	iniSet() { return _ini != NULL; };
@@ -81,6 +97,7 @@ public:
 	void NewSpeciesParal(char *);
 	void packingSingleSpecies(int, SpeciesList *,int);
 	void sendList();
+	void FinalizeParal();
 	
 
 };

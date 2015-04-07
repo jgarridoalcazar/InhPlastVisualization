@@ -21,6 +21,16 @@
 
 class NDimRealElement : public SearchSpElement {
 
+private:
+	// Optimization state variables
+	static const long	Scnt = 5, Fcnt = 3;
+	static const double	ct = .5, ex = 2.0;
+	double rad, sigmaub, sigmalb;
+	long scnt, fcnt;
+	double sigma, *b, *epsi;
+	short sign;
+
+
 protected:
 
 	virtual double	Value();
@@ -44,16 +54,21 @@ public:
 	virtual SearchSpElement* RandNewParal();
 	virtual SearchSpElement* RandNewParal( short, SearchSpElement* s=NULL );
 	virtual SearchSpElement* MutateNew( short, SearchSpElement* s=NULL );
+	virtual SearchSpElement* MutateNewParal( short, SearchSpElement* s=NULL );
 	virtual SearchSpElement* BetweenNew( SearchSpElement*,
 					     SearchSpElement* s=NULL );
 
 	virtual long	Optimize( short, long ); // returns funct. evals
+	virtual SearchSpElement *	InitOptimizeParal( short);
+	virtual SearchSpElement *	ResumeOptimize( SearchSpElement *);
+	static SearchSpElement *	LoadFromFile(ifstream & file);
 	
 	virtual void	UpdateFrom( SearchSpElement* );
 
 	virtual double	Diameter( Ini* );
 	virtual double	v( double );
 
+	virtual std::ofstream &	Save(std::ofstream & myfile );
 	virtual void	Save( FILE* );
 	virtual void	Save2( FILE* );
 	virtual void	GetX( double* y){for (int k=0; k<dim;k++) y[k]=x[k];};

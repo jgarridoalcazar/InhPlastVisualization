@@ -22,9 +22,9 @@ void message( char*, short );
 #define MSG_ERROR        1
 #define MSG_NOTHING      0
 
+#define INI (Master::ini())
 
 // --- define to keep source clean
-#define INI (Master::ini())
 #include <mpi.h>
 #include <stdio.h>
 #include <math.h>
@@ -36,11 +36,12 @@ class Master;
 #include "uegoini.h"
 #include "uegorand.h"
 #include "master.h"
+#include "fitness.h"
 
 #include "searchsp.h"
 #include "nreal.h"
 #include "nbin.h"
-#include <pthread.h>
 #include "speclist.h"
+
 
 #endif

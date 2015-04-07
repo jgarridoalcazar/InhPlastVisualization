@@ -46,7 +46,17 @@ give one of the above numbers.\n\n"
 #define LOWB_T "lower bound vector:"
 #define UPB_T "upper bound vector:"
 #define PARAM_NAMES "parameter names:"
+#define SCALE_NAMES	"parameter scales:"
+#define NUM_SIMUL "number simulations:"
+#define SIMUL_SEED "simulation seed:"
+#define NET_FILE "network config file:"
 
+#define LOG_SCALE	"logarithmic"
+#define	ARIT_SCALE	"arithmetic"
+#define NO_FILE		"none"
+
+#define LOAD_STATE	"load state file name:"
+#define SAVE_STATE	"save state file name:"
 
 // --- uego special
 #define MAXEV_T "function evaluations:"

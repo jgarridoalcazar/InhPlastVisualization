@@ -18,10 +18,6 @@ Ini::Ini( FILE* stream ) {
 	double		evals1; // double to handle negative numbers
 	unsigned long	evals2;
 
-
-
-
-
 	FailFlag = 1==0;	// it is ok here
 
 
@@ -92,6 +88,60 @@ Ini::Ini( FILE* stream ) {
 	//for(int i=0;i<dimension;i++) printf(" %s ", paramNames[i]);
 	//getchar();
 
+	// Number of simulations to average
+	numsimulations = (unsigned int) GetValue( buff, (char*)NUM_SIMUL);
+
+	// Initial simulation seed
+	simseed = (unsigned int) GetValue( buff, (char*)SIMUL_SEED);
+
+	// Network configuration file
+	configFileName=GetNames(buff, (char*)NET_FILE,1)[0];
+
+
+	this->paramScale = (numScale *)malloc(dimension*sizeof(numScale));
+	char ** scaleName=GetNames(buff,(char*)SCALE_NAMES,dimension);
+	for(int i=0;i<dimension;i++){
+		if (strcmp(scaleName[i],LOG_SCALE)==0){
+			this->paramScale[i] = LOGARITHMIC;
+		} else {
+			this->paramScale[i] = ARITHMETIC;
+		}
+	}
+
+	// Network configuration file
+	char ** loadState = GetNames(buff, (char*)LOAD_STATE,1);
+	if (loadState!=NULL){
+		if (strcmp(loadState[0],NO_FILE)==0){
+			printf("Load state file not found\n");
+			this->loadStateFileName=NULL;
+		} else {
+			printf("Load state file: %s\n",loadState[0]);
+			this->loadStateFileName=loadState[0];
+		}
+
+	} else {
+		printf("Load state file not found\n");
+		this->loadStateFileName=NULL;
+	}
+
+	// Network configuration file
+	char ** saveState = GetNames(buff, (char*)SAVE_STATE,1);
+	if (saveState!=NULL){
+		if (strcmp(saveState[0],NO_FILE)==0){
+			printf("Save state file not found\n");
+			this->saveStateFileName=NULL;
+		} else {
+			printf("Save state file: %s\n",saveState[0]);
+			this->saveStateFileName=saveState[0];
+		}
+	} else {
+		printf("Save state file not found\n");
+		this->saveStateFileName=NULL;
+	}
+
+
+	numScale	*paramScale;
+
 	// --------------------------------------------------------
         // -----------------RADIUS CALCULATION---------------------
         // --------------------------------------------------------
@@ -102,14 +152,16 @@ Ini::Ini( FILE* stream ) {
     
 
 
-	for( long i=dimension/3; i < dimension; ++i )
-	{
-		sqrsum += (lowb[i] - upb[i] ) *
-				( lowb[i] - upb[i] );
-	};
-
-	r[0]=sqrt( sqrsum ); 
+//	for( long i=dimension/3; i < dimension; ++i )
+//	{
+//		sqrsum += (lowb[i] - upb[i] ) *
+//				( lowb[i] - upb[i] );
+//	};
+	// Assuming normalized dimensions. Check
 	
+	//r[0]=sqrt( sqrsum );
+	r[0] = 1.0;
+
 	// --- calculate exponential factor for radii -------------
 	beta = pow( (last_r / r[0]), 1.0/(levels-1) );
 
@@ -123,10 +175,11 @@ Ini::Ini( FILE* stream ) {
         // --------------------------------------------------------
 
 	evals = new unsigned long[ levels ];
-	newspecevals = new unsigned long[ levels - 1 ];
-	
-	for( int i=1; i < levels; ++i )
-		newspecevals[i-1] = 3 * maxspecnum;
+	newspecevals = new unsigned long[ levels ];
+	newspecevals[0] = 1;
+	for( int i=1; i < levels; ++i ){
+		newspecevals[i] = 6 * maxspecnum;
+	}
 
 
 	// --------------------------------------------------------
@@ -136,7 +189,7 @@ Ini::Ini( FILE* stream ) {
 
 	evals1 = maxevals;
 
-	for( int i=1; i < levels; ++i ) evals1 -= newspecevals[i-1];
+	for( int i=0; i < levels; ++i ) evals1 -= newspecevals[i];
 	if( evals1 < 0 )
 	{
 		message((char*)"All evaluations (N) too small, parameters not set.",
@@ -148,7 +201,7 @@ Ini::Ini( FILE* stream ) {
 	//---initial threshold
 	threshold = 1.0;
 	//---initial number of function evaluation for optimization process
-	for(int  i=1; i < levels; ++i )
+	for(int  i=0; i < levels; ++i )
 	   evals[i] = (unsigned long) (
 			maxspecnum * r[0] *
 				threshold /v(r[i]) );
@@ -161,30 +214,16 @@ Ini::Ini( FILE* stream ) {
 	threshold = evals1 / (double)evals2;
 
 	//---Calculate the number of function evaluation for optimization process	
-	for(int  i=1; i < levels; ++i ){
+	for(int  i=0; i < levels; ++i ){
 		evals[i] = (unsigned long) (
 			maxspecnum * r[0] *threshold /v( r[i] ) );
 	}
         
-	
-         /*printf("\n function evaluations in new species: \n");        
-	 for(int i=0;i< levels-1;i++) printf("%ld ", newspecevals[i]);
-	 printf("\n");
+	if (myid==0){
+		printf("\n function evaluations in (level, new species, optimization, radii): \n");
+		for(int i=0;i< levels;i++) printf("%ld %ld %ld %e\n", i, newspecevals[i], evals[i], r[i]);
+	}
 
-	
-        printf("\n evaluations for levels: \n");        
-	for(int i=0;i< levels;i++) printf("%ld ", evals[i]);
-	printf("\n");
-
-  
-	printf("\n radii for levels: \n ");	
-	for( int i=0; i<levels;i++)
-		printf("%e ",r[i]);
-	printf("\n");*/
-
-
-
-	
 	delete buff;
 
 	if( !Fail() ) SetPrototype();
@@ -544,6 +583,7 @@ char ** Ini::GetNames( char* buff, char* name,long length) {
 	{
 		sprintf( msg, (char*)"Could not find '%s' in ini file", name );
 		message( msg, MSG_INFORMATION );
+		return NULL;
 	};
 	pos += strlen(name); // position after the token
 	
@@ -558,8 +598,11 @@ char ** Ini::GetNames( char* buff, char* name,long length) {
 
 	for(long i=0 ; i< dimension;i++){
 		FailFlag = FailFlag || sscanf( pos, "%s ", db ) != 1;
-		if( FailFlag )
+		if( FailFlag ){
 			sprintf( msg, (char*)"Failed loading name of parameter");
+			message( msg, MSG_INFORMATION );
+			return NULL;
+		}
 		
 		strcpy(d[i],db);
 		pos += strlen(db);

@@ -1,11 +1,16 @@
 #include "uego.h"
 
+#include <fstream>
+
 long	NDimRealElement::dim = 1;
 
 // -------------------------------------------------------------------------
 
 
 NDimRealElement::NDimRealElement( long dimension ) {
+
+	b = NULL;
+	epsi = NULL;
 
 	dim = dimension;
 
@@ -96,8 +101,10 @@ double	NDimRealElement::Distance( SearchSpElement* e1, SearchSpElement* e2 ) {
 	sqrsum = 0.0;
 	for( long i=0; i < dim; ++i )
 	{
-		d1 = r1->x[i]*(INI.Upb(i)-INI.Lowb(i)) + INI.Lowb(i);
-		d2 = r2->x[i]*(INI.Upb(i)-INI.Lowb(i)) + INI.Lowb(i);
+		//d1 = r1->x[i]*(INI.Upb(i)-INI.Lowb(i)) + INI.Lowb(i);
+		d1 = r1->x[i];
+		//d2 = r2->x[i]*(INI.Upb(i)-INI.Lowb(i)) + INI.Lowb(i);
+		d2 = r2->x[i];
 		sqrsum += ( d1 - d2 ) * ( d1 - d2 );
 	};
 
@@ -181,9 +188,6 @@ SearchSpElement* NDimRealElement::RandNew( short radind, SearchSpElement* e ) {
 	
 	rad = INI.R( radind ) / INI.R( 0 ) * sqrt( dim ); // normalized radius
 
-			
-
-
 	FailFlag = 1==1;
 
 	r = (NDimRealElement*)e;
@@ -222,8 +226,10 @@ SearchSpElement* NDimRealElement::RandNewParal( short radind, SearchSpElement* e
 
 	if( radind == 0 ) return RandNewParal(); // default for root
 	
-	rad = INI.R( radind ) / INI.R( 0 ) * sqrt( dim ); // normalized radius
+	//rad = INI.R( radind ) / INI.R( 0 ) * sqrt( dim ); // normalized radius
+	rad = INI.R( radind );
 
+	printf("Generating new species with rad=%e\n",rad);
 
 	FailFlag = 1==1;
 
@@ -409,6 +415,17 @@ return RandNew( radind, e );
 // -------------------------------------------------------------------------
 
 
+SearchSpElement* NDimRealElement::MutateNewParal( short radind, SearchSpElement* e ) {
+// mutation used by several algorithms (SHC, GAS, etc.)
+
+return RandNewParal( radind, e );
+// ok, just to make it work quickly, temporarily
+};
+
+
+// -------------------------------------------------------------------------
+
+
 SearchSpElement* NDimRealElement::BetweenNew( SearchSpElement* e1, SearchSpElement* e2 ) {
 
 	NDimRealElement *result, *r1, *r2;
@@ -470,6 +487,55 @@ void	NDimRealElement::Save( FILE* stream ) {
 	if( Fail() ) message((char*)"Error writing SearchSpElement.",MSG_ERROR);
 };
 
+
+// -------------------------------------------------------------------------
+std::ofstream&	NDimRealElement::Save( std::ofstream & myfile ) {
+
+	double	y;
+
+	// --- saving as real coordinates
+	for( long i=0; i < INI.Dimension(); ++i )
+	{
+		y =x[i]*(INI.Upb(i)-INI.Lowb(i)) + INI.Lowb(i);
+		myfile << y << "\t";
+	};
+
+	myfile << value;
+
+	if (!myfile){
+		message((char*)"Error writing SearchSpElement.",MSG_ERROR);
+	}
+
+	return myfile;
+
+};
+
+// -------------------------------------------------------------------------
+SearchSpElement *	NDimRealElement::LoadFromFile(std::ifstream & file){
+
+	double y;
+
+	NDimRealElement * NewElement = new NDimRealElement(INI.Dimension());
+
+	for (long i=0; i < INI.Dimension(); ++i ){
+		file >> y;
+
+		if (!file){
+			message((char*)"Error reading SearchSpElement.",MSG_ERROR);
+		}
+
+		// Normalize the values
+		NewElement->x[i] = (y-INI.Lowb(i))/(INI.Upb(i)-INI.Lowb(i));
+	}
+
+	file >> NewElement->value;
+
+	if (!file){
+		message((char*)"Error reading SearchSpElement.",MSG_ERROR);
+	}
+
+	return NewElement;
+}
 
 // -------------------------------------------------------------------------
 void	NDimRealElement::Save2( FILE* stream ) {

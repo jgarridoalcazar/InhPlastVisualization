@@ -152,67 +152,77 @@ int	main( int argc, char** argv, char** envp ) {
 	}
 	else
 	{
-		message((char*)"Creating master.",MSG_INFORMATION);
-		if( GetPars( argc-2, argv+2 ) )
-			master = new Master( ini, trace,argv[1]);
 		
-		if( master == NULL || master->Fail() )
-		{
-			message((char*)"Could not create master.",MSG_ERROR);
-			errcode = 2;
-		}
-		else{
-			message((char*)"Starting optimalization.",MSG_INFORMATION);
-			// --- doing repcount experiments -----------------------
-			for( long i=1; i<=repcount; ++i )
+
+		// Master node runs the evolotionary algorithm
+		if (myid==0){
+			message((char*)"Creating master.",MSG_INFORMATION);
+			if( GetPars( argc-2, argv+2 ) )
+				master = new Master( ini, trace,argv[1]);
+
+			if( master == NULL || master->Fail() )
 			{
-				time1 = MPI_Wtime();
-				t1=time(NULL);
-				
-				//clock1=clock();
-				sprintf( msg, "Starting experiment %ld.", i );
-				message( msg,MSG_INFORMATION );
-				master->Go(argv[1]);
-				time2 = MPI_Wtime();
-				t2=time(NULL);
-				
-				//clock2=clock();
-				tiemporeloj=(double)t2-t1;
-				//tiemporeloj=(double)(clock2-clock1)/(double)CLOCKS_PER_SEC; 
-				
-				if( master->Fail() )
+				message((char*)"Could not create master.",MSG_ERROR);
+				errcode = 2;
+			}
+			else{
+				message((char*)"Starting optimalization.",MSG_INFORMATION);
+				// --- doing repcount experiments -----------------------
+				for( long i=1; i<=repcount; ++i )
 				{
-					errcode = 3;
-					break;
-				}
-				else
-				{
-					message((char*)"Saving results.",MSG_INFORMATION);
-					master->Save( stdout,tiemporeloj,saveflags );
+					time1 = MPI_Wtime();
+					t1=time(NULL);
+
+					//clock1=clock();
+					sprintf( msg, "Starting experiment %ld.", i );
+					message( msg,MSG_INFORMATION );
+					master->Go(argv[1]);
+					time2 = MPI_Wtime();
+					t2=time(NULL);
+
+					//clock2=clock();
+					tiemporeloj=(double)t2-t1;
+					//tiemporeloj=(double)(clock2-clock1)/(double)CLOCKS_PER_SEC;
+
 					if( master->Fail() )
 					{
-						errcode = 4;
+						errcode = 3;
 						break;
+					}
+					else
+					{
+						message((char*)"Saving results.",MSG_INFORMATION);
+						master->Save( stdout,tiemporeloj,saveflags );
+						if( master->Fail() )
+						{
+							errcode = 4;
+							break;
+						};
 					};
 				};
-			};
+			}
+		} else {
+			// Slave nodes just wait for species and run fitness function.
+			MPI_evaluation_loop(ini);
 		}
+
+		// --- All the proccess have to wait here.
+		MPI_Barrier( MPI_COMM_WORLD );
 	};
 
 	if( errcode == 0 ) message((char*)"Success.",MSG_INFORMATION);
+
 
 	if( master != NULL ) delete master;
 	if( ini != NULL ) delete ini;
 	if( trace != NULL ) delete trace;
 	
 
-	MPI_Barrier( MPI_COMM_WORLD );
+	//MPI_Barrier( MPI_COMM_WORLD );
 	MPI_Finalize();
 
 	// Finalize Python. This is required to avoid PyInitialization crashes everytime a simulation is done.
 	Py_Finalize();
-
-
 
 	return errcode;
 };

@@ -15,7 +15,7 @@ void    message( char *msg, short level ) {
         char    tempMsg[1000];
 
         time_t current_time;
-        char* c_time_string;
+        char  c_time_string[1000];
 
         strcpy(tempMsg,msg);
 
@@ -28,7 +28,8 @@ void    message( char *msg, short level ) {
                         tempMsg[pos] = 0;
 
         current_time = time(NULL);
-        c_time_string = ctime(&current_time);
+        struct tm * p = localtime(&current_time);
+        strftime(c_time_string, 1000, "%d/%m/%y -- %X", p);
         };
 
 	switch( level )

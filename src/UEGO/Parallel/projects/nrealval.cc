@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
-#include "fitness.c"
+#include "fitness.h"
 #include <vector>
 
 
@@ -117,7 +117,7 @@ for(int i=0;i<INI.Dimension();i++){
 //---Computing objective function value
  med_fobj = 0;
 for(int i=0;i<count;i++){
-	objFunc[i] = fitness(seed,param_names, param_values);
+	objFunc[i] = fitness(std::string(INI.NetworkConfigFile()), seed,param_names, param_values);
 	//objFunc[i] = i;
 	med_fobj += objFunc[i];
 	seed++;

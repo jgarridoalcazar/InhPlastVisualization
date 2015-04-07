@@ -10,7 +10,7 @@ UEGOH=$(wildcard include/*.h)
 
 # PRJO defines the optimizers and the opbjective functions
 # for search spaces; change if necessary
-PRJO=projects/nrealopt.o projects/nbinval.o projects/nrealval.o
+PRJO=projects/nrealopt.o projects/nbinval.o projects/nrealval.o projects/thread.o projects/fitness.o
 
 # PRJLIBS defines additional libraries that must be linked to the project
 # defined by PRJO; change when needed

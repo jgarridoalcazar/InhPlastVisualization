@@ -22,6 +22,8 @@ private:
 	// ----- value of center may be changed in both
 	long	Optimize(  long = -1 );	// -1 : use Evals()
 	long	Optimize2(  long = -1 );	// -1 : use Evals()
+	SearchSpElement	* InitializeOptimize();
+	SearchSpElement * ResumeOptimize(SearchSpElement *);
 	
 	long	Evals( long = -1 );// evaluations  (depends on level and ini)
 	long	_NewSpecies( SpeciesList**, short, long );
@@ -48,9 +50,12 @@ public:
 		prev = next = NULL; FailFlag = 1==0; };
 	~SpeciesList() { if( center != NULL ) delete center; };
 
+	ofstream&	Save( ofstream & myfile );
 	void	Save( FILE* );
 	void	Save2( FILE* );
 	void	Absorb( SpeciesList* ); // absorb given species
+
+	static 	SpeciesList*	LoadFromFile(ifstream & file);
 
 	char	Fail() { return FailFlag; };
 

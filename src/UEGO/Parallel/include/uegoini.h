@@ -12,6 +12,7 @@
 //	jelasity 98 02 20 name changed to uegoini.h
 ////////////////////////////////////////////////////////////
 
+typedef enum scale {ARITHMETIC, LOGARITHMIC} numScale;
 
 class Ini {
 friend class Configure;
@@ -30,8 +31,16 @@ private:
 	double	*lowb;		// lower bounds of variables for real spaces
 	double	*upb;		// upper bounds of variables for real spaces
 	char    **paramNames;	// parameter names
+	numScale	*paramScale;	// Scale of each parameter (arithmetic/logarithmic)
 	SearchSpElement	*prototype;	// points to an instance of the
 					// class selected by the user
+
+	unsigned int	numsimulations; // Number of simulations to average
+	unsigned int	simseed; // Simulation seed
+
+	char	*configFileName;	// Name of the network configuration file
+	char	*loadStateFileName;	// Name of the file where the execution state will be loaded.
+	char	*saveStateFileName;	// Name of the file where the execution state will be loaded.
 
 	// --- uego values -----------------------------------------------
 	unsigned long	maxevals;	// max num. of funct. evals
@@ -85,6 +94,30 @@ public:
 		if( i < 0 ) i = 0; else if( i>=dimension ) i=dimension-1;
 		return paramNames[i]; };
 
+	numScale ParameterScale(long i) {
+			if( i < 0 ) i = 0; else if( i>=dimension ) i=dimension-1;
+			return paramScale[i];
+	};
+
+	unsigned int NumberOfSimulations(){
+		return this->numsimulations;
+	}
+
+	unsigned int SimulationSeed(){
+		return this->simseed;
+	}
+
+	char * NetworkConfigFile() {
+		return this->configFileName;
+	};
+
+	char * SaveStateFile() {
+		return this->saveStateFileName;
+	};
+
+	char * LoadStateFile() {
+		return this->loadStateFileName;
+	};
 
 	unsigned long	MaxEvals() { return maxevals; };
 	long		MaxSpecNumber() { return maxspecnum; };
@@ -96,8 +129,8 @@ public:
 		if( i < 0 ) i = 0; else if( i>=levels ) i=levels-1;
 		return evals == NULL ? 0 : evals[i]; };
 	unsigned long	NewSpecEvals( long i ) {
-		if( i < 1 ) i = 1; else if( i>=levels ) i=levels-1;
-		return newspecevals == NULL ? 0 : newspecevals[i-1]; };
+		if( i < 0 ) i = 0; else if( i>=levels ) i=levels-1;
+		return newspecevals == NULL ? 0 : newspecevals[i]; };
 
 	SearchSpElement	*Prototype() { return prototype; };
 	void		SetPrototype(); // creates prototype of type 'type'
