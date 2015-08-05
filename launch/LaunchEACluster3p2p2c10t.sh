@@ -10,7 +10,7 @@
 #$ -v OMP_NUM_THREADS=1
 #$ -q 72H
 #$ -pe openmpi 128
-#$ -hold_jid deap-3p2p2c10t
+# -hold_jid deap-3p2p2c10t
 
 export PATH=/SCRATCH/TIC117/jesusgarrido/autotools/bin:/SCRATCH/TIC117/jesusgarrido/NEST/nest24/insNoMPI/bin:/usr/local/apps/python-2.7.6/bin:$PATH
 export PYTHONPATH=/SCRATCH/TIC117/jesusgarrido/NEST/nest24/insNoMPI/lib/python2.7/site-packages/:/SCRATCH/TIC117/jesusgarrido/scipy/ins/lib/python2.7/site-packages/:$PYTHONPATH

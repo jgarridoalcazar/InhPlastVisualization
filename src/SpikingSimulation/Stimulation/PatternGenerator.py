@@ -193,6 +193,12 @@ class PatternGenerator(object):
         self.fibers_in_pattern = numpy.array([self.ran_generator.permutation(self.number_of_fibers)[0:self.number_of_selected_fibers] for _ in range(self.number_of_patterns)])
         self.fibers_in_pattern.sort(axis=1)
         
+        # Show fiber overlapping statistics
+        for ind1 in range(self.number_of_patterns):
+            for ind2 in range(ind1+1,self.number_of_patterns):
+                intersect = numpy.intersect1d(self.fibers_in_pattern[ind1], self.fibers_in_pattern[ind2], assume_unique=True)
+                logger.debug('Pattern %s and %s share %s input cells: %s',ind1, ind2, len(intersect), intersect)
+        
         return
     
     def _generate_activation_levels(self):
@@ -226,6 +232,16 @@ class PatternGenerator(object):
             
             # Store a copy of the pattern
             self.pattern_activation[index] = norm_pattern_values
+            
+        # Show fiber overlapping statistics
+        for ind1 in range(self.number_of_patterns):
+            for ind2 in range(ind1+1,self.number_of_patterns):
+                intersect = numpy.intersect1d(self.fibers_in_pattern[ind1], self.fibers_in_pattern[ind2], assume_unique=True)
+                logger.debug('Pattern %s and %s share %s input cells: %s',ind1, ind2, len(intersect), intersect)
+                index_ind1 = numpy.in1d(self.fibers_in_pattern[ind1],intersect, assume_unique=True)
+                logger.debug('Activation level of pattern %s in shared cells: %s', ind1, self.pattern_activation[ind1,index_ind1])
+                index_ind2 = numpy.in1d(self.fibers_in_pattern[ind2],intersect, assume_unique=True)
+                logger.debug('Activation level of pattern %s in shared cells: %s', ind2, self.pattern_activation[ind2,index_ind2])
                 
             
         # Replicate the first realization of every pattern (except 0)

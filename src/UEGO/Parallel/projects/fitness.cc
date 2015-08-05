@@ -65,9 +65,9 @@ int MPI_evaluation_loop(Ini * Ini){
 		for(int i=0;i<Ini->Dimension();i++){
 			param_names[i]=Ini->ParameterName(i);
 			if (Ini->ParameterScale(i)==LOGARITHMIC){
-				double logmin = log10(Ini->Lowb(i));
-				double logmax = log10(Ini->Upb(i));
-				param_values[i]= pow(10.0,(x_norm_values[i]*(logmax - logmin) + logmin));
+				double logmin = log10(abs(Ini->Lowb(i)));
+				double logmax = log10(abs(Ini->Upb(i)));
+				param_values[i]= pow(10.0,(x_norm_values[i]*(logmax - logmin)))*Ini->Lowb(i);
 			} else {
 				param_values[i]=x_norm_values[i]*(Ini->Upb(i)-Ini->Lowb(i)) + Ini->Lowb(i);
 			}

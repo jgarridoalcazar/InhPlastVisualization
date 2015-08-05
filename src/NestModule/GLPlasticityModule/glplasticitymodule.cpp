@@ -36,12 +36,14 @@
 
 // include headers with your own stuff
 #include "glplasticitymodule.h"
+
+#include "estdp_connection_hom.h"
+#include "istdp_connection_hom.h"
 #include "iaf_cond_exp_ip.h"
 #include "iaf_cond_exp_ip_sym.h"
 #include "iaf_cond_exp_sto_ip.h"
 #include "iaf_cond_exp_sym.h"
 #include "stdp_sym_connection_hom.h"
-#include "stdp_sym_exp_connection_hom.h"
 
 // -- Interface to dynamic module loader ---------------------------------------
 
@@ -131,8 +133,16 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
           Give synapse type as template argument and the name as second argument.
           The first argument is always a reference to the network.
        */
-      nest::register_prototype_connection_commonproperties < STDPSymExpConnectionHom,STDPSymExpHomCommonProperties>
-      	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "stdp_sym_exp_synapse_hom");
+      nest::register_prototype_connection_commonproperties < ESTDPConnectionHom,ESTDPHomCommonProperties>
+      	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "estdp_synapse_hom");
+
+      /* Register a synapse type.
+			Give synapse type as template argument and the name as second argument.
+			The first argument is always a reference to the network.
+		 */
+		nest::register_prototype_connection_commonproperties < ISTDPConnectionHom,ISTDPHomCommonProperties>
+            	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "istdp_synapse_hom");
+
 
   }  // GLPlasticityModule::init()
 

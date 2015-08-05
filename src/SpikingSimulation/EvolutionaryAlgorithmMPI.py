@@ -339,9 +339,9 @@ class EvolutionaryAlgorithm(object):
             if param_dic['type'] == 'arithmetic':
                 value = norm_value*(max_value - min_value) + min_value
             elif param_dic['type'] == 'geometric':
-                logmin = math.log10(min_value)
-                logmax = math.log10(max_value)
-                value = 10.0**(norm_value*(logmax - logmin) + logmin)
+                logmin = math.log10(abs(min_value))
+                logmax = math.log10(abs(max_value))
+                value = 10.0**(norm_value*(logmax - logmin))*min_value
             
             unnorm_values.append(value)
             

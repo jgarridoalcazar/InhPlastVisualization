@@ -89,7 +89,7 @@ void	Master::ReInitParal( Ini* ini, char* trace, char *file) {
 		head = new SpeciesList;
 		if( head != NULL ) {
 			tmp = head;
-			for (int i=0; i<length; ++i){
+			for (int i=0; i<length; ++i, tmp=tmp->next){
 				tmp->next = SpeciesList::LoadFromFile(myFile);
 				tmp->next->prev = tmp;
 				tmp->next->next = NULL;

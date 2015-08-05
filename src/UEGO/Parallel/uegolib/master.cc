@@ -1,6 +1,7 @@
 #include <cstring>
 #include <iostream>
 #include <fstream>
+#include <cmath>
 #include "uego.h"
 
 
@@ -360,7 +361,14 @@ void	Master::_Go(char * file) {
 			{
 				tmp->next->center->GetX(x);
 				for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
-					double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+					double value;
+					if (this->_ini->ParameterScale(i)==LOGARITHMIC){
+						double logmin = log10(std::abs(this->_ini->Lowb(i)));
+						double logmax = log10(std::abs(this->_ini->Upb(i)));
+						value= pow(10.0,(x[i]*(logmax - logmin)))*this->_ini->Lowb(i);
+					} else {
+						value=x[i]*(this->_ini->Upb(i)-this->_ini->Lowb(i)) + this->_ini->Lowb(i);
+					}
 					sprintf(msg,"%s%e\t",msg,value);
 				}
 				sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
@@ -375,7 +383,14 @@ void	Master::_Go(char * file) {
 			{
 				tmp->next->center->GetX(x);
 				for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
-					double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+					double value;
+					if (this->_ini->ParameterScale(i)==LOGARITHMIC){
+						double logmin = log10(std::abs(this->_ini->Lowb(i)));
+						double logmax = log10(std::abs(this->_ini->Upb(i)));
+						value= pow(10.0,(x[i]*(logmax - logmin)))*this->_ini->Lowb(i);
+					} else {
+						value=x[i]*(this->_ini->Upb(i)-this->_ini->Lowb(i)) + this->_ini->Lowb(i);
+					}
 					sprintf(msg,"%s%e\t",msg,value);
 				}
 				sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
@@ -399,7 +414,14 @@ void	Master::_Go(char * file) {
 		{
 			tmp->next->center->GetX(x);
 			for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
-				double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+				double value;
+				if (this->_ini->ParameterScale(i)==LOGARITHMIC){
+					double logmin = log10(std::abs(this->_ini->Lowb(i)));
+					double logmax = log10(std::abs(this->_ini->Upb(i)));
+					value= pow(10.0,(x[i]*(logmax - logmin)))*this->_ini->Lowb(i);
+				} else {
+					value=x[i]*(this->_ini->Upb(i)-this->_ini->Lowb(i)) + this->_ini->Lowb(i);
+				}
 				sprintf(msg,"%s%e\t",msg,value);
 			}
 			sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
@@ -421,7 +443,14 @@ void	Master::_Go(char * file) {
 		{
 			tmp->next->center->GetX(x);
 			for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
-				double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+				double value;
+				if (this->_ini->ParameterScale(i)==LOGARITHMIC){
+					double logmin = log10(std::abs(this->_ini->Lowb(i)));
+					double logmax = log10(std::abs(this->_ini->Upb(i)));
+					value= pow(10.0,(x[i]*(logmax - logmin)))*this->_ini->Lowb(i);
+				} else {
+					value=x[i]*(this->_ini->Upb(i)-this->_ini->Lowb(i)) + this->_ini->Lowb(i);
+				}
 				sprintf(msg,"%s%e\t",msg,value);
 			}
 			sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);
@@ -437,7 +466,14 @@ void	Master::_Go(char * file) {
 		{
 			tmp->next->center->GetX(x);
 			for (unsigned int i=0; i<this->_ini->Dimension(); ++i){
-				double value = x[i]*(_ini->Upb(i)-_ini->Lowb(i)) + _ini->Lowb(i);
+				double value;
+				if (this->_ini->ParameterScale(i)==LOGARITHMIC){
+					double logmin = log10(std::abs(this->_ini->Lowb(i)));
+					double logmax = log10(std::abs(this->_ini->Upb(i)));
+					value= pow(10.0,(x[i]*(logmax - logmin)))*this->_ini->Lowb(i);
+				} else {
+					value=x[i]*(this->_ini->Upb(i)-this->_ini->Lowb(i)) + this->_ini->Lowb(i);
+				}
 				sprintf(msg,"%s%e\t",msg,value);
 			}
 			sprintf(msg,"%s%f\t%d\n",msg,tmp->next->center->CurrValue(), tmp->next->level);

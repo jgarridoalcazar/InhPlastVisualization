@@ -18,7 +18,6 @@ from Utils.Utils import ReadConfigFile
 from Utils.Logger import InitializeLogger, Logger2File
 import threading
 import Queue
-from nose.util import tolist
 
 InitializeLogger('ParameterSearch')
 
@@ -280,9 +279,9 @@ class ParameterSearch(object):
             if param_dic['type'] == 'arithmetic':
                 value = norm_value*(max_value - min_value) + min_value
             elif param_dic['type'] == 'geometric':
-                logmin = math.log10(min_value)
-                logmax = math.log10(max_value)
-                value = 10.0**(norm_value*(logmax - logmin) + logmin)
+                logmin = math.log10(abs(min_value))
+                logmax = math.log10(abs(max_value))
+                value = 10.0**(norm_value*(logmax - logmin))*min_value
             
             unnorm_values.append(value)
             
@@ -375,7 +374,7 @@ class ParameterSearch(object):
                         logger.debug('Fitness value calculated for individual %s: %s', tuple_ind, avMI)
                         
                         unnorm_val = self._get_unnormalized_values(tuple_ind)
-                        unnorm_val.extend(tolist(avMI))
+                        unnorm_val.extend(list(avMI))
                         
                         if self.config_options['algorithm']['saving_file'] is not None:
                             with open(self.config_options['algorithm']['saving_file'], 'a') as fileid:

@@ -494,11 +494,16 @@ std::ofstream&	NDimRealElement::Save( std::ofstream & myfile ) {
 	double	y;
 
 	// --- saving as real coordinates
-	for( long i=0; i < INI.Dimension(); ++i )
-	{
-		y =x[i]*(INI.Upb(i)-INI.Lowb(i)) + INI.Lowb(i);
+	for (unsigned int i=0; i<INI.Dimension(); ++i){
+		if (INI.ParameterScale(i)==LOGARITHMIC){
+			double logmin = log10(INI.Lowb(i));
+			double logmax = log10(INI.Upb(i));
+			y= pow(10.0,(x[i]*(logmax - logmin)))*INI.Lowb(i);
+		} else {
+			y=x[i]*(INI.Upb(i)-INI.Lowb(i)) + INI.Lowb(i);
+		}
 		myfile << y << "\t";
-	};
+	}
 
 	myfile << value;
 
@@ -525,7 +530,12 @@ SearchSpElement *	NDimRealElement::LoadFromFile(std::ifstream & file){
 		}
 
 		// Normalize the values
-		NewElement->x[i] = (y-INI.Lowb(i))/(INI.Upb(i)-INI.Lowb(i));
+		if (INI.ParameterScale(i)==LOGARITHMIC){
+			NewElement->x[i] = log10(y/INI.Lowb(i))/log10(INI.Upb(i)/INI.Lowb(i));
+		} else {
+			NewElement->x[i] = (y-INI.Lowb(i))/(INI.Upb(i)-INI.Lowb(i));
+		}
+
 	}
 
 	file >> NewElement->value;

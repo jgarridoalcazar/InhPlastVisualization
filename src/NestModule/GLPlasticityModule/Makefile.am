@@ -33,7 +33,8 @@ glplasticitymodule_la_SOURCES=  glplasticitymodule.cpp      glplasticitymodule.h
 				  histentry_sym.cpp			histentry_sym.h \
 				  archiving_node_sym.cpp	archiving_node_sym.h \
                   stdp_sym_connection_hom.cpp	stdp_sym_connection_hom.h \
-                  stdp_sym_exp_connection_hom.cpp	stdp_sym_exp_connection_hom.h
+                  estdp_connection_hom.cpp	estdp_connection_hom.h \
+                  istdp_connection_hom.cpp	istdp_connection_hom.h
 
 
 glplasticitymodule_la_LDFLAGS=  -module

@@ -17,15 +17,15 @@
 	parameter scales:
 		arithmetic	arithmetic 
 	number simulations:
-		10
+		20
 	simulation seed:
 		12345
 	network config file:
 		./config/SimulationConfigUego1p1c.cfg
 	load state file name:
-		none
-	save state file name:
 		./results/uego_state_2p1p1c.txt
+	save state file name:
+		./results/uego_state_2p1p1c_2.txt
 
 [UEGO parameters]
 

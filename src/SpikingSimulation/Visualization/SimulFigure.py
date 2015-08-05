@@ -53,7 +53,8 @@ class SimulFigure(object):
         self.figure.subplots_adjust(hspace=self.numRows*0.1)
         
         if (issubclass(type(self),animation.TimedAnimation)):
-            super(SimulFigure, self).__init__(self.figure,interval=1000./self.frame_rate,repeat=False,blit=False)
+            #super(SimulFigure, self).__init__(self.figure,interval=1000./self.frame_rate,repeat=False,blit=False)
+            super(SimulFigure, self).__init__(self.figure,interval=1,repeat=False,blit=False)
         else:
             super(SimulFigure, self).__init__()
         

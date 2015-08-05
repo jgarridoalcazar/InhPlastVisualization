@@ -20,15 +20,15 @@ if __name__ == "__main__":
     for section in arguments.keys():
         for param in arguments[section].keys():
             simulation.config_options[section][param] = arguments[section][param]
-                
+    
     simulation.initialize()
 
-    if simulation.config_options['simulation']['visualize_animation']:
+    if simulation.new_config_options['simulation']['visualize_animation']:
         simulation.visualize_animation()
     else:
         simulation.run_simulation()
                 
-    if simulation.config_options['simulation']['visualize_results']:
+    if simulation.new_config_options['simulation']['visualize_results']:
         simulation.visualize_results()
     
     simulation.analyze_results()    

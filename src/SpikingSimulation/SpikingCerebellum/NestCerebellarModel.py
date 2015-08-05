@@ -66,6 +66,7 @@ class NestCerebellarModel(CerebellarModel):
         'C_m': 'cm*1.e12', # Membrane capacitance in pF
         'tau_m': 'cm/grest*1.e3', # Membrane time constant in ms
         'tau_minus':'tau_minus*1.e3', # Time constant of the post-pre part in ms
+        'tau_minus_triplet':'tau_istdp*1.e3', # Time constant of the `post-pre part of iSTDP in ms
         't_ref_abs': 'tref_abs*1.e3', # Absolute refractory period (SRM) in ms
         # Intrinsic plasticity parameters
         'tau_ip':'tau_ip*1.e3', # Time constant of the intrinsic plasticity in ms
@@ -98,8 +99,9 @@ class NestCerebellarModel(CerebellarModel):
     # Learning rule translation
     ruleNameTranslatorDict = {
         'STDP' : 'stdp_synapse_hom',
-        'STDPSym'   :   'stdp_sym_synapse_hom',
-        'STDPSymExp'    :   'stdp_sym_exp_synapse_hom'
+        'STDPSym'  :   'stdp_sym_synapse_hom',
+        'eSTDP'    :   'estdp_synapse_hom',
+        'iSTDP'    :   'istdp_synapse_hom'
     }
     
     # This dictionary maps the learning rule configuration parameters into the NEST learning rule model parameters (used in the keys).

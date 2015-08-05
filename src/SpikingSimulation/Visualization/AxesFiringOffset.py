@@ -96,7 +96,11 @@ class AxesFiringOffset(AxesPlot.AxesPlot):
         
         self.oscillation_period = 1./self.oscillation_freq
          
-        number_of_lines = 1
+        data_labels = []
+        for ind in self.index:
+            data_labels.append('Cell '+str(ind))
+        
+        number_of_lines = len(data_labels) 
         
         self.axesLines = []
         
@@ -163,19 +167,20 @@ class AxesFiringOffset(AxesPlot.AxesPlot):
         
             initialized = False
 
-            sel_time = gtime
-            sel_offset = numpy.mod(gtime,self.oscillation_period)
+            for ind,cell in enumerate(self.index):
+                sel_time = gtime[gcell_id==cell]
+                sel_offset = numpy.mod(sel_time,self.oscillation_period)
             
-            old_time_data = self.axesLines[0].get_xdata()
-            first_index = numpy.searchsorted(old_time_data, data_init_time)
-            new_time_data = numpy.append(old_time_data[first_index:],sel_time)
+                old_time_data = self.axesLines[ind].get_xdata()
+                first_index = numpy.searchsorted(old_time_data, data_init_time)
+                new_time_data = numpy.append(old_time_data[first_index:],sel_time)
             
-            old_signal_data = self.axesLines[0].get_ydata()
-            new_signal_data = old_signal_data[first_index:]
-            new_signal_data = numpy.append(new_signal_data, sel_offset)
+                old_signal_data = self.axesLines[ind].get_ydata()
+                new_signal_data = old_signal_data[first_index:]
+                new_signal_data = numpy.append(new_signal_data, sel_offset)
                 
-            self.axesLines[0].set_xdata(new_time_data)
-            self.axesLines[0].set_ydata(new_signal_data)
+                self.axesLines[ind].set_xdata(new_time_data)
+                self.axesLines[ind].set_ydata(new_signal_data)
                 
                 
     
