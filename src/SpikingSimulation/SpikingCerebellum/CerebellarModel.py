@@ -275,6 +275,12 @@ class CerebellarModel(object):
         return
     
     @abc.abstractmethod
+    def get_synaptic_connections(self, **kwargs):
+        '''
+        Get the source and target neurons in the synaptic layer.
+        '''
+    
+    @abc.abstractmethod
     def get_number_of_virtual_processes(self):
         '''
         Return the number of virtual processes. It might be used to decide the number of   

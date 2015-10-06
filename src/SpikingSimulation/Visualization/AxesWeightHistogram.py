@@ -93,20 +93,26 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
                 self.max_weight = synaptic_layer.learning_rule_parameters['max_weight']
             else:
                 self.max_weight = 1.
+                
+        if self.max_weight > 0:
+            self.min_weight = 0
+        else:
+            self.min_weight = self.max_weight
+            self.max_weight = 0.0
         
-        self.positions = numpy.linspace(0, self.max_weight,self.num_bins)
+        self.positions = numpy.linspace(self.min_weight, self.max_weight,self.num_bins)
         
         self.param['end_time'] = 0.0
         _,gcon,_ = self.data_provider.get_synaptic_weights(**self.param)
         
-        self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), self.max_weight/self.num_bins)
+        self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), max(abs(self.max_weight),abs(self.min_weight))/self.num_bins)
         
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()
         
         if (process_id==0):
-            self.axes.set_xlim([0,self.max_weight])
+            self.axes.set_xlim([self.min_weight,self.max_weight])
             self.axes.set_ylim([0,len(gcon)])
         
         super(AxesWeightHistogram, self).initialize()

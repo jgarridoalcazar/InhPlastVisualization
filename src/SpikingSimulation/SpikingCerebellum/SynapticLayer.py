@@ -119,6 +119,11 @@ class SynapticLayer(object):
                     self.connectivity_parameters['allow_auto_connection'] = kwargs.pop('allow_auto_connection')
                 else:
                     self.connectivity_parameters['allow_auto_connection'] = True
+                    
+                if 'allow_multiple_connections' in kwargs:
+                    self.connectivity_parameters['allow_multiple_connections'] = kwargs.pop('allow_multiple_connections')
+                else:
+                    self.connectivity_parameters['allow_multiple_connections'] = True
                 
                 # Generate the individual connections
                 #self.template_connectivity_parameters[self.connectivity_type][-1]()

@@ -116,7 +116,7 @@ class NestCerebellarModel(CerebellarModel):
     
     # Connectivity pattern translator
     connectivityNameTranslatorDict = {
-        'randomn2one': ('fixed_indegree',['indegree','autapses']),
+        'randomn2one': ('fixed_indegree',['indegree','autapses','multapses']),
         'random_with_probability': ('pairwise_bernoulli',['p','autapses'])
     }
     
@@ -124,7 +124,9 @@ class NestCerebellarModel(CerebellarModel):
     connectivityTranslatorDict = { 
         'indegree':'number_of_source_cells', # Target cell fan-in
         'p': 'connection_probability*1.', # Probability of connection
-        'autapses': 'allow_auto_connection' # Connections from one node to itself are allowed
+        'autapses': 'allow_auto_connection', # Connections from one node to itself are allowed
+        'multapses': 'allow_multiple_connections' # Multiple connections with same source and target are allowed
+    
     }
     
     # Weight initialization translator
@@ -993,6 +995,55 @@ class NestCerebellarModel(CerebellarModel):
         # print 'Process',self.get_my_process_id(),':','Collected time ->',gtime,'Collected Connections ->',gconnections,'Collected weights ->',gweights
         
         return (selected_time,selected_connections,selected_weights)
+    
+    def get_synaptic_connections(self, **kwargs):
+        '''
+        Get the source and target neurons in the synaptic layer.
+        @param synaptic_layer Layer name as the section name in the config file (.cfg).
+        @param source_indexes Indexes of the source cells of the synapses to get the activity.
+        @param target_indexes Indexes of the target cells of the synapses to get the activity.
+        '''
+        # Collect all the parameters
+        if 'synaptic_layer' in kwargs:
+            synaptic_layer_name = kwargs.pop('synaptic_layer')
+        else:
+            logger.error('Non specified synaptic layer in get_synaptic_weights function')
+            raise Exception('Non-DefinedSynapticLayer')
+        
+        if synaptic_layer_name in self.layer_map:
+            synaptic_layer = self.layer_map[synaptic_layer_name]
+        else:
+            logger.error('Invalid synaptic layer in get_synaptic_weights function')
+            raise Exception('InvalidSynapticLayer')
+        
+        if 'source_indexes' in kwargs:
+            source_indexes = kwargs.pop('source_indexes')
+            
+            if (max(source_indexes)>=(synaptic_layer.source_layer.number_of_neurons)):
+                logger.error('Invalid source index in get_synaptic_weights function')
+                raise Exception('InvalidSourceIndex')
+        else:
+            source_indexes = range(synaptic_layer.source_layer.number_of_neurons)
+        
+        if 'target_indexes' in kwargs:
+            target_indexes = kwargs.pop('target_indexes')
+            
+            if (max(target_indexes)>=(synaptic_layer.target_layer.number_of_neurons)):
+                logger.error('Invalid target index in get_synaptic_weights function')
+                raise Exception('InvalidTargetIndex')
+        else:
+            target_indexes = range(synaptic_layer.target_layer.number_of_neurons)
+            
+        # print 'Process',self.get_my_process_id(),':','Source indexes:',source_indexes,'Target indexes ->',target_indexes
+        abs_source_indexes = [ind + synaptic_layer.source_layer.MinIndex for ind in source_indexes]
+        abs_target_indexes = [ind + synaptic_layer.target_layer.MinIndex for ind in target_indexes]
+        connections = nest.GetConnections(source=abs_source_indexes, target=abs_target_indexes)
+        status = nest.GetStatus(connections)
+        
+        con_local_sources = numpy.array([dicCon['source'] - synaptic_layer.source_layer.MinIndex for dicCon in status])
+        con_local_targets =  numpy.array([dicCon['target'] - synaptic_layer.target_layer.MinIndex for dicCon in status])
+        
+        return (con_local_sources,con_local_targets)
         
         
     def get_number_of_virtual_processes(self):
