@@ -35,7 +35,7 @@
   Author: Jesus Garrido (jesusgarrido@ugr.es)
 */
 
-#include "connection_het_wd.h"
+#include "connection.h"
 #include "archiving_node.h"
 #include <cmath>
 
@@ -47,47 +47,63 @@ namespace mynest
    */
   class ISTDPHomCommonProperties : public nest::CommonSynapseProperties
     {
-      friend class ISTDPConnectionHom;
-
     public:
 
       /**
        * Default constructor.
        * Sets all property values to defaults.
        */
-      ISTDPHomCommonProperties();
+      ISTDPHomCommonProperties(): CommonSynapseProperties(),
+    	tau_plus_(20.0),
+    	lambda_(0.01),
+    	alpha_(1.0),
+    	Wmax_(100.0)
+      { };
    
       /**
        * Get all properties and put them into a dictionary.
        */
-      void get_status(DictionaryDatum & d) const;
+      void get_status(DictionaryDatum & d) const{
+        CommonSynapseProperties::get_status(d);
+
+    	def<nest::double_t>(d, "tau_plus", tau_plus_);
+    	def<nest::double_t>(d, "lambda", lambda_);
+    	def<nest::double_t>(d, "alpha", alpha_);
+    	def<nest::double_t>(d, "Wmax", Wmax_);
+      };
   
       /**
        * Set properties from the values given in dictionary.
        */
-      void set_status(const DictionaryDatum & d, nest::ConnectorModel& cm);
+      void set_status(const DictionaryDatum & d, nest::ConnectorModel& cm)
+      {
+        CommonSynapseProperties::set_status(d, cm);
 
-      // overloaded for all supported event types
-      void check_event(nest::SpikeEvent&) {}
- 
-    private:
+        updateValue<nest::double_t>(d, "tau_plus", tau_plus_);
+        updateValue<nest::double_t>(d, "lambda", lambda_);
+        updateValue<nest::double_t>(d, "alpha", alpha_);
+        updateValue<nest::double_t>(d, "Wmax", Wmax_);
+      };
 
       // data members common to all connections
       nest::double_t tau_plus_;
       nest::double_t lambda_;
       nest::double_t alpha_;
       nest::double_t Wmax_;
-    };
-
-
+  };
 
   /**
    * Class representing an STDP connection with homogeneous parameters, i.e. parameters are the same for all synapses.
    */
-  class ISTDPConnectionHom : public nest::ConnectionHetWD
+  template < typename targetidentifierT >
+  class ISTDPConnectionHom : public nest::Connection<targetidentifierT>
   {
 
   public:
+
+  typedef ISTDPHomCommonProperties CommonPropertiesType;
+  typedef nest::Connection< targetidentifierT > ConnectionBase;
+
   /**
    * Default Constructor.
    * Sets default values for all parameters. Needed by GenericConnectorModel.
@@ -100,11 +116,53 @@ namespace mynest
    */
   ISTDPConnectionHom(const ISTDPConnectionHom &);
 
+  // Explicitly declare all methods inherited from the dependent base ConnectionBase.
+  // This avoids explicit name prefixes in all places these functions are used.
+  // Since ConnectionBase depends on the template parameter, they are not automatically
+  // found in the base class.
+  using ConnectionBase::get_delay;
+  using ConnectionBase::get_delay_steps;
+  using ConnectionBase::get_rport;
+  using ConnectionBase::get_target;
+
   /**
    * Default Destructor.
    */
   virtual ~ISTDPConnectionHom() {}
 
+  /**
+   * Get all properties of this connection and put them into a dictionary.
+   */
+  void get_status(DictionaryDatum & d) const;
+  
+  /**
+   * Set properties of this connection from the values given in dictionary.
+   */
+  void set_status(const DictionaryDatum & d, nest::ConnectorModel &cm);
+
+  /**
+   * Send an event to the receiver of this connection.
+   * \param e The event to send
+   * \param t_lastspike Point in time of last spike sent.
+   */
+  void send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const ISTDPHomCommonProperties &);
+
+  void set_weight( double_t w )
+  {
+    weight_ = w;
+  }
+
+  class ConnTestDummyNode : public nest::ConnTestDummyNodeBase {
+    public:
+  	// Ensure proper overriding of overloaded virtual functions.
+  	// Return values from functions are ignored.
+  	using ConnTestDummyNodeBase::handles_test_event;
+  	nest::port handles_test_event( nest::SpikeEvent&, nest::rport )
+  	{
+  	  return nest::invalid_port_;
+  	}
+  };
+  
   /*
    * This function calls check_connection on the sender and checks if the receiver
    * accepts the event type and receptor type requested by the sender.
@@ -119,60 +177,42 @@ namespace mynest
    * \param receptor_type The ID of the requested receptor type
    * \param t_lastspike last spike produced by presynaptic neuron (in ms)
    */
-  void check_connection(nest::Node & s, nest::Node & r, nest::rport receptor_type, nest::double_t t_lastspike);
+  void check_connection( nest::Node& s, nest::Node& t, nest::rport receptor_type, nest::double_t t_lastspike, const CommonPropertiesType& ){
+    ConnTestDummyNode dummy_target;
+    ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
 
-  /**
-   * Get all properties of this connection and put them into a dictionary.
-   */
-  void get_status(DictionaryDatum & d) const;
-  
-  /**
-   * Set properties of this connection from the values given in dictionary.
-   */
-  void set_status(const DictionaryDatum & d, nest::ConnectorModel &cm);
+    t.register_stdp_connection( t_lastspike - get_delay() );
+  }
 
-  /**
-   * Set properties of this connection from position p in the properties
-   * array given in dictionary.
-   */  
-  void set_status(const DictionaryDatum & d, nest::index p, nest::ConnectorModel &cm);
-
-  /**
-   * Create new empty arrays for the properties of this connection in the given
-   * dictionary. It is assumed that they are not existing before.
-   */
-  void initialize_property_arrays(DictionaryDatum & d) const;
-
-  /**
-   * Append properties of this connection to the given dictionary. If the
-   * dictionary is empty, new arrays are created first.
-   */
-  void append_properties(DictionaryDatum & d) const;
-
-  /**
-   * Send an event to the receiver of this connection.
-   * \param e The event to send
-   * \param t_lastspike Point in time of last spike sent.
-   */
-  void send(nest::Event& e, nest::double_t t_lastspike, const ISTDPHomCommonProperties &);
-
-  // overloaded for all supported event types
-  using Connection::check_event;
-  void check_event(nest::SpikeEvent&) {}
-  
  private:
 
   nest::double_t postsynaptic_change_(nest::double_t w, nest::double_t kplus, const ISTDPHomCommonProperties &cp);
   nest::double_t presynaptic_change_(nest::double_t w, nest::double_t kminus, const ISTDPHomCommonProperties &cp);
 
   // data members of each connection
+  nest::double_t weight_;
   nest::double_t Kplus_;
 
-  };
+};
 
+template < typename targetidentifierT >
+ISTDPConnectionHom< targetidentifierT >::ISTDPConnectionHom()
+    : ConnectionBase()
+    , weight_( 1.0 )
+    , Kplus_( 0.0 )
+{
+}
 
-inline
-nest::double_t ISTDPConnectionHom::postsynaptic_change_(nest::double_t w, nest::double_t kplus, const ISTDPHomCommonProperties &cp)
+template < typename targetidentifierT >
+ISTDPConnectionHom< targetidentifierT >::ISTDPConnectionHom( const ISTDPConnectionHom& rhs )
+    : ConnectionBase( rhs )
+    , weight_( rhs.weight_ )
+    , Kplus_( rhs.Kplus_ )
+{
+}
+
+template < typename targetidentifierT >
+inline nest::double_t ISTDPConnectionHom< targetidentifierT >::postsynaptic_change_(nest::double_t w, nest::double_t kplus, const ISTDPHomCommonProperties &cp)
 {
 	nest::double_t norm_w = (w / cp.Wmax_) + (cp.lambda_ * kplus);
 	if (norm_w > 1.0){
@@ -183,8 +223,8 @@ nest::double_t ISTDPConnectionHom::postsynaptic_change_(nest::double_t w, nest::
 	return norm_w * cp.Wmax_;
 }
 
-inline
-nest::double_t ISTDPConnectionHom::presynaptic_change_(nest::double_t w, nest::double_t kminus, const ISTDPHomCommonProperties &cp)
+template < typename targetidentifierT >
+inline nest::double_t ISTDPConnectionHom< targetidentifierT >::presynaptic_change_(nest::double_t w, nest::double_t kminus, const ISTDPHomCommonProperties &cp)
 {
 	nest::double_t norm_w = (w / cp.Wmax_) + cp.lambda_ * (kminus - cp.alpha_);
 	if (norm_w > 1.0){
@@ -195,22 +235,14 @@ nest::double_t ISTDPConnectionHom::presynaptic_change_(nest::double_t w, nest::d
 	return norm_w * cp.Wmax_;
 }
 
-
-inline 
-  void ISTDPConnectionHom::check_connection(nest::Node & s, nest::Node & r, nest::rport receptor_type, nest::double_t t_lastspike)
-{
-	nest::ConnectionHetWD::check_connection(s, r, receptor_type, t_lastspike);
-  r.register_stdp_connection(t_lastspike - nest::Time(nest::Time::step(delay_)).get_ms());
-}
-
 /**
  * Send an event to the receiver of this connection.
  * \param e The event to send
  * \param p The port under which this connection is stored in the Connector.
  * \param t_lastspike Time point of last spike emitted
  */
-inline
-void ISTDPConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, const ISTDPHomCommonProperties &cp)
+template < typename targetidentifierT >
+inline void ISTDPConnectionHom< targetidentifierT >::send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const ISTDPHomCommonProperties &cp)
 {
   // synapse STDP depressing/facilitation dynamics
 
@@ -219,13 +251,13 @@ void ISTDPConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, const 
   
   // t_lastspike_ = 0 initially
   
-
-	nest::double_t dendritic_delay = nest::Time(nest::Time::step(delay_)).get_ms();
+	nest::Node* target = get_target( t );
+	nest::double_t dendritic_delay = nest::Time(nest::Time::step(get_delay())).get_ms();
     
   //get spike history in relevant range (t1, t2] from post-synaptic neuron
   std::deque<nest::histentry>::iterator start;
   std::deque<nest::histentry>::iterator finish;
-  target_->get_history(t_lastspike - dendritic_delay, t_spike - dendritic_delay,
+  target->get_history(t_lastspike - dendritic_delay, t_spike - dendritic_delay,
 			       &start, &finish);
   //facilitation due to post-synaptic spikes since last pre-synaptic spike
   while (start != finish)
@@ -240,16 +272,29 @@ void ISTDPConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, const 
 
   //depression due to new pre-synaptic spike
   double_t k_value, k_triplet;
-  target_->get_K_values(t_spike - dendritic_delay, k_value, k_triplet);
+  target->get_K_values(t_spike - dendritic_delay, k_value, k_triplet);
   weight_ = presynaptic_change_(weight_, k_triplet, cp);
-  e.set_receiver(*target_);
+  e.set_receiver(*target);
   e.set_weight(weight_);
-  e.set_delay(delay_);
-  e.set_rport(rport_);
+  e.set_delay(get_delay_steps());
+  e.set_rport(get_rport());
   e();
 
   Kplus_ = Kplus_ * std::exp((t_lastspike - t_spike) /  cp.tau_plus_) + 1.0;
   }
+
+template < typename targetidentifierT >
+void ISTDPConnectionHom< targetidentifierT >::get_status( DictionaryDatum& d ) const
+{
+
+  // base class properties, different for individual synapse
+  ConnectionBase::get_status( d );
+  def< nest::double_t >( d, nest::names::weight, weight_ );
+
+  // own properties, different for individual synapse
+  def< nest::double_t >( d, "Kplus", Kplus_ );
+  def< nest::long_t >( d, nest::names::size_of, sizeof( *this ) );
+}
 
 } // of namespace nest
 

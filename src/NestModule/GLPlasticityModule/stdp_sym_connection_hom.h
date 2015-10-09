@@ -39,7 +39,7 @@
   Author: Jesus Garrido (jesusgarrido@ugr.es)
 */
 
-#include "connection_het_wd.h"
+#include "connection.h"
 #include "archiving_node_sym.h"
 #include <cmath>
 
@@ -51,30 +51,57 @@ namespace mynest
    */
   class STDPSymHomCommonProperties : public nest::CommonSynapseProperties
     {
-      friend class STDPSymConnectionHom;
-
     public:
 
       /**
        * Default constructor.
        * Sets all property values to defaults.
        */
-      STDPSymHomCommonProperties();
+      STDPSymHomCommonProperties():
+	    CommonSynapseProperties(),
+	    inv_tau_sym1_(50.e-3),
+	    lambda_(0.01),
+	    alpha_(0.25),
+	    Wmax_(100.0)
+	  {
+	    inv_tau_sym2_ = inv_tau_sym1_*(std::atan(M_PI/2)*2./M_PI);
+
+	    sym_A_ = 1./(std::exp(-std::atan(M_PI/2.)*4./M_PI)*std::pow(std::sin(std::atan(M_PI/2.)),2)); // Normalizing constant of the external part
+	  };
    
       /**
        * Get all properties and put them into a dictionary.
        */
-      void get_status(DictionaryDatum & d) const;
+      void get_status(DictionaryDatum & d) const
+      {
+    	CommonSynapseProperties::get_status(d);
+
+    	def<nest::double_t>(d, "tau_sym", 1./inv_tau_sym1_);
+    	def<nest::double_t>(d, "lambda", lambda_);
+    	def<nest::double_t>(d, "alpha", alpha_);
+    	def<nest::double_t>(d, "Wmax", Wmax_);
+      }
   
       /**
        * Set properties from the values given in dictionary.
        */
-      void set_status(const DictionaryDatum & d, nest::ConnectorModel& cm);
+      void set_status(const DictionaryDatum & d, nest::ConnectorModel& cm){
+    	CommonSynapseProperties::set_status(d, cm);
 
-      // overloaded for all supported event types
-      void check_event(nest::SpikeEvent&) {}
- 
-    private:
+    	nest::double_t old_tau_sym = 1.0/inv_tau_sym1_;
+
+    	updateValue<nest::double_t>(d, "tau_sym", old_tau_sym);
+
+    	if ( old_tau_sym <= 0)
+    	  throw nest::BadProperty("All time constants must be strictly positive.");
+
+    	inv_tau_sym1_ = 1.0/old_tau_sym;
+    	inv_tau_sym2_ = inv_tau_sym1_*(std::atan(M_PI/2)*2./M_PI);
+
+    	updateValue<nest::double_t>(d, "lambda", lambda_);
+    	updateValue<nest::double_t>(d, "alpha", alpha_);
+    	updateValue<nest::double_t>(d, "Wmax", Wmax_);
+      };
 
       // data members common to all connections
       nest::double_t inv_tau_sym1_;
@@ -87,15 +114,17 @@ namespace mynest
       nest::double_t sym_A_;
     };
 
-
-
   /**
    * Class representing an STDP connection with homogeneous parameters, i.e. parameters are the same for all synapses.
    */
-  class STDPSymConnectionHom : public nest::ConnectionHetWD
+  template < typename targetidentifierT >
+  class STDPSymConnectionHom : public nest::Connection<targetidentifierT>
   {
 
   public:
+  typedef STDPSymHomCommonProperties CommonPropertiesType;
+  typedef nest::Connection< targetidentifierT > ConnectionBase;
+
   /**
    * Default Constructor.
    * Sets default values for all parameters. Needed by GenericConnectorModel.
@@ -108,10 +137,52 @@ namespace mynest
    */
   STDPSymConnectionHom(const STDPSymConnectionHom &);
 
+  // Explicitly declare all methods inherited from the dependent base ConnectionBase.
+  // This avoids explicit name prefixes in all places these functions are used.
+  // Since ConnectionBase depends on the template parameter, they are not automatically
+  // found in the base class.
+  using ConnectionBase::get_delay;
+  using ConnectionBase::get_delay_steps;
+  using ConnectionBase::get_rport;
+  using ConnectionBase::get_target;
+
   /**
    * Default Destructor.
    */
   virtual ~STDPSymConnectionHom() {}
+
+  /**
+   * Get all properties of this connection and put them into a dictionary.
+   */
+  void get_status(DictionaryDatum & d) const;
+  
+  /**
+   * Set properties of this connection from the values given in dictionary.
+   */
+  void set_status(const DictionaryDatum & d, nest::ConnectorModel &cm);
+
+  /**
+   * Send an event to the receiver of this connection.
+   * \param e The event to send
+   * \param t_lastspike Point in time of last spike sent.
+   */
+  void send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const CommonPropertiesType &);
+
+  void set_weight( double_t w )
+  {
+    weight_ = w;
+  }
+
+  class ConnTestDummyNode : public nest::ConnTestDummyNodeBase {
+    public:
+  	// Ensure proper overriding of overloaded virtual functions.
+  	// Return values from functions are ignored.
+  	using ConnTestDummyNodeBase::handles_test_event;
+  	nest::port handles_test_event( nest::SpikeEvent&, nest::rport )
+  	{
+  	  return nest::invalid_port_;
+  	}
+  };
 
   /*
    * This function calls check_connection on the sender and checks if the receiver
@@ -127,46 +198,12 @@ namespace mynest
    * \param receptor_type The ID of the requested receptor type
    * \param t_lastspike last spike produced by presynaptic neuron (in ms)
    */
-  void check_connection(nest::Node & s, nest::Node & r, nest::rport receptor_type, nest::double_t t_lastspike);
+  void check_connection( nest::Node& s, nest::Node& t, nest::rport receptor_type, nest::double_t t_lastspike, const CommonPropertiesType& ){
+	ConnTestDummyNode dummy_target;
+    ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
 
-  /**
-   * Get all properties of this connection and put them into a dictionary.
-   */
-  void get_status(DictionaryDatum & d) const;
-  
-  /**
-   * Set properties of this connection from the values given in dictionary.
-   */
-  void set_status(const DictionaryDatum & d, nest::ConnectorModel &cm);
-
-  /**
-   * Set properties of this connection from position p in the properties
-   * array given in dictionary.
-   */  
-  void set_status(const DictionaryDatum & d, nest::index p, nest::ConnectorModel &cm);
-
-  /**
-   * Create new empty arrays for the properties of this connection in the given
-   * dictionary. It is assumed that they are not existing before.
-   */
-  void initialize_property_arrays(DictionaryDatum & d) const;
-
-  /**
-   * Append properties of this connection to the given dictionary. If the
-   * dictionary is empty, new arrays are created first.
-   */
-  void append_properties(DictionaryDatum & d) const;
-
-  /**
-   * Send an event to the receiver of this connection.
-   * \param e The event to send
-   * \param t_lastspike Point in time of last spike sent.
-   */
-  void send(nest::Event& e, nest::double_t t_lastspike, const STDPSymHomCommonProperties &);
-
-  // overloaded for all supported event types
-  using Connection::check_event;
-  void check_event(nest::SpikeEvent&) {}
+    t.register_stdp_connection( t_lastspike - get_delay() );
+  }
   
  private:
 
@@ -181,11 +218,38 @@ namespace mynest
   nest::double_t Ksin2t2_;		// value of exp(-abs(x)/tau2)*sin(2*x/tau2) at that time
   nest::double_t Kcos2t2_;		// value of exp(-abs(x)/tau2)*cos(2*x/tau2) at that time
 
+  nest::double_t weight_;
   };
 
+template < typename targetidentifierT >
+STDPSymConnectionHom< targetidentifierT >::STDPSymConnectionHom()
+    : ConnectionBase(),
+    weight_( 1.0 ),
+	Kexpt1_(0.0),
+	Kcos2t1_(0.0),
+	Ksin2t1_(0.0),
+	Kexpt2_(0.0),
+	Ksin2t2_(0.0),
+	Kcos2t2_(0.0)
+{
+}
 
-inline
-nest::double_t STDPSymConnectionHom::apply_weight_change_(nest::double_t w, nest::double_t trace, const STDPSymHomCommonProperties &cp)
+template < typename targetidentifierT >
+STDPSymConnectionHom< targetidentifierT >::STDPSymConnectionHom( const STDPSymConnectionHom& rhs )
+    : ConnectionBase( rhs ),
+	  weight_( rhs.weight_ ),
+	  Kexpt1_ (rhs.Kexpt1_),
+	  Kcos2t1_ (rhs.Kcos2t1_),
+	  Ksin2t1_(rhs.Ksin2t1_),
+      Kexpt2_(rhs.Kexpt2_),
+	  Ksin2t2_(rhs.Ksin2t2_),
+	  Kcos2t2_(rhs.Kcos2t2_)
+{
+}
+
+
+template < typename targetidentifierT >
+inline nest::double_t STDPSymConnectionHom< targetidentifierT >::apply_weight_change_(nest::double_t w, nest::double_t trace, const CommonPropertiesType & cp)
 {
   nest::double_t norm_w = (w / cp.Wmax_) + (cp.lambda_ * trace);
 //  std::cout << "Old weight: " << w << " Norm. Weight: " << norm_w << " Kexpt1: " << Kexpt1_ << " Kcos2t1: " << Kcos2t1_ << " Ksin2t1: " << Ksin2t1_ << " Kexpt2: " << Kexpt2_ << " Ksin2t2: " << Ksin2t2_ << " Kcos2t2: " << Kcos2t2_ << " Trace: " << trace << " Lambda: " << cp.lambda_ << " Wmax: " << cp.Wmax_ << this << std::endl;
@@ -197,21 +261,14 @@ nest::double_t STDPSymConnectionHom::apply_weight_change_(nest::double_t w, nest
   return norm_w * cp.Wmax_;
 }
 
-inline 
-  void STDPSymConnectionHom::check_connection(nest::Node & s, nest::Node & r, nest::rport receptor_type, nest::double_t t_lastspike)
-{
-	nest::ConnectionHetWD::check_connection(s, r, receptor_type, t_lastspike);
-  r.register_stdp_connection(t_lastspike - nest::Time(nest::Time::step(delay_)).get_ms());
-}
-
 /**
  * Send an event to the receiver of this connection.
  * \param e The event to send
  * \param p The port under which this connection is stored in the Connector.
  * \param t_lastspike Time point of last spike emitted
  */
-inline
-void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, const STDPSymHomCommonProperties &cp)
+template < typename targetidentifierT >
+inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const STDPSymHomCommonProperties &cp)
 {
   // synapse STDP depressing/facilitation dynamics
 
@@ -219,14 +276,14 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
 
   
   // t_lastspike_ = 0 initially
-  
-  nest::double_t dendritic_delay = nest::Time(nest::Time::step(delay_)).get_ms();
+  nest::Node* target = get_target( t );
+  nest::double_t dendritic_delay = nest::Time(nest::Time::step(get_delay())).get_ms();
     
   //get spike history in relevant range (t1, t2] from post-synaptic neuron
   std::deque<mynest::histentry_sym>::iterator start;
   std::deque<mynest::histentry_sym>::iterator finish;
   //((mynest::Archiving_Node_Sym *)target_)->get_sym_history(t_lastspike - dendritic_delay, t_spike - dendritic_delay,&start, &finish);
-  ((mynest::Archiving_Node_Sym *)target_)->get_sym_history(t_lastspike, t_spike,&start, &finish);
+  ((mynest::Archiving_Node_Sym *)target)->get_sym_history(t_lastspike, t_spike,&start, &finish);
   //weight change due to post-synaptic spikes since last pre-synaptic spike
   double_t dt;
   while (start != finish)
@@ -303,7 +360,7 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   //depression due to the incoming pre-synaptic spike
   nest::double_t central, external;
   //((mynest::Archiving_Node_Sym *)target_)->get_sym_K_value(t_spike - dendritic_delay, central, external);
-  ((mynest::Archiving_Node_Sym *)target_)->get_sym_K_value(t_spike, central, external);
+  ((mynest::Archiving_Node_Sym *)target)->get_sym_K_value(t_spike, central, external);
 //  std::cout << "Post-pre at time: " << t_spike - dendritic_delay << " Central: " << central << " External: " << cp.sym_A_*external << " Alpha: " << cp.alpha_ << std::endl;
 
   nest::double_t old_weight = weight_;
@@ -313,10 +370,10 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
   //std::cout << "Weight change (post->pre) from pre at " << t_spike << " to post accumulated: " << weight_-old_weight << ". Current value: " << weight_ << std::endl;
 
 
-  e.set_receiver(*target_);
+  e.set_receiver(*target);
   e.set_weight(weight_);
-  e.set_delay(delay_);
-  e.set_rport(rport_);
+  e.set_delay(get_delay_steps());
+  e.set_rport(get_rport());
   e();
 
 //  std::cout << "Updating synapsis from time " << t_lastspike << " to " << t_spike << ". Old values: " << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_ << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << this << std::endl;
@@ -361,6 +418,48 @@ void STDPSymConnectionHom::send(nest::Event& e, nest::double_t t_lastspike, cons
 //  std::cout << "Pre-spike received at " << t_spike << ": Trace: " << central - cp.alpha_ * cp.sym_A_ * external << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_ << " dt_tau1 - " << dt_tau1 << " dt_pi_tau1 - " << dt_pi_tau1 << " aux_expon_tau1 - " << aux_expon_tau1 << " aux_cos_tau1 - " << aux_cos_tau1 << " aux_sin_tau1 - " << aux_sin_tau1
 //		  	  	  << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << " dt_tau2 - " << dt_tau2 << " dt_pi_tau2 - " << dt_pi_tau2 << " aux_expon_tau2 - " << aux_expon_tau2 << " aux_cos_tau2 - " << aux_cos_tau2 << " aux_sin_tau2 - " << aux_sin_tau2 << std::endl;
 //  std::cout << "Calculating new STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << std::endl;
+
+  }
+
+template < typename targetidentifierT >
+void STDPSymConnectionHom< targetidentifierT >::get_status(DictionaryDatum & d) const
+{
+
+    // base class properties, different for individual synapse
+    ConnectionBase::get_status(d);
+
+    // own properties, different for individual synapse
+    def<nest::double_t>(d, "Kexpt1", Kexpt1_);
+    def<nest::double_t>(d, "Kcos2t1", Kcos2t1_);
+    def<nest::double_t>(d, "Ksin2t1", Ksin2t1_);
+    def<nest::double_t>(d, "Kexpt2", Kexpt2_);
+    def<nest::double_t>(d, "Kcos2t2", Kcos2t2_);
+    def<nest::double_t>(d, "Ksin2t2", Ksin2t2_);
+    def<nest::double_t>(d, nest::names::weight, weight_ );
+    def<nest::long_t>(d, nest::names::size_of, sizeof(*this));
+  }
+
+template < typename targetidentifierT >
+void STDPSymConnectionHom< targetidentifierT >::set_status(const DictionaryDatum & d, nest::ConnectorModel &cm)
+{
+    // base class properties
+    ConnectionBase::set_status(d, cm);
+    updateValue<nest::double_t>(d, "Kexpt1", Kexpt1_);
+    updateValue<nest::double_t>(d, "Kcos2t1", Kcos2t1_);
+    updateValue<nest::double_t>(d, "Ksin2t1", Ksin2t1_);
+    updateValue<nest::double_t>(d, "Kexpt2", Kexpt2_);
+    updateValue<nest::double_t>(d, "Kcos2t2", Kcos2t2_);
+    updateValue<nest::double_t>(d, "Ksin2t2", Ksin2t2_);
+    updateValue<nest::double_t>(d, nest::names::weight, weight_);
+
+//    std::cout << "Updating STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << this << std::endl;
+
+    // exception throwing must happen after setting own parameters
+    // this exception will be caught and ignored within generic_connector_model::set_status()
+    // it will not be caught if set_status is called directly to signify the specified error
+    //if (d->known("tau_sym") || d->known("lambda") || d->known("alpha") || d->known("Wmax") ){
+	//  throw nest::ChangeCommonPropsByIndividual("STDPSymConnectionHom::set_status(): you are trying to set common properties via an individual synapse.");
+    //}
 
   }
 

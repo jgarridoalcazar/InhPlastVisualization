@@ -21,8 +21,8 @@ n = nest.Create('iaf_cond_exp_ip',
                            'beta':1.2, 'tau_ip': 1.0e6, 'epsilon_rC': 42.0, 'epsilon_rR':600.0})
 nest.SetStatus(n,{'r_C':1.0,'g_L':0.6, 'I_e':0.0})
 
-g = nest.Create('sinusoidal_poisson_generator', n=1, params={'dc': 100.0, 'ac': 100.0,
-                                                              'freq': 0.5, 'phi': 0.0})
+g = nest.Create('sinusoidal_poisson_generator', n=1, params={'rate': 100.0, 'amplitude': 100.0,
+                                                              'frequency': 0.5, 'phase': 0.0})
 
 m = nest.Create('multimeter',
                 params = {'withtime': True, 

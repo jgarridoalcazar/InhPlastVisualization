@@ -70,8 +70,13 @@ m = nest.Create('multimeter',
 
 spikedetector = nest.Create("spike_detector")
 nest.Connect(n, spikedetector, 'all_to_all')
-nest.Connect(g1, spikedetector)
-nest.Connect(g2, spikedetector)
+
+nest.CopyModel('static_synapse','excitatory',
+            {'weight':100.0, 
+            'delay':1.0})
+
+nest.Connect(g1, spikedetector, syn_spec='excitatory')
+nest.Connect(g2, spikedetector, syn_spec='excitatory')
 nest.Connect(m, n, 'all_to_all')
 
 # nest.CopyModel('stdp_synapse_hom','my_stdp',
@@ -91,9 +96,6 @@ nest.CopyModel('stdp_sym_synapse_hom','my_stdp',
 nest.Connect([n[0]], [n[1]], syn_spec='my_stdp')
 nest.Connect([n[1]], [n[0]], syn_spec='my_stdp')
             
-nest.CopyModel('static_synapse','excitatory',
-            {'weight':100.0, 
-            'delay':1.0})
 nest.Connect(g1, [n[0]], syn_spec='excitatory')
 nest.Connect(g2, [n[1]], syn_spec='excitatory')
 

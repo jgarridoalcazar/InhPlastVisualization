@@ -112,24 +112,24 @@ namespace mynest
      * happily live without.
      */
 
-    using nest::Node::connect_sender;
+    using nest::Node::handles_test_event;
     using nest::Node::handle;
 
-    nest::port check_connection(nest::Connection&, nest::port);
+    nest::port send_test_event(nest::Node&, nest::rport, nest::synindex, bool);
     
     void handle(nest::SpikeEvent &);
     void handle(nest::CurrentEvent &);
     void handle(nest::DataLoggingRequest &);
     
-    nest::port connect_sender(nest::SpikeEvent &, nest::port);
-    nest::port connect_sender(nest::CurrentEvent &, nest::port);
-    nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
-    
+    nest::port handles_test_event(nest::SpikeEvent &, nest::rport);
+	nest::port handles_test_event(nest::CurrentEvent &, nest::rport);
+	nest::port handles_test_event(nest::DataLoggingRequest &, nest::rport);
+
     void get_status(DictionaryDatum &) const;
     void set_status(const DictionaryDatum &);
     
   private:
-    void init_state_(const nest::Node& proto);
+    void init_state_(const Node& proto);
     void init_buffers_();
     void calibrate();
     void update(nest::Time const &, const nest::long_t, const nest::long_t);
@@ -264,43 +264,31 @@ namespace mynest
   };
 
   
-  inline
-  nest::port iaf_cond_exp_sym::check_connection(nest::Connection& c, nest::port receptor_type)
-  {
-	nest::SpikeEvent e;
+  inline nest::port iaf_cond_exp_sym::send_test_event(nest::Node& target, nest::rport receptor_type, nest::synindex, bool){
+  	nest::SpikeEvent e;
     e.set_sender(*this);
-    c.check_event(e);
-    return c.get_target()->connect_sender(e, receptor_type);
+    return target.handles_test_event(e, receptor_type);
   }
 
-  inline
-  nest::port iaf_cond_exp_sym::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
-  {
-    if (receptor_type != 0)
-      throw nest::UnknownReceptorType(receptor_type, get_name());
-    return 0;
-  }
- 
-  inline
-  nest::port iaf_cond_exp_sym::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
-  {
+  inline nest::port iaf_cond_exp_sym::handles_test_event(nest::SpikeEvent&, nest::rport receptor_type) {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
     return 0;
   }
 
-  inline
-  nest::port iaf_cond_exp_sym::connect_sender(nest::DataLoggingRequest& dlr,
-		  nest::port receptor_type)
-  {
+  inline nest::port iaf_cond_exp_sym::handles_test_event(nest::CurrentEvent&, nest::rport receptor_type) {
+    if (receptor_type != 0)
+      throw nest::UnknownReceptorType(receptor_type, get_name());
+    return 0;
+  }
+
+  inline nest::port iaf_cond_exp_sym::handles_test_event(nest::DataLoggingRequest& dlr, nest::rport receptor_type){
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
     return B_.logger_.connect_logging_device(dlr, recordablesMap_);
   }
- 
-  inline
-  void iaf_cond_exp_sym::get_status(DictionaryDatum &d) const
-  {
+
+  inline void iaf_cond_exp_sym::get_status(DictionaryDatum &d) const {
     P_.get(d);
     S_.get(d);
     Archiving_Node_Sym::get_status(d);
@@ -308,9 +296,7 @@ namespace mynest
     (*d)[nest::names::recordables] = recordablesMap_.get_list();
   }
 
-  inline
-  void iaf_cond_exp_sym::set_status(const DictionaryDatum &d)
-  {
+  inline void iaf_cond_exp_sym::set_status(const DictionaryDatum &d){
     Parameters_ ptmp = P_;  // temporary copy in case of errors
     ptmp.set(d);                       // throws if BadProperty
     State_      stmp = S_;  // temporary copy in case of errors

@@ -25,14 +25,15 @@
 #include "network.h"
 #include "model.h"
 #include "dynamicloader.h"
-#include "genericmodel.h"
-#include "generic_connector.h"
 #include "booldatum.h"
 #include "integerdatum.h"
 #include "tokenarray.h"
 #include "exceptions.h"
 #include "sliexceptions.h"
 #include "nestmodule.h"
+#include "genericmodel.h"
+#include "connector_model_impl.h"
+#include "target_identifier.h"
 
 // include headers with your own stuff
 #include "glplasticitymodule.h"
@@ -87,61 +88,54 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
 
   //-------------------------------------------------------------------------------------
 
-  void mynest::GLPlasticityModule::init(SLIInterpreter *i, nest::Network*)
+  void mynest::GLPlasticityModule::init(SLIInterpreter *i)
   {
 	/* Register a neuron or device model.
 	   Give node type as template argument and the name as second argument.
 	   The first argument is always a reference to the network.
 	   Return value is a handle for later unregistration.
 	*/
-	nest::register_model<iaf_cond_exp_sto_ip>(nest::NestModule::get_network(),
-	                                          "iaf_cond_exp_sto_ip");
+	nest::register_model<iaf_cond_exp_sto_ip>(nest::NestModule::get_network(), "iaf_cond_exp_sto_ip");
 
 	/* Register a neuron or device model.
        Give node type as template argument and the name as second argument.
        The first argument is always a reference to the network.
        Return value is a handle for later unregistration.
     */
-    nest::register_model<iaf_cond_exp_ip>(nest::NestModule::get_network(),
-                                        "iaf_cond_exp_ip");
+    nest::register_model<iaf_cond_exp_ip>(nest::NestModule::get_network(), "iaf_cond_exp_ip");
 
     /* Register a neuron or device model.
            Give node type as template argument and the name as second argument.
            The first argument is always a reference to the network.
            Return value is a handle for later unregistration.
     */
-    nest::register_model<iaf_cond_exp_ip_sym>(nest::NestModule::get_network(),
-                                            "iaf_cond_exp_ip_sym");
+    nest::register_model<iaf_cond_exp_ip_sym>(nest::NestModule::get_network(), "iaf_cond_exp_ip_sym");
 
     /* Register a neuron or device model.
 	   Give node type as template argument and the name as second argument.
 	   The first argument is always a reference to the network.
 	   Return value is a handle for later unregistration.
 	*/
-	nest::register_model<iaf_cond_exp_sym>(nest::NestModule::get_network(),
-											  "iaf_cond_exp_sym");
+	nest::register_model<iaf_cond_exp_sym>(nest::NestModule::get_network(), "iaf_cond_exp_sym");
 
 
     /* Register a synapse type.
        Give synapse type as template argument and the name as second argument.
        The first argument is always a reference to the network.
     */
-   nest::register_prototype_connection_commonproperties < STDPSymConnectionHom,STDPSymHomCommonProperties>
-   	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "stdp_sym_synapse_hom");
+    nest::register_connection_model < STDPSymConnectionHom<nest::TargetIdentifierPtrRport> >(nest::NestModule::get_network(), "stdp_sym_synapse_hom");
 
-   /* Register a synapse type.
-          Give synapse type as template argument and the name as second argument.
-          The first argument is always a reference to the network.
-       */
-      nest::register_prototype_connection_commonproperties < ESTDPConnectionHom,ESTDPHomCommonProperties>
-      	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "estdp_synapse_hom");
+    /* Register a synapse type.
+       Give synapse type as template argument and the name as second argument.
+       The first argument is always a reference to the network.
+    */
+    nest::register_connection_model < ESTDPConnectionHom<nest::TargetIdentifierPtrRport> >(nest::NestModule::get_network(), "estdp_synapse_hom");
 
-      /* Register a synapse type.
-			Give synapse type as template argument and the name as second argument.
-			The first argument is always a reference to the network.
-		 */
-		nest::register_prototype_connection_commonproperties < ISTDPConnectionHom,ISTDPHomCommonProperties>
-            	   	   	   	   	   	   	   	   	   	   	   (nest::NestModule::get_network(), "istdp_synapse_hom");
+    /* Register a synapse type.
+	   Give synapse type as template argument and the name as second argument.
+	   The first argument is always a reference to the network.
+    */
+	nest::register_connection_model < ISTDPConnectionHom<nest::TargetIdentifierPtrRport> >(nest::NestModule::get_network(), "istdp_synapse_hom");
 
 
   }  // GLPlasticityModule::init()

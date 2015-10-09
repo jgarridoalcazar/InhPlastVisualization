@@ -3,19 +3,15 @@
  *
  *  This file is based on the example module distributed with NEST.
  *  
- *  Modified by: Jesœs Garrido (jgarridoalcazar at gmail.com) in 2014.
+ *  Modified by: Jesï¿½s Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
 #ifndef GLPLASTICITYMODULE_H
 #define GLPLASTICITYMODULE_H
 
-#include "dynmodule.h"
+#include "slimodule.h"
 #include "slifunction.h"
 
-namespace nest
-{
-  class Network;
-}
 
 // Put your stuff into your own namespace.
 namespace mynest {
@@ -24,7 +20,7 @@ namespace mynest {
  * Class defining your model.
  * @note For each model, you must define one such class, with a unique name.
  */
-class GLPlasticityModule : public DynModule
+class GLPlasticityModule : public SLIModule
 {
 public:
 
@@ -49,7 +45,7 @@ public:
    * @note  Parameter Network is needed for historical compatibility
    *        only.
    */
-  void init(SLIInterpreter*, nest::Network*);
+  void init(SLIInterpreter*);
 
   /**
    * Return the name of your model.
