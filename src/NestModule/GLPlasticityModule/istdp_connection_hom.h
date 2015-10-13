@@ -284,7 +284,7 @@ inline void ISTDPConnectionHom< targetidentifierT >::send(nest::Event& e, nest::
   }
 
 template < typename targetidentifierT >
-void ISTDPConnectionHom< targetidentifierT >::get_status( DictionaryDatum& d ) const
+inline void ISTDPConnectionHom< targetidentifierT >::get_status( DictionaryDatum& d ) const
 {
 
   // base class properties, different for individual synapse
@@ -294,6 +294,18 @@ void ISTDPConnectionHom< targetidentifierT >::get_status( DictionaryDatum& d ) c
   // own properties, different for individual synapse
   def< nest::double_t >( d, "Kplus", Kplus_ );
   def< nest::long_t >( d, nest::names::size_of, sizeof( *this ) );
+}
+
+template < typename targetidentifierT >
+inline void ISTDPConnectionHom< targetidentifierT >::set_status( const DictionaryDatum& d, nest::ConnectorModel &cm)
+{
+
+  // base class properties, different for individual synapse
+  ConnectionBase::set_status(d, cm);
+  updateValue<double_t>(d, nest::names::weight, weight_);
+
+  updateValue< nest::double_t >( d, "Kplus", Kplus_ );
+
 }
 
 } // of namespace nest
