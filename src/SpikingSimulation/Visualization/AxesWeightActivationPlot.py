@@ -119,7 +119,7 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         
         for _ in range(number_of_lines):
             #newLine = self.axes.scatter([],[],marker='.')
-            newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=8, markeredgecolor = 'none')
+            newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5)
             self.axesLines.append(newLine)
         
         if (self.show_legend):

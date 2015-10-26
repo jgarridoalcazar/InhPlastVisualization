@@ -206,7 +206,7 @@ class NestCerebellarModel(CerebellarModel):
             nest.Install('glplasticitymodule')
         except nest.NESTError:
             logger.warning('NEST Error caught on loading user module. Skiping...')
-            #nest.Install('glplasticitymodule')
+            nest.Install('glplasticitymodule')
         
         logger.debug('NEST module loaded')
         
