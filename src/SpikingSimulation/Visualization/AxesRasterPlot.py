@@ -123,10 +123,15 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
         number_of_lines = len(data_labels)
         
         self.axesLines = []
+        animated_artists = []
         
         for _ in range(number_of_lines):
             #newLine = self.axes.scatter([],[],marker='.')
-            newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5)
+            if (self.figure.blit):
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5, animated=True)
+                animated_artists.append(newLine)
+            else:
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5)
             self.axesLines.append(newLine)
         
         if (self.show_legend):
@@ -135,13 +140,34 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
         if (self.y_window_lim is not None):
             self.axes.set_ylim(self.y_window_lim)
         else:
-            self.axes.set_ylim([min(self.index)-0.5,max(self.index)+0.5])  
+            self.axes.set_ylim([min(self.index)-0.5,max(self.index)+0.5])
             
+        self.visual_time_window = self.getVisualTimeWindow(0)
+        self.time_window = [0,0]
+        
+        self.axes.set_xlim(self.time_window)
+        
+        if (self.figure.blit and not self.x_length):
+            self.axes.xaxis.set_animated(True)
+            animated_artists.append(self.axes.xaxis)
+        
+        self.animated_artists = tuple(animated_artists)
+        
         super(AxesRasterPlot, self).initialize()
             
         return
     
    
+    def getVisualTimeWindow(self, simulation_time):
+        if self.x_length:
+            minTime = -self.x_length
+            maxTime = 0
+        else:
+            minTime = 0
+            maxTime = simulation_time
+            
+        return [minTime,maxTime]
+    
     def getTimeWindow(self, simulation_time):
         if self.x_length:
             minTime = max(simulation_time-self.x_length,0)
@@ -159,12 +185,14 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
         @param simulation_time: The simulation end time (in seconds).
         @return A list with the artist to be updated. 
         '''
-        
-        time_window = self.getTimeWindow(simulation_time = simulation_time)
+        old_visual_time_window = self.visual_time_window
+        self.visual_time_window = self.getVisualTimeWindow(simulation_time = simulation_time)
+        old_time_window = self.time_window
+        self.time_window = self.getTimeWindow(simulation_time = simulation_time)
         
         # Check if load all the data or only the data within the visualization window
         if (self.visible_data_only):
-            data_init_time = time_window[0]
+            data_init_time = self.time_window[0]
         else:
             data_init_time = self.simulation_limits[0]
             
@@ -186,7 +214,9 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
         
         if (process_id==0):
         
-            self.axes.set_xlim(time_window) # Set x_axes limits axes
+            if (self.visual_time_window[0]!=old_time_window[0] or 
+                self.visual_time_window[1]!=old_time_window[1]):
+                self.axes.set_xlim(self.visual_time_window) # Set x_axes limits axes
         
             y_limits = range(2)
             initialized = False
@@ -217,8 +247,12 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
                     sel_cell = gcell_id
                     
                 old_time_data = self.axesLines[i].get_xdata()
-                first_index = numpy.searchsorted(old_time_data, data_init_time)
-                new_time_data = numpy.append(old_time_data[first_index:],sel_time)
+                if (self.x_length is None):
+                    first_index = numpy.searchsorted(old_time_data, data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],sel_time)
+                else:
+                    first_index = numpy.searchsorted(old_time_data+old_time_window[1], data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],sel_time-self.time_window[1])
             
                 old_signal_data = self.axesLines[i].get_ydata()
                 new_signal_data = old_signal_data[first_index:]
@@ -227,6 +261,4 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
                 self.axesLines[i].set_xdata(new_time_data)
                 self.axesLines[i].set_ydata(new_signal_data)
                 
-                
-    
-        return self.axesLines
+        return self.animated_artists

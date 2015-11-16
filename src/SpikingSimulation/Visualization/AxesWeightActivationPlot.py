@@ -116,10 +116,15 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         number_of_lines = len(data_labels)
         
         self.axesLines = []
+        animated_artists = []
         
         for _ in range(number_of_lines):
             #newLine = self.axes.scatter([],[],marker='.')
-            newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5)
+            if (self.figure.blit):
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5, animated=True)
+                animated_artists.append(newLine)
+            else:
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5)
             self.axesLines.append(newLine)
         
         if (self.show_legend):
@@ -139,8 +144,10 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         else:
             self.axes.set_ylim([0,max_weight*1.10])
             
-        super(AxesWeightActivationPlot, self).initialize()
+        self.animated_artists = tuple(animated_artists)
             
+        super(AxesWeightActivationPlot, self).initialize()
+        
         return
     
    
@@ -187,4 +194,4 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
                 self.axesLines[i].set_xdata(activation_values)
                 self.axesLines[i].set_ydata(weight_values)  
     
-        return self.axesLines
+        return self.animated_artists

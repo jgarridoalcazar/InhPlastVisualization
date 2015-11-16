@@ -59,7 +59,6 @@ class AxesPatternLine(AxesPlot.AxesPlot):
             self.x_length = kwargs.pop('x_length',None)
         else:
             self.x_length = None
-            
         
         # Time of the last update
         self.data_update = 0
@@ -128,22 +127,48 @@ class AxesPatternLine(AxesPlot.AxesPlot):
         number_of_lines = len(data_labels)
         
         self.axesLines = []
+        animated_artists = []
         
         for _ in range(number_of_lines):
             #newLine = self.axes.scatter([],[],marker='.')
-            newLine, = self.axes.plot([], [])
+            if (self.figure.blit):
+                newLine, = self.axes.plot([], [], animated=True)
+                animated_artists.append(newLine)
+            else:
+                newLine, = self.axes.plot([], [])
             self.axesLines.append(newLine)
         
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower left')
             
-        self.axes.set_ylim([-0.05,self.pattern_provider.number_of_patterns + 0.05])  
+        self.axes.set_ylim([-0.05,self.pattern_provider.number_of_patterns + 0.05])
+        
+        self.visual_time_window = self.getVisualTimeWindow(0)
+        self.time_window = [0,0]
+        
+        self.axes.set_xlim(self.time_window)
+        
+        if (self.figure.blit and not self.x_length):
+            self.axes.xaxis.set_animated(True)
+            animated_artists.append(self.axes.xaxis)
+        
+        self.animated_artists = tuple(animated_artists)
             
         super(AxesPatternLine, self).initialize()
             
         return
     
    
+    def getVisualTimeWindow(self, simulation_time):
+        if self.x_length:
+            minTime = -self.x_length
+            maxTime = 0
+        else:
+            minTime = 0
+            maxTime = simulation_time
+            
+        return [minTime,maxTime]
+    
     def getTimeWindow(self, simulation_time):
         if self.x_length:
             minTime = max(simulation_time-self.x_length,0)
@@ -162,11 +187,14 @@ class AxesPatternLine(AxesPlot.AxesPlot):
         @return A list with the artist to be updated. 
         '''
         
-        time_window = self.getTimeWindow(simulation_time = simulation_time)
+        old_visual_time_window = self.visual_time_window
+        self.visual_time_window = self.getVisualTimeWindow(simulation_time = simulation_time)
+        old_time_window = self.time_window
+        self.time_window = self.getTimeWindow(simulation_time = simulation_time)
         
         # Check if load all the data or only the data within the visualization window
         if (self.visible_data_only):
-            data_init_time = time_window[0]
+            data_init_time = self.time_window[0]
         else:
             data_init_time = self.simulation_limits[0]
             
@@ -188,20 +216,23 @@ class AxesPatternLine(AxesPlot.AxesPlot):
         
         if (process_id==0):
         
-            self.axes.set_xlim(time_window) # Set x_axes limits axes
+            if (self.visual_time_window[0]!=old_time_window[0] or 
+                self.visual_time_window[1]!=old_time_window[1]):
+                self.axes.set_xlim(self.visual_time_window) # Set x_axes limits axes
         
-            y_limits = range(2)
-            initialized = False
-            
             sel_time = self.bin_time_init[init_bin:end_bin]
             
             for index,pattern_idx in enumerate(self.pattern):
                 sel_data = self.bin_is_pattern[index,init_bin:end_bin] * (pattern_idx + 1.0)
                 
                 old_time_data = self.axesLines[index].get_xdata()
-                first_index = numpy.searchsorted(old_time_data, data_init_time)
-                new_time_data = numpy.append(old_time_data[first_index:],sel_time)
-            
+                if (self.x_length is None):
+                    first_index = numpy.searchsorted(old_time_data, data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],sel_time)
+                else:
+                    first_index = numpy.searchsorted(old_time_data+old_time_window[1], data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],sel_time-self.time_window[1])
+                
                 old_signal_data = self.axesLines[index].get_ydata()
                 new_signal_data = old_signal_data[first_index:]
                 new_signal_data = numpy.append(new_signal_data, sel_data)
@@ -218,4 +249,4 @@ class AxesPatternLine(AxesPlot.AxesPlot):
 #                         y_limits[0] = numpy.min(new_signal_data)
 #                         y_limits[1] = numpy.max(new_signal_data)
             
-        return self.axesLines
+        return self.animated_artists

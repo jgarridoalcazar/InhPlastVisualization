@@ -17,11 +17,8 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         @param layer: Name of the layer to plot. Obligatory parameter.
         @param source_indexes Indexes of the source cells of the synapses to get the activity.
         @param target_indexes Indexes of the target cells of the synapses to get the activity.
-        @param max_weight Maximum weight to consider in the histogram.
         @param num_bins Number of bins to include in the histogram
         '''
-        
-        
         super(AxesWeightHistogram, self).__init__(**kwargs)
                 
         # Get data_provider parameter 
@@ -50,13 +47,6 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         else:
             self.target_indexes = None
         
-            
-        # Get max_weight parameter 
-        if ('max_weight' in kwargs):
-            self.max_weight = kwargs.pop('max_weight',None)
-        else:
-            self.max_weight = None
-            
         # Get num_bins parameter 
         if ('num_bins' in kwargs):
             self.num_bins = kwargs.pop('num_bins',None)
@@ -88,12 +78,11 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         
         synaptic_layer = self.data_provider.layer_map[self.layer]
         
-        if self.max_weight is None:
-            if synaptic_layer.learning_rule_type:
-                self.max_weight = synaptic_layer.learning_rule_parameters['max_weight']
-            else:
-                self.max_weight = 1.
-                
+        if synaptic_layer.learning_rule_type:
+            self.max_weight = synaptic_layer.learning_rule_parameters['max_weight']
+        else:
+            self.max_weight = 1.
+            
         if self.max_weight > 0:
             self.min_weight = 0
         else:
@@ -105,8 +94,15 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         self.param['end_time'] = 0.0
         _,gcon,_ = self.data_provider.get_synaptic_weights(**self.param)
         
-        self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), max(abs(self.max_weight),abs(self.min_weight))/self.num_bins)
-        
+        animated_artists = []
+        if (self.figure.blit):
+            self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), max(abs(self.max_weight),abs(self.min_weight))/self.num_bins, animated=True)
+            for rect in self.axesRect:
+                rect.set_animated(True)
+                animated_artists.append(rect)
+        else:
+            self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), max(abs(self.max_weight),abs(self.min_weight))/self.num_bins)
+    
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()
@@ -114,6 +110,8 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         if (process_id==0):
             self.axes.set_xlim([self.min_weight,self.max_weight])
             self.axes.set_ylim([0,len(gcon)])
+        
+        self.animated_artists = tuple(animated_artists)
         
         super(AxesWeightHistogram, self).initialize()
             
@@ -145,5 +143,4 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
             for rect, f in zip(self.axesRect, frequencies):
                 rect.set_height(f)
             
-            self.axes.set_ylim([0,max(frequencies)])
-        return self.axesRect
+        return self.animated_artists

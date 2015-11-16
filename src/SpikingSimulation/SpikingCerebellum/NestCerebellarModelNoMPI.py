@@ -916,7 +916,6 @@ class NestCerebellarModel(CerebellarModel):
         
         return (time,neuron_id,value)
         
-    
     def get_synaptic_weights(self, **kwargs):
         '''
         Get the synaptic weights in the synapses, layer and during the time specified in the parameters.
@@ -978,7 +977,21 @@ class NestCerebellarModel(CerebellarModel):
         
         # Calculate selected connection indexes
         connections = synaptic_layer.weight_record['connections']
-        connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes) and (connections[index][1] in target_indexes)]
+        # Optimize connection indexes selection
+        if (source_indexes == range(synaptic_layer.source_layer.number_of_neurons)):
+            if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
+                # No selection -> All the connections in the layer
+                connection_indexes = range(len(connections))
+            else:
+                # Target indexes selection
+                connection_indexes = [index for index in range(len(connections)) if (connections[index][1] in target_indexes)]
+        else:
+            if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
+                # Source indexes selection
+                connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes)]
+            else:
+                # Source and target selection
+                connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes) and (connections[index][1] in target_indexes)]
         selected_connections = connections[connection_indexes]
         
         # print 'Process',self.get_my_process_id(),':','Selected connections:',selected_connections

@@ -54,8 +54,9 @@ class SimulFigure(object):
         
         if (issubclass(type(self),animation.TimedAnimation)):
             #super(SimulFigure, self).__init__(self.figure,interval=1000./self.frame_rate,repeat=False,blit=False)
-            super(SimulFigure, self).__init__(self.figure,interval=1,repeat=False,blit=False)
+            super(SimulFigure, self).__init__(self.figure,interval=0,repeat=False,blit=self.blit)
         else:
+            self.blit = False
             super(SimulFigure, self).__init__()
         
     def add_subplot(self, **kwargs):
@@ -88,6 +89,8 @@ class SimulFigure(object):
         else:
             axes_type_arguments = dict()
             
+        axes_type_arguments['figure'] = self
+            
         # Insert position parameters and create the subplot
         args = (self.numRows, self.numColumns, self.position)
         
@@ -113,6 +116,9 @@ class SimulFigure(object):
         
         for axes in self.axesList:
             objectsToUpdate.extend(axes.drawAtTime(**kwargs))
+            
+        if ('simulation_time' in kwargs):
+            self.figure.canvas.set_window_title(str(kwargs['simulation_time']) + ' seconds')
        
         return objectsToUpdate
     
@@ -134,6 +140,7 @@ class SimulFigure(object):
         self.simulation.run_simulation(end_time=simulation_time)
         
         self.update(**kwargs)
+        
         return
             
             

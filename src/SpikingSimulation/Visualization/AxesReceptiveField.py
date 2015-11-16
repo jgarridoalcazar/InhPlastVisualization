@@ -104,31 +104,51 @@ class AxesReceptiveField(AxesPlot.AxesPlot):
         number_of_lines = len(self.target_indexes)
     
         self.axesLines = []
+        animated_artists = []
         
         for _ in range(number_of_lines):
             #newLine = self.axes.scatter([],[],marker='.')
-            newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=3)
+            if (self.figure.blit):
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=3, animated=True)
+                animated_artists.append(newLine)
+            else:
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=3)
             self.axesLines.append(newLine)
         
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower left')
             
         if (self.y_window_lim is not None):
-            self.axes.set_ylim(self.y_window_lim)
-        else:
-            self.axes.set_ylim([-0.01,1.01])  
-                
-        
-        if (self.y_window_lim is not None):
             self.axes.set_ylim(self.y_lim)
         else:
-            self.axes.set_ylim([0,1])  
+            self.axes.set_ylim([0,1])
+            
+        self.visual_time_window = self.getVisualTimeWindow(0)
+        self.time_window = [0,0]
+        
+        self.axes.set_xlim(self.time_window)
+        
+        if (self.figure.blit and not self.x_length):
+            self.axes.xaxis.set_animated(True)
+            animated_artists.append(self.axes.xaxis)
+        
+        self.animated_artists = tuple(animated_artists)  
         
         super(AxesReceptiveField, self).initialize()
             
         return
     
    
+    def getVisualTimeWindow(self, simulation_time):
+        if self.x_length:
+            minTime = -self.x_length
+            maxTime = 0
+        else:
+            minTime = 0
+            maxTime = simulation_time
+            
+        return [minTime,maxTime]
+    
     def getTimeWindow(self, simulation_time):
         if self.x_length:
             minTime = max(simulation_time-self.x_length,0)
@@ -146,11 +166,14 @@ class AxesReceptiveField(AxesPlot.AxesPlot):
         @return A list with the artist to be updated. 
         '''
         
-        time_window = self.getTimeWindow(simulation_time = simulation_time)
+        old_visual_time_window = self.visual_time_window
+        self.visual_time_window = self.getVisualTimeWindow(simulation_time = simulation_time)
+        old_time_window = self.time_window
+        self.time_window = self.getTimeWindow(simulation_time = simulation_time)
         
         # Check if load all the data or only the data within the visualization window
         if (self.visible_data_only):
-            data_init_time = time_window[0]
+            data_init_time = self.time_window[0]
         else:
             data_init_time = self.simulation_limits[0]
             
@@ -172,7 +195,9 @@ class AxesReceptiveField(AxesPlot.AxesPlot):
         
         if (process_id==0):
         
-            self.axes.set_xlim(time_window) # Set x_axes limits axes
+            if (self.visual_time_window[0]!=old_time_window[0] or 
+                self.visual_time_window[1]!=old_time_window[1]):
+                self.axes.set_xlim(self.visual_time_window) # Set x_axes limits axes
         
             for ind,cell in enumerate(self.target_indexes):
                 initialized = False
@@ -189,13 +214,17 @@ class AxesReceptiveField(AxesPlot.AxesPlot):
                     sel_bin = numpy.tile(bin_index,num_cells)
                     sel_activation = self.pattern_provider.activation_levels[sel_bin,sel_cells]
                 else:
-                    sel_time = []
-                    sel_activation = []
+                    sel_time = numpy.array([])
+                    sel_activation = numpy.array([])
             
                 old_time_data = self.axesLines[ind].get_xdata()
-                first_index = numpy.searchsorted(old_time_data, data_init_time)
-                new_time_data = numpy.append(old_time_data[first_index:],sel_time)
-            
+                if (self.x_length is None):
+                    first_index = numpy.searchsorted(old_time_data, data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],sel_time)
+                else:
+                    first_index = numpy.searchsorted(old_time_data+old_time_window[1], data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],sel_time-self.time_window[1])
+                            
                 old_signal_data = self.axesLines[ind].get_ydata()
                 new_signal_data = old_signal_data[first_index:]
                 new_signal_data = numpy.append(new_signal_data, sel_activation)
@@ -203,7 +232,5 @@ class AxesReceptiveField(AxesPlot.AxesPlot):
                 
                 self.axesLines[ind].set_xdata(new_time_data)
                 self.axesLines[ind].set_ydata(new_signal_data)
-                    
-                
     
-        return self.axesLines
+        return self.animated_artists

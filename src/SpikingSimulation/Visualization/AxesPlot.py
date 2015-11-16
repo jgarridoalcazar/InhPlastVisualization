@@ -23,6 +23,12 @@ class AxesPlot(object):
             logger.error('Obligatory axes parameter not provided')
             raise Exception('NonProvidedParameter','axes')
         
+        if ('figure' in kwargs):
+            self.figure = kwargs.pop('figure',None)
+        else:
+            logger.error('Obligatory axes parameter not provided')
+            raise Exception('NonProvidedParameter','figure')
+        
         return 
                
     

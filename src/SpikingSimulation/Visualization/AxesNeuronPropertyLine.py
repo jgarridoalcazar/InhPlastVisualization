@@ -119,19 +119,53 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         number_of_lines = len(self.index)
         
         self.axesLines = []
+        animated_artists = []
         
         for _ in range(number_of_lines):
-            newLine, = self.axes.plot([],[])
+            if (self.figure.blit):
+                newLine, = self.axes.plot([], [], animated=True)
+                animated_artists.append(newLine)
+            else:
+                newLine, = self.axes.plot([], [])
             self.axesLines.append(newLine)
         
         if (self.show_legend):
             self.axes.legend(self.axesLines,data_labels,loc='lower left')
+         
+        self.visual_time_window = self.getVisualTimeWindow(0)
+        self.time_window = [0,0]
+        
+        self.axes.set_xlim(self.time_window)
+        
+        if (self.figure.blit and not self.x_length):
+            self.axes.xaxis.set_animated(True)
+            animated_artists.append(self.axes.xaxis)
             
+        if (self.y_window_lim is not None):
+            self.axes.set_ylim(self.y_window_lim)
+        else:
+            self.axes.set_ylim([0,1])
+            if (self.figure.blit):
+                self.axes.yaxis.set_animated(True)
+                animated_artists.append(self.axes.yaxis)  
+        
+        self.animated_artists = tuple(animated_artists)
+           
         super(AxesNeuronPropertyLine, self).initialize()
             
         return
     
    
+    def getVisualTimeWindow(self, simulation_time):
+        if self.x_length:
+            minTime = -self.x_length
+            maxTime = 0
+        else:
+            minTime = 0
+            maxTime = simulation_time
+            
+        return [minTime,maxTime]
+    
     def getTimeWindow(self, simulation_time):
         if self.x_length:
             minTime = max(simulation_time-self.x_length,0)
@@ -150,11 +184,14 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         @return A list with the artist to be updated. 
         '''
         
-        time_window = self.getTimeWindow(simulation_time = simulation_time)
+        old_visual_time_window = self.visual_time_window
+        self.visual_time_window = self.getVisualTimeWindow(simulation_time = simulation_time)
+        old_time_window = self.time_window
+        self.time_window = self.getTimeWindow(simulation_time = simulation_time)
         
         # Check if load all the data or only the data within the visualization window
         if (self.visible_data_only):
-            data_init_time = time_window[0]
+            data_init_time = self.time_window[0]
         else:
             data_init_time = self.simulation_limits[0]
             
@@ -176,7 +213,9 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
         
         if (process_id==0):
         
-            self.axes.set_xlim(time_window) # Set x_axes limits axes
+            if (self.visual_time_window[0]!=old_time_window[0] or 
+                self.visual_time_window[1]!=old_time_window[1]):
+                self.axes.set_xlim(self.visual_time_window) # Set x_axes limits axes
         
             y_limits = range(2)
             initialized = False
@@ -188,9 +227,13 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
                 value = gvalue[cell_index]
                 
                 old_time_data = self.axesLines[ind].get_xdata()
-                first_index = numpy.searchsorted(old_time_data, data_init_time)
-                new_time_data = numpy.append(old_time_data[first_index:],time)
-            
+                if (self.x_length is None):
+                    first_index = numpy.searchsorted(old_time_data, data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],time)
+                else:
+                    first_index = numpy.searchsorted(old_time_data+old_time_window[1], data_init_time)
+                    new_time_data = numpy.append(old_time_data[first_index:],time-self.time_window[1])
+                
                 old_signal_data = self.axesLines[ind].get_ydata()
                 new_signal_data = old_signal_data[first_index:]
                 new_signal_data = numpy.append(new_signal_data, value)
@@ -198,7 +241,7 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
                 self.axesLines[ind].set_xdata(new_time_data)
                 self.axesLines[ind].set_ydata(new_signal_data)
                 
-                if (new_signal_data.size):
+                if (new_signal_data.size and self.y_window_lim is None):
                     if (initialized):
                         y_limits[0] = min(y_limits[0],numpy.min(new_signal_data))
                         y_limits[1] = max(y_limits[1],numpy.max(new_signal_data))
@@ -207,11 +250,7 @@ class AxesNeuronPropertyLine(AxesPlot.AxesPlot):
                         y_limits[0] = numpy.min(new_signal_data)
                         y_limits[1] = numpy.max(new_signal_data)
                 
-            if (self.y_window_lim is not None):
-                self.axes.set_ylim(self.y_window_lim)
-            elif initialized:
-                self.axes.set_ylim(y_limits)
-            else:
-                self.axes.set_ylim([0,1])  
+            if (self.y_window_lim is None):
+                self.axes.set_ylim(y_limits)  
     
-        return self.axesLines
+        return self.animated_artists

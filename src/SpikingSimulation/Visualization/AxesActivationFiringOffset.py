@@ -98,10 +98,16 @@ class AxesActivationFiringOffset(AxesPlot.AxesPlot):
         number_of_lines = 1
         
         self.axesLines = []
+        animated_artists = []
         
         for _ in range(number_of_lines):
             #newLine = self.axes.scatter([],[],marker='.')
-            newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5)
+            if (self.figure.blit):
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5, animated=True)
+                animated_artists.append(newLine)
+            else:
+                newLine, = self.axes.plot([], [], linestyle='', marker='.', markersize=5)
+                
             self.axesLines.append(newLine)
         
         if (self.y_window_lim is not None):
@@ -110,6 +116,9 @@ class AxesActivationFiringOffset(AxesPlot.AxesPlot):
             self.axes.set_ylim([0,self.oscillation_period])  
         
         self.axes.set_xlim([0,1])    
+        
+        self.animated_artists = tuple(animated_artists)
+        
         super(AxesActivationFiringOffset, self).initialize()
             
         return
@@ -180,4 +189,4 @@ class AxesActivationFiringOffset(AxesPlot.AxesPlot):
                 
                 
     
-        return self.axesLines
+        return self.animated_artists
