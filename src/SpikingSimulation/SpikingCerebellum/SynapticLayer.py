@@ -44,9 +44,9 @@ class SynapticLayer(object):
     
         # Specific parameters of the connectivity algorithm (and function implementing each one)
         self.template_connectivity_parameters = {
-                                        'fixedn2one': ['number_of_source_cells', self.generate_fixed_n2one_connections],
-                                        'randomn2one': ['number_of_source_cells', self.generate_random_n2one_connections],
-                                        'random_with_probability': ['connection_probability', self.generate_random_connections]
+                                        'fixedn2one': ['number_of_source_cells', self._generate_fixed_n2one_connections_],
+                                        'randomn2one': ['number_of_source_cells', self._generate_random_n2one_connections_],
+                                        'random_with_probability': ['connection_probability', self._generate_random_connections_]
                                         }
 
         # Specific parameters of the weight initialization (and function implementing each one)
@@ -221,7 +221,7 @@ class SynapticLayer(object):
              
              
      
-    def generate_fixed_n2one_connections(self):
+    def _generate_fixed_n2one_connections_(self):
         '''
         Generate connections between source and target layers n2one following succesive order (s0,s1,...,s(n-1) to t0, sn, s(n+1),...,s(2n-1) to t1,...).
         '''
@@ -246,7 +246,7 @@ class SynapticLayer(object):
         self.target_index = numpy.repeat(local_target_cells,self.connectivity_parameters['number_of_source_cells']).tolist()
         return
      
-    def generate_random_n2one_connections(self):
+    def _generate_random_n2one_connections_(self):
         '''
         Generate connections between source and target layers n2one with random selection of source cells (sr0,sr1,...,sr(n-1) to t0, srn, s(rn+1),...,s(r2n-1) to t1,...).
         '''
@@ -271,7 +271,7 @@ class SynapticLayer(object):
          
         return
      
-    def generate_random_connections(self):
+    def _generate_random_connections_(self):
         '''
         Generate connections between source and target layers with a given probability.
         '''
@@ -301,7 +301,7 @@ class SynapticLayer(object):
         self.number_of_synapses = len(self.target_index)      
         return
      
-    def generate_random_weights(self):
+    def _generate_random_weights_(self):
         '''
         Generate uniformly distributed random weights between the minimum and maximum values.
         '''
@@ -314,7 +314,7 @@ class SynapticLayer(object):
         self.weights = rand_numbers.tolist()
         return
      
-    def generate_fixed_weights(self):
+    def _generate_fixed_weights_(self):
         '''
         Initialize all the weights to the specified values.
         '''
