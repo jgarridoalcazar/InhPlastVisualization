@@ -7,6 +7,7 @@ Created on May 27, 2014
 import bisect
 import ntpath
 import logging
+import numpy
 from Utils.Utils import ReadConfigFile
 from Utils.Logger import InitializeLogger, Logger2File
 
@@ -115,7 +116,7 @@ class FrequencySimulation(object):
     
         logger.debug('Initializing cerebellum generator')
         self.cerebellum.initialize_simulation()
-    
+        
         # Initialize oscillatory input current
         if 'oscillations' in self.config_options:
             logger.debug('Creating AC Current generator')
@@ -126,8 +127,8 @@ class FrequencySimulation(object):
             logger.debug('Creating DC Current generator')
             self.config_options['stimulation']['simulation_time'] = self.simulation_time
             self.config_options['stimulation']['number_of_fibers'] = self.cerebellum.mflayer.number_of_neurons
-            self.config_options['stimulation']['seed'] = self.config_options['simulation']['seed']
-            
+            self.config_options['stimulation']['rng'] = self.cerebellum.get_global_py_rng()
+                        
             import Stimulation.PatternGenerator as PatternGenerator
             self.pattern_generator = PatternGenerator.PatternGenerator(**self.config_options['stimulation'])
             self.pattern_generator.initialize()

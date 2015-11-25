@@ -273,6 +273,12 @@ class NestCerebellarModel(CerebellarModel):
             
         nest.SetKernelStatus(nest_options_dict)
         
+        # Create the random number generators for each virtual process
+        self.simulation_options['py_seeds'] = range(self.simulation_options['seed'],self.simulation_options['seed'] + self.get_number_of_virtual_processes())
+        self.simulation_options['py_rngs'] = [numpy.random.RandomState(s) for s in self.simulation_options['py_seeds']]
+        # Create a random number generator to be used for serial operations (such as pattern generation) -> The same for all the virtual processes
+        self.simulation_options['py_serial_rng'] = numpy.random.RandomState(self.simulation_options['seed'] + self.get_number_of_virtual_processes())
+        
         # Set random seeds
         nest_options_dict = dict()
         nest_options_dict['grng_seed'] = self.simulation_options['seed'] + self.get_number_of_virtual_processes()
@@ -1071,3 +1077,15 @@ class NestCerebellarModel(CerebellarModel):
         Return the id-number of this process.   
         '''
         return 0
+    
+    def get_local_py_rng(self):
+        '''
+        Return the random number generator of this proccess
+        '''
+        return self.simulation_options['py_rngs'][self.get_my_process_id()]
+    
+    def get_global_py_rng(self):
+        '''
+        Return the random number generator for the global operations
+        '''
+        return self.simulation_options['py_serial_rngs']

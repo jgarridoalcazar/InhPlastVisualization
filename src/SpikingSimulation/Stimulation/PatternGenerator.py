@@ -21,7 +21,7 @@ class PatternGenerator(object):
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates a new frequency pattern generator.
-        @param seed Seed to be used for the random number generator. If not present, time will be usead instead.
+        @param rng Random number generator to be used for pattern generation. If not present, time will be usead instead to initialize a new generator.
         @param mean_length Average length of each pattern according to an exponential distribution (in seconds)
         @param min_amplitude Minimum current amplitude of each fiber (in A).
         @param max_amplitude Maximum current amplitude of each fiber (in A).
@@ -34,10 +34,10 @@ class PatternGenerator(object):
         @param overlapped_patterns Whether the patterns are allowed to overlap each other
         '''
         
-        if 'seed' in kwargs:
-            self.seed = kwargs.pop('seed')                         
+        if 'rng' in kwargs:
+            self.ran_generator = kwargs.pop('rng')                         
         else:
-            self.seed = time()
+            self.ran_generator = numpy.random.RandomState(time())
             
         if 'mean_length' in kwargs:
             self.mean_length = kwargs.pop('mean_length')
@@ -311,9 +311,6 @@ class PatternGenerator(object):
         '''
         Initialize the pattern generator by iteratively normalizing the firing rates until it gets the desired values.
         '''
-        
-        # Initialize random number generator
-        self.ran_generator = numpy.random.RandomState(self.seed)
         
         # Generate the length of each interval
         self._generate_length()

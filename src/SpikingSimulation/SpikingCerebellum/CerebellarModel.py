@@ -7,7 +7,6 @@ Created on May 12, 2014
 import abc
 import NeuronLayer
 import InputLayer
-import SynapticLayer
 import time
 import numpy
 import logging
@@ -36,6 +35,18 @@ class CerebellarModel(object):
             logger.error('Non-specified cerebellum config file')
             raise Exception('Non-DefinedCerebellumModel')
         
+        if ('network' not in self.config_dict):
+            self.config_dict['network'] = {}
+            
+        if ('length' not in self.config_dict['network']):
+            self.config_dict['network']['length'] = None
+            self.network_size = None
+        else:
+            # Create the dimensions of the cube from the lenght of the size
+            length = self.config_dict['network']['length']
+            self.network_size = (length, length, length)
+            
+        
         # Initialize the cell layer map
         self.layer_map = {}
         
@@ -52,6 +63,9 @@ class CerebellarModel(object):
         
         # Create cerebellar inputs (mossy fibers and inferior olive)
         mf_options = self.config_dict['mflayer']
+        mf_options['random_generator'] = self.get_local_py_rng()
+        if (self.network_size is not None):
+            mf_options['size'] = self.network_size
         self.mflayer = NeuronLayer.NeuronLayer(**mf_options)
         self.neuron_layers.append(self.mflayer)
         self.layer_map[self.mflayer.__name__] = self.mflayer
@@ -62,12 +76,18 @@ class CerebellarModel(object):
         
         # Create granule cell layer
         grc_options = self.config_dict['grclayer']
+        grc_options['random_generator'] = self.get_local_py_rng()
+        if (self.network_size is not None):
+            grc_options['size'] = self.network_size
         self.grclayer = NeuronLayer.NeuronLayer(**grc_options)
         self.neuron_layers.append(self.grclayer)
         self.layer_map[self.grclayer.__name__] = self.grclayer
         
         # Create Golgi cell layer
         goc_options = self.config_dict['goclayer']
+        goc_options['random_generator'] = self.get_local_py_rng()
+        if (self.network_size is not None):
+            goc_options['size'] = self.network_size
         self.goclayer = NeuronLayer.NeuronLayer(**goc_options)
         self.neuron_layers.append(self.goclayer)
         self.layer_map[self.goclayer.__name__] = self.goclayer
@@ -90,14 +110,21 @@ class CerebellarModel(object):
         '''
         
         self.synaptic_layers = []
-        # Get the process id to know which seed has to be used
+        
+        if (self.config_dict['simulation']['use_mpi']):
+            import SynapticLayer as SynapticLayer
+        else:
+            import SynapticLayerNoMPI as SynapticLayer
+        
+        # Get the process_id to select the correct random number generator    
         process_id = self.get_my_process_id()
         
         # Create MF-GrC synaptic layer
         mfgrc_options = self.config_dict['mfgrcsynapsis']
         mfgrc_options['source_layer'] = self.mflayer
         mfgrc_options['target_layer'] = self.grclayer
-        mfgrc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
+        mfgrc_options['random_generator'] = self.get_local_py_rng()
+        
         self.mfgrclayer = SynapticLayer.SynapticLayer(**mfgrc_options)
         self.synaptic_layers.append(self.mfgrclayer)
         self.layer_map[self.mfgrclayer.__name__] = self.mfgrclayer
@@ -106,7 +133,7 @@ class CerebellarModel(object):
         mfgoc_options = self.config_dict['mfgocsynapsis']
         mfgoc_options['source_layer'] = self.mflayer
         mfgoc_options['target_layer'] = self.goclayer
-        mfgoc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
+        mfgoc_options['random_generator'] = self.get_local_py_rng()
         self.mfgoclayer = SynapticLayer.SynapticLayer(**mfgoc_options)
         self.synaptic_layers.append(self.mfgoclayer)
         self.layer_map[self.mfgoclayer.__name__] = self.mfgoclayer
@@ -115,7 +142,7 @@ class CerebellarModel(object):
         grcgoc_options = self.config_dict['grcgocsynapsis']
         grcgoc_options['source_layer'] = self.grclayer
         grcgoc_options['target_layer'] = self.goclayer
-        grcgoc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
+        grcgoc_options['random_generator'] = self.get_local_py_rng()
         self.grcgoclayer = SynapticLayer.SynapticLayer(**grcgoc_options)
         self.synaptic_layers.append(self.grcgoclayer)
         self.layer_map[self.grcgoclayer.__name__] = self.grcgoclayer
@@ -124,7 +151,9 @@ class CerebellarModel(object):
         gocgrc_options = self.config_dict['gocgrcsynapsis']
         gocgrc_options['source_layer'] = self.goclayer
         gocgrc_options['target_layer'] = self.grclayer
-        gocgrc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
+        gocgrc_options['intermediate_layer'] = self.mflayer
+        gocgrc_options['intermediate_to_target_synaptic_layer'] = self.mfgrclayer
+        gocgrc_options['random_generator'] = self.get_local_py_rng()
         self.gocgrclayer = SynapticLayer.SynapticLayer(**gocgrc_options)
         self.synaptic_layers.append(self.gocgrclayer)
         self.layer_map[self.gocgrclayer.__name__] = self.gocgrclayer
@@ -133,7 +162,7 @@ class CerebellarModel(object):
         gocgoc_options = self.config_dict['gocgocsynapsis']
         gocgoc_options['source_layer'] = self.goclayer
         gocgoc_options['target_layer'] = self.goclayer
-        gocgoc_options['random_generator'] = self.simulation_options['pyrngs'][process_id]
+        gocgoc_options['random_generator'] = self.get_local_py_rng()
         self.gocgoclayer = SynapticLayer.SynapticLayer(**gocgoc_options)
         self.synaptic_layers.append(self.gocgoclayer)
         self.layer_map[self.gocgoclayer.__name__] = self.gocgoclayer
@@ -178,11 +207,6 @@ class CerebellarModel(object):
         if not 'seed' in self.simulation_options:
             self.simulation_options['seed']  = int(time.time())
         
-        
-        # Generate random number generators for each python virtual process
-        self.simulation_options['pyrngs'] = [numpy.random.RandomState(s) for s in range(self.simulation_options['seed'], self.simulation_options['seed']+self.get_number_of_virtual_processes())]
-        
-        logger.debug('Numpy random seeds set')
         
         # Check weight recording time step
         if not 'weight_recording_step' in self.simulation_options:
@@ -295,6 +319,18 @@ class CerebellarModel(object):
         '''
         return 
 
-        
+    @abc.abstractmethod
+    def get_local_py_rng(self):
+        '''
+        Return the random number generator of this proccess
+        '''
+        return
+    
+    @abc.abstractmethod
+    def get_global_py_rng(self):
+        '''
+        Return the random number generator for serial operations
+        '''
+        return
         
         

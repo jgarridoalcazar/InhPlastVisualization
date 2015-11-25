@@ -41,9 +41,9 @@ class InputLayer(object):
             
         # Read volume size
         if ('size' in kwargs):
-            self.size = kwargs.pop('dimensions')
+            self.size = numpy.array(kwargs.pop('size'))
             # Calculate the total volume of the dice
-            self.volume = reduce(lambda x, y: x*y, self.size, 1)
+            self.volume = numpy.prod(self.size)
         else:
             logger.warning('Non-specified volume size in layer %s',self.__name__)
             
@@ -59,7 +59,7 @@ class InputLayer(object):
                     logger.warning('Both number of neurons and density of neurons specified in layer %s. Density of neurons will be discarded',self.__name__)
                 self.density_of_neurons = self.number_of_neurons / self.volume
         elif self.size is not None and self.density_of_neurons is not None: 
-            self.number_of_neurons = self.volume * self.density_of_neurons
+            self.number_of_neurons = round(self.volume * self.density_of_neurons)
         else:
             logger.error('Non-specified neither number of neurons nor (density of neurons and size) in layer %s',self.__name__)
             raise Exception('Non-DefinedProperty')
@@ -106,9 +106,7 @@ class InputLayer(object):
                 
         n_dimensions = len(self.size)
         
-        rel_positions_matrix = self.random_generator.uniform(0,1,(n_dimensions, self.number_of_neurons))
-        
-        self.relative_positions = zip(*rel_positions_matrix) 
+        self.relative_positions = self.random_generator.uniform(0,1,(self.number_of_neurons, n_dimensions)) 
         
         return
     
@@ -116,5 +114,5 @@ class InputLayer(object):
         return self.relative_positions
     
     def get_absolute_coordinates(self):
-        return map(lambda c: map(lambda a,b: a*b,c,self.size),self.relative_positions)
+        return self.relative_positions * self.size
                 

@@ -6,6 +6,7 @@ Created on April 23, 2014
 import numpy
 import time
 import logging
+import scipy.spatial.distance
 
 logger = logging.getLogger('Simulation')
 
@@ -50,13 +51,13 @@ class SynapticLayer(object):
                                         'randomn2one': ['number_of_source_cells', self._generate_random_n2one_connections_],
                                         'random_with_probability': ['connection_probability', self._generate_random_connections_],
                                         'randomn2onelocal': ['average_number_of_source_cells', 'average_dendritic_length', self._generate_random_n2one_local_connections_],
-                                        'glomerulin2onelocal': ['average_number_of_source_cells_per_glomerulus', 'average_dendritic_length', self._generate_glomeruli_n2one_local_connecitons_]
+                                        'glomerulin2onelocal': ['average_number_of_source_cells_per_glomerulus', 'average_dendritic_length', self._generate_glomeruli_n2one_local_connections_]
                                         }
 
         # Specific parameters of the weight initialization (and function implementing each one)
         self.template_weight_parameters = {
-                                        'random': ['random_min_weight', 'random_max_weight', self.generate_random_weights],
-                                        'fixed': ['initial_weight', self.generate_fixed_weights]
+                                        'random': ['random_min_weight', 'random_max_weight', self._generate_random_weights_],
+                                        'fixed': ['initial_weight', self._generate_fixed_weights_]
                                         }
         # Read name
         self.__name__ = kwargs.pop('name')
@@ -83,7 +84,7 @@ class SynapticLayer(object):
             
         # Read intermediate_to_target_ synaptic layer
         if ('intermediate_to_target_synaptic_layer' in kwargs):
-            self.intermediate_to_target_synaptic_layer = kwargs.pop('intermediate_to_target')
+            self.intermediate_to_target_synaptic_layer = kwargs.pop('intermediate_to_target_synaptic_layer')
         else:
             self.intermediate_to_target_synaptic_layer = None
         
@@ -142,7 +143,7 @@ class SynapticLayer(object):
                     self.connectivity_parameters['allow_multiple_connections'] = True
                 
                 # Generate the individual connections
-                #self.template_connectivity_parameters[self.connectivity_type][-1]()
+                self.template_connectivity_parameters[self.connectivity_type][-1]()
             else:
                 logger.error('Unknown connectivity type: %s', self.connectivity_type)
                 raise Exception('UnknownConnectivityType')                         
@@ -162,7 +163,7 @@ class SynapticLayer(object):
                         logger.error('Non-specified weight initialization parameter: %s',param)
                         raise Exception('Non-DefinedWeightInitializationParameter')
                 # Generate the individual connections
-                #self.template_weight_parameters[self.weight_initialization_type][-1]()
+                self.template_weight_parameters[self.weight_initialization_type][-1]()
             else:
                 logger.error('Unknown weight initialization type: %s', self.weight_initialization_type)
                 raise Exception('UnknownWeightInitializationType')                         
@@ -251,7 +252,7 @@ class SynapticLayer(object):
         probability = self.connectivity_parameters['connection_probability']
  
         # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
-        local_target_cells = range(rank,self.target_layer.number_of_neurons,size)
+        local_target_cells = numpy.arange(rank,self.target_layer.number_of_neurons,size)
          
         # Generate num_source_cells * num_target_cells rand numbers
         rand_numbers = self.random_generator.rand(self.source_layer.number_of_neurons,len(local_target_cells))
@@ -262,9 +263,9 @@ class SynapticLayer(object):
                 rand_numbers[local_target_cells[index],index] = 1.0
          
         (source_array,target_array) = numpy.where(rand_numbers<probability)
-        self.source_index = source_array.tolist()
-        self.target_index = [local_target_cells[index] for index in target_array]  
-        self.number_of_synapses = len(self.target_index)      
+        self.source_index = source_array
+        self.target_index = local_target_cells[target_array]  
+        self.number_of_synapses = self.target_index.shape[0]      
         return
     
     def _generate_random_n2one_local_connections_(self):
@@ -276,28 +277,26 @@ class SynapticLayer(object):
         target_coord = self.target_layer.get_absolute_coordinates()
         source_coord = self.source_layer.get_absolute_coordinates()
         
-        n_source_cells = len(source_coord)
-        n_target_cells = len(target_coord)
+        n_source_cells = source_coord.shape[0]
+        n_target_cells = target_coord.shape[0]
         
         lambda_val = 1./self.connectivity_parameters['average_dendritic_length']
                 
-        distance = numpy.array([_calculate_distance_(scoord, tcoord) for tcoord in target_coord for scoord in source_coord])
+        distance = scipy.spatial.distance.cdist(source_coord, target_coord, 'euclidean')
         
         # Generate the probability of connection for each pair of source/target neurons following an exponential distribution with average_dendritic_length
         probability = lambda_val * numpy.exp(-lambda_val*distance)
-        norm_probability = numpy.zeros(len(probabilitiy))
         # For each target neuron normalize the probability and multiply by the average number of source cells
-        for target_index in range(n_target_cells):
-            norm_probability[target_index*n_source_cells:(target_index+1)*n_source_cells] = probability[target_index*n_source_cells:(target_index+1)*n_source_cells] / numpy.sum(probability[target_index*n_source_cells:(target_index+1)*n_source_cells]) * self.connectivity_parameters['average_number_of_source_cells']
+        norm_probability = probability / numpy.sum(probability,axis=0) * self.connectivity_parameters['average_number_of_source_cells']
         
         # Generate random numbers according to uniform distribution and compare with the probability of each connection
-        rand_nums = self.random_generator.uniform(len(probability))
+        rand_nums = self.random_generator.uniform(0,1,probability.shape)
         
         indexes = numpy.where(rand_nums<norm_probability)
         
-        self.source_index = numpy.mod(indexes, n_source_cells)
-        self.target_index = numpy.floor_divide(indexes, n_source_cells)
-        
+        self.source_index = indexes[0]
+        self.target_index = indexes[1]
+        self.number_of_synapses = self.target_index.shape[0]
         return
      
     def _generate_glomeruli_n2one_local_connections_(self):
@@ -314,50 +313,47 @@ class SynapticLayer(object):
             logger.error('Non-specified intermediate_to_target synaptic layer. It is required in glomeruli-type connectivity creation.')
             raise Exception('Non-DefinedProperty')
         
-        interm_coord = self.intermediate_layer.get_absolute_coords()
+        interm_coord = self.intermediate_layer.get_absolute_coordinates()
         source_coord = self.source_layer.get_absolute_coordinates()
         
-        n_source_cells = len(source_coord)
-        n_interm_cells = len(interm_coord)
+        n_source_cells = source_coord.shape[0]
+        n_interm_cells = interm_coord.shape[0]
         
         lambda_val = 1./self.connectivity_parameters['average_dendritic_length']
                 
-        distance = numpy.array([_calculate_distance_(scoord, tcoord) for tcoord in interm_coord for scoord in source_coord])
+        distance = scipy.spatial.distance.cdist(source_coord, interm_coord, 'euclidean')
         
         # Generate the probability of connection for each pair of source/target neurons following an exponential distribution with average_dendritic_length
         probability = lambda_val * numpy.exp(-lambda_val*distance)
         
         # Generate random numbers according to uniform distribution and compare with the probability of each connection
-        rand_nums = self.random_generator.uniform(len(probability))
+        rand_nums = self.random_generator.uniform(0,1,probability.shape)
         
-        norm_probability = numpy.zeros(len(probability))
+        norm_probability = numpy.zeros((n_source_cells, n_interm_cells))
         
         self.source_index = []
         self.target_index = []
         
         # For each target neuron normalize the probability and multiply by the average number of source cells
         for glomerulus_index in range(n_interm_cells):
-            norm_probability[glomerulus_index*n_source_cells:(glomerulus_index+1)*n_source_cells] = \
-                    probability[glomerulus_index*n_source_cells:(glomerulus_index+1)*n_source_cells] / \
-                    numpy.sum(probability[glomerulus_index*n_source_cells:(glomerulus_index+1)*n_source_cells]) * \
-                    self.connectivity_parameters['average_number_of_source_cells_per_glomerulus']
+            norm_probability[:,glomerulus_index] = probability[:,glomerulus_index] / numpy.sum(probability[:,glomerulus_index]) * self.connectivity_parameters['average_number_of_source_cells_per_glomerulus']
             
-            connected_goc_indexes = numpy.where(rand_nums<norm_probability[glomerulus_index*n_source_cells:(glomerulus_index+1)*n_source_cells])
+            connected_goc_indexes, = numpy.where(rand_nums[:,glomerulus_index]<norm_probability[:,glomerulus_index])
             
-            [target_grcs] = _get_target_cell_indexes_([interm_index], self.intermediate_to_target_synaptic_layer)
-            neighboor_glomeruli = _get_source_cell_indexes_(target_grcs, self.intermediate_to_target_synaptic_layer)
+            target_grcs = numpy.unique(numpy.concatenate(_get_target_cell_indexes_([glomerulus_index], self.intermediate_to_target_synaptic_layer)))
+            neighboor_glomeruli = numpy.unique(numpy.concatenate(_get_source_cell_indexes_(target_grcs, self.intermediate_to_target_synaptic_layer)))
             
-            num_targets = len(connected_goc_indexes)*len(target_grcs)
-            
-            for i,goc_index in enumerate(connected_goc_indexes):
-                self.source_index.extend([goc_index]*len(target_grcs))
-                self.target_index.extend(target_grcs)
+            self.source_index.extend(numpy.repeat(connected_goc_indexes,target_grcs.shape[0]))
+            self.target_index.extend(numpy.tile(target_grcs,connected_goc_indexes.shape[0]))
                 
-                # Update the probability of the following glomeruli to avoid repeating connections
-                probability[neighboor_glomeruli*n_source_cells+goc_index] = 0.0
+            # Update the probability of the following glomeruli to avoid repeating connections
+            goc_indexes = numpy.tile(connected_goc_indexes,neighboor_glomeruli.shape[0])
+            glomeruli_rep_indexes = numpy.repeat(neighboor_glomeruli,connected_goc_indexes.shape[0])
+            probability[goc_indexes,glomeruli_rep_indexes] = 0.0
         
         self.source_index = numpy.array(self.source_index)
         self.target_index = numpy.array(self.target_index)
+        self.number_of_synapses = self.target_index.shape[0]
         return
     
     def _generate_random_weights_(self):
@@ -392,11 +388,11 @@ def _get_target_cell_indexes_(indexes, interm_to_target_syn_layer):
     '''
     Extract the indexes of the target cells of those cells indicated by indexes in the interm_layer.
     '''
-    return numpy.array([interm_to_target_syn_layer.target_index(interm_to_target_syn_layer.source_index==index) for index in indexes])
+    return numpy.array([interm_to_target_syn_layer.target_index[interm_to_target_syn_layer.source_index==index] for index in indexes])
     
 def _get_source_cell_indexes_(indexes, interm_to_target_syn_layer):
     '''
     Extract the indexes in the interm_layer of the sources cells of those cells indicated by indexes in the target_layer.
     '''
-    return numpy.array([interm_to_target_syn_layer.source_index(interm_to_target_syn_layer.target_index==index) for index in indexes])
+    return numpy.array([interm_to_target_syn_layer.source_index[interm_to_target_syn_layer.target_index==index] for index in indexes])
     
