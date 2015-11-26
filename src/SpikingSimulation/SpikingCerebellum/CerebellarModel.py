@@ -229,6 +229,84 @@ class CerebellarModel(object):
         
         return
     
+    def visualize_network(self):
+        '''
+        Visualize the network structure by using matplotlib
+        '''
+        
+        from mpl_toolkits.mplot3d import Axes3D
+        import matplotlib.pyplot
+        
+        colours = { 'mflayer': 'b',
+                  'grclayer': 'g',
+                  'goclayer': 'r',
+                  'mfgrcsynapsis': 'c',
+                  'mfgocsynapsis': 'm',
+                  'grcgocsynapsis': 'y',
+                  'gocgrcsynapsis': 'k',
+                  'gocgocsynapsis': 'r'}
+        
+        ignored_layers = [
+#                          'mfgrcsynapsis',
+#                          'mfgocsynapsis', 
+#                          'grcgocsynapsis',
+#                          'gocgrcsynapsis', 
+#                          'gocgocsynapsis'
+                          ]
+        
+        figure = matplotlib.pyplot.figure(figsize=[23,14],dpi=80)
+        axes = figure.add_subplot(111, projection='3d')
+        axes.set_xlabel('X (mm)')
+        axes.set_ylabel('Y (mm)')
+        axes.set_zlabel('Z (mm)')
+        
+        axes.set_xlim([0.0,self.network_size[0]])
+        axes.set_ylim([0.0,self.network_size[1]])
+        axes.set_zlim([0.0,self.network_size[2]])
+        
+        # Visualize the neuron layers
+        for neuron_layer in self.neuron_layers:
+            if neuron_layer.__name__ not in ignored_layers:
+                logger.debug('Plotting neurons from layer %s',neuron_layer.__name__)
+                if neuron_layer.soma_size is None:
+                    soma_size = 5
+                else:
+                    soma_size = neuron_layer.soma_size
+            
+                neuron_positions = neuron_layer.get_absolute_coordinates()
+                
+                axes.scatter(neuron_positions[:,0], neuron_positions[:,1], neuron_positions[:,2], \
+                             c=colours[neuron_layer.__name__], marker = 'o', s = soma_size*1e4, label=neuron_layer.__name__)
+        
+        # Visualize the synaptic layers
+        for synaptic_layer in self.synaptic_layers:
+            if synaptic_layer.__name__ not in ignored_layers:
+                logger.debug('Plotting synaptic connections from layer %s',synaptic_layer.__name__)
+                
+                source_layer_positions = synaptic_layer.source_layer.get_absolute_coordinates()
+                target_layer_positions = synaptic_layer.target_layer.get_absolute_coordinates()
+                
+                for spos, tpos in zip(source_layer_positions[synaptic_layer.source_index],target_layer_positions[synaptic_layer.target_index]):
+                    axes.plot([spos[0],tpos[0]],[spos[1],tpos[1]],[spos[2],tpos[2]],\
+                              marker = '', color = colours[synaptic_layer.__name__], linewidth=0.2, linestyle = 'solid', label=synaptic_layer.__name__)
+    
+        logger.debug('Cleaning figure legend')
+            
+        # Remove repeated legend entries
+        handles, labels = axes.get_legend_handles_labels()
+        newLabels, newHandles = [], []
+        for handle, label in zip(handles, labels):
+            if label not in newLabels:
+                newLabels.append(label)
+                newHandles.append(handle)
+        matplotlib.pyplot.legend(newHandles, newLabels, loc='center right', bbox_to_anchor=(1.1,0.5))
+        
+        logger.debug('Showing the figure')
+        matplotlib.pyplot.show()
+            
+            
+            
+    
     def get_number_of_elements(self, **kwargs):
         '''
         Retrieve the number of elements (neurons or synapses in a layer.

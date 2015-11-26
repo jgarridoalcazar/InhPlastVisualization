@@ -24,6 +24,7 @@ class InputLayer(object):
         @param size: (length, width, height)-tuple with the size of the volume to fill (in mm) (optional).
         @param density_of_neurons: Density of neurons in the volume (optional).
         @param random_generator: The random number generator to use (optional).
+        @param soma_size: Size of the soma for this neuron layer (optional). It should be used only for visualization purposes.
         '''
         
         # Read name
@@ -59,7 +60,7 @@ class InputLayer(object):
                     logger.warning('Both number of neurons and density of neurons specified in layer %s. Density of neurons will be discarded',self.__name__)
                 self.density_of_neurons = self.number_of_neurons / self.volume
         elif self.size is not None and self.density_of_neurons is not None: 
-            self.number_of_neurons = round(self.volume * self.density_of_neurons)
+            self.number_of_neurons = int(round(self.volume * self.density_of_neurons))
         else:
             logger.error('Non-specified neither number of neurons nor (density of neurons and size) in layer %s',self.__name__)
             raise Exception('Non-DefinedProperty')
@@ -83,6 +84,11 @@ class InputLayer(object):
             self.random_generator = kwargs.pop('random_generator') 
         else:
             self.random_generator = numpy.random.RandomState(int(time.time()))
+            
+        if ('soma_size' in kwargs):
+            self.soma_size = kwargs.pop('soma_size')
+        else:
+            self.soma_size = None
             
         # Check whether additional parameters have been used.
         for param in kwargs:

@@ -403,6 +403,8 @@ class NestCerebellarModel(CerebellarModel):
         
         super(NestCerebellarModel, self)._build_network()
         
+        # self.visualize_network()
+        
         # Create nodes in the network
         self._create_nodes()
         
