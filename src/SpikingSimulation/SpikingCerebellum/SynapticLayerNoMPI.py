@@ -364,9 +364,7 @@ class SynapticLayer(object):
         min_weight = self.weight_initialization_parameters['random_min_weight']
         max_weight = self.weight_initialization_parameters['random_max_weight']
          
-        rand_numbers = self.random_generator.rand(self.number_of_synapses) * (max_weight-min_weight) + min_weight
-         
-        self.weights = rand_numbers.tolist()
+        self.weights = self.random_generator.rand(self.number_of_synapses) * (max_weight-min_weight) + min_weight
         return
      
     def _generate_fixed_weights_(self):
@@ -375,7 +373,7 @@ class SynapticLayer(object):
         '''
          
         initial_weight = self.weight_initialization_parameters['initial_weight']
-        self.weights = [initial_weight] * self.number_of_synapses
+        self.weights = numpy.array([initial_weight] * self.number_of_synapses)
         return
 
 def _calculate_distance_(source_coord, target_coord):

@@ -295,7 +295,7 @@ class NestCerebellarModel(CerebellarModel):
         
         # Initialize ac_current and dc_current stimulation
         self.ac_generator = []
-        self.dc_current = []
+        self.dc_current = numpy.array([])
         
         # Build the network
         self._build_network()
@@ -357,7 +357,7 @@ class NestCerebellarModel(CerebellarModel):
                 # logger.debug('Source layer: %s. Target layer: %s',layer.source_layer.nest_layer,layer.target_layer.nest_layer)
                 # Store the source and target cells to know the order to be stored
                 # We assume GetConnections return only those connections whose target node is local to the process
-                layer.weight_record['con'] = nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)
+                layer.weight_record['con'] = nest.GetConnections(source=layer.source_layer.nest_layer.tolist(),target=layer.target_layer.nest_layer.tolist())
                 global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['source','target']))
                 min_source = layer.source_layer.MinIndex
                 min_target = layer.target_layer.MinIndex
@@ -403,7 +403,7 @@ class NestCerebellarModel(CerebellarModel):
         
         super(NestCerebellarModel, self)._build_network()
         
-        # self.visualize_network()
+        #self.visualize_network()
         
         # Create nodes in the network
         self._create_nodes()
@@ -440,16 +440,16 @@ class NestCerebellarModel(CerebellarModel):
             nest_param_dict = self._map_cm_parameters(layer)
             
             # Create the layer nodes and store them in the NuronLayer object
-            layer.nest_layer = nest.Create(model=layer.nest_model_name, params=nest_param_dict, n=layer.number_of_neurons)
+            layer.nest_layer = numpy.array(nest.Create(model=layer.nest_model_name, params=nest_param_dict, n=layer.number_of_neurons))
             
             # Check whether we have to record the activity. If that is the case, create the spike detector
             if layer.register_activity:
-                layer.nest_spike_detector = nest.Create(model='spike_detector')
+                layer.nest_spike_detector = numpy.array(nest.Create(model='spike_detector'))
                 #nest.ConvergentConnect(layer.nest_layer,layer.nest_spike_detector)
                 nest.Connect(layer.nest_layer,layer.nest_spike_detector,conn_spec='all_to_all')
                 
                 # Set layer registered name
-                nest.SetStatus(layer.nest_spike_detector,{'label':layer.__name__+'_spike'})
+                nest.SetStatus(layer.nest_spike_detector.tolist(),{'label':layer.__name__+'_spike'})
             else:
                 layer.nest_spike_detector = None
                 
@@ -477,15 +477,15 @@ class NestCerebellarModel(CerebellarModel):
                         logger.warning('%s state variable is included in the recordable variable map. Ignoring',var)
                 
             if recording_vars:
-                layer.nest_multimeter = nest.Create(model='multimeter', params = {'withtime': True,
+                layer.nest_multimeter = numpy.array(nest.Create(model='multimeter', params = {'withtime': True,
                                                                             'withgid': True, 
                                                                             'interval': layer.record_step*1e3,
-                                                                            'record_from': recording_vars})
+                                                                            'record_from': recording_vars}))
                 #nest.DivergentConnect(layer.nest_multimeter,layer.nest_layer)
                 nest.Connect(layer.nest_multimeter,layer.nest_layer,conn_spec='all_to_all')
                 
                 # Set layer registered name
-                nest.SetStatus(layer.nest_multimeter,{'label':layer.__name__+'_mult'})
+                nest.SetStatus(layer.nest_multimeter.tolist(),{'label':layer.__name__+'_mult'})
             else:
                 layer.nest_multimeter = None
                 
@@ -529,7 +529,7 @@ class NestCerebellarModel(CerebellarModel):
                 nest.CopyModel("static_synapse", layer.__name__, {'delay':layer.synaptic_delay*1.e3})
             
             # Search the local nodes
-            #node_info = nest.GetStatus(layer.target_layer.nest_layer)
+            #node_info = nest.GetStatus(layer.target_layer.nest_layer.tolist())
             
             # Create the synaptic connections in NEST
             #presynaptic = [layer.source_layer.nest_layer[layer.source_index[index]] for index in xrange(len(layer.source_index)) if node_info[layer.target_index[index]]['local']] # Get absolute indexes in NEST
@@ -538,16 +538,22 @@ class NestCerebellarModel(CerebellarModel):
             #delay_values = [layer.synaptic_delay*1.e3] * len(presynaptic)
             
             # Create the synaptic connections in NEST >2.4
-            con_dict = self._create_connection_pattern_dict(layer)
-            syn_dict = self._create_connection_synapsis_dict(layer)
+            #con_dict = self._create_connection_pattern_dict(layer)
+            con_dict = {'rule': 'one_to_one'}
+            
+            source_nest_nodes = layer.source_layer.nest_layer[layer.source_index]
+            target_nest_nodes = layer.target_layer.nest_layer[layer.target_index]
             
             #print 'Process:', self.get_my_process_id(),'Source cells:', presynaptic,'Target cells:',postsynaptic
-            nest.Connect(pre=layer.source_layer.nest_layer, post=layer.target_layer.nest_layer, conn_spec=con_dict, syn_spec=syn_dict)
-            #nest.OneToOneConnect(pre=presynaptic, post=postsynaptic, params= weights, delay=delay_values, model=layer.__name__)
-            logger.debug('Nest Process: %s. Connections created in layer %s: %s', nest.Rank(), layer.__name__,len(nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)))
-
-
- 
+            if nest.version() >= 'NEST 2.8.0':
+                syn_dict = {'model': layer.__name__,
+                          'weight': layer.weights*1.e9}
+                nest.Connect(pre=source_nest_nodes, post=target_nest_nodes, conn_spec=con_dict, syn_spec=syn_dict)
+            else:
+                def_delay = nest.GetDefaults(layer.__name__,'delay')
+                nest.OneToOneConnect(pre=source_nest_nodes, post=target_nest_nodes, params=layer.weights*1.e9, delay=def_delay, model=layer.__name__)
+            
+            logger.debug('Nest Process: %s. Connections created in layer %s: %s', nest.Rank(), layer.__name__,len(nest.GetConnections(source=layer.source_layer.nest_layer.tolist(),target=layer.target_layer.nest_layer.tolist())))
         return
     
     def _create_connection_pattern_dict(self, layer):
@@ -616,7 +622,7 @@ class NestCerebellarModel(CerebellarModel):
             ac_dict['frequency'] = float(kwargs.pop('frequency'))
         
         
-        new_ac_generator = nest.Create(model='ac_generator', n=1, params=ac_dict)
+        new_ac_generator = numpy.array(nest.Create(model='ac_generator', n=1, params=ac_dict))
         
         # Connect the new ac_generator to the mossy fibers
         #nest.DivergentConnect(pre=new_ac_generator, post=self.mflayer.nest_layer, weight=1., delay=1., model='static_synapse')
@@ -633,8 +639,8 @@ class NestCerebellarModel(CerebellarModel):
         '''
         
         # If dc_current generators have not been 
-        if not self.dc_current:            
-            self.dc_current = nest.Create(model='dc_generator', n=self.mflayer.number_of_neurons, params={'amplitude':0.0})
+        if not self.dc_current.size:            
+            self.dc_current = numpy.array(nest.Create(model='dc_generator', n=self.mflayer.number_of_neurons, params={'amplitude':0.0}))
             #weights = [1.]*self.mflayer.number_of_neurons
             #delay = [1.]*self.mflayer.number_of_neurons
             #nest.Connect(pre=self.dc_current, post=self.mflayer.nest_layer, params=weights, delay=delay, model='static_synapse')
@@ -647,7 +653,7 @@ class NestCerebellarModel(CerebellarModel):
             amp = kwargs.pop('amplitude')*iThreshold*1.e12
             
             if len(amp)==self.mflayer.number_of_neurons:
-                nest.SetStatus(nodes=self.dc_current, params='amplitude', val=amp)
+                nest.SetStatus(nodes=self.dc_current.tolist(), params='amplitude', val=amp)
                 # We could check and set status only of the local nodes   
             else:
                 logger.error('dc_current amplitude has to be a list with the same length of the number of MFs')
@@ -800,10 +806,10 @@ class NestCerebellarModel(CerebellarModel):
             raise Exception('InvalidNeuronLayer')
         
         # If the spike detector is local to this process
-        # logger.debug('Checking locality in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector,'local'))
-        if nest.GetStatus(neuron_layer.nest_spike_detector,'local')[0]:
-            # logger.debug('Getting spikes in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector,'events'))
-            spike_events = nest.GetStatus(neuron_layer.nest_spike_detector,'events')[0]
+        # logger.debug('Checking locality in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'local'))
+        if nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'local')[0]:
+            # logger.debug('Getting spikes in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events'))
+            spike_events = nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events')[0]
             time = spike_events['times']*1e-3
             neuron_id = spike_events['senders']
             
@@ -901,7 +907,7 @@ class NestCerebellarModel(CerebellarModel):
             end_time = float('inf')
         
         # If the spike detector is local to this process
-        recording_events = nest.GetStatus(neuron_layer.nest_multimeter,'events')[0]
+        recording_events = nest.GetStatus(neuron_layer.nest_multimeter.tolist(),'events')[0]
         # print 'Process',self.get_my_process_id(),': recording_events=',recording_events
         time = recording_events['times']*1e-3
         neuron_id = recording_events['senders']
@@ -1090,4 +1096,4 @@ class NestCerebellarModel(CerebellarModel):
         '''
         Return the random number generator for the global operations
         '''
-        return self.simulation_options['py_serial_rngs']
+        return self.simulation_options['py_serial_rng']
