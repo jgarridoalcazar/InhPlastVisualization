@@ -396,10 +396,14 @@ class NestCerebellarModel(CerebellarModel):
         Generate a NEST model based on the inherited cerebellar model.
         '''
         
-        super(NestCerebellarModel, self)._build_network()
+        # Create the network elements
+        super(NestCerebellarModel, self)._create_network_elements();
         
         # Create nodes in the network
         self._create_nodes()
+        
+        # Create the synapses
+        super(NestCerebellarModel, self)._create_synapses();
         
         # Create the connections in the network
         self._create_connections()
@@ -434,6 +438,7 @@ class NestCerebellarModel(CerebellarModel):
             
             # Create the layer nodes and store them in the NuronLayer object
             layer.nest_layer = nest.Create(model=layer.nest_model_name, params=nest_param_dict, n=layer.number_of_neurons)
+            layer.is_local_node = numpy.array([True]*layer.number_of_neurons)
             
             # Check whether we have to record the activity. If that is the case, create the spike detector
             if layer.register_activity:
@@ -493,6 +498,7 @@ class NestCerebellarModel(CerebellarModel):
             # Update the record_vars variable to those that effectively can be recorded
             self.config_dict[layer.__name__]['record_vars'] = ','.join(recorded_vars) 
             
+            logger.debug('Nest Process: %s. Neuron layer created in layer %s: %s', nest.Rank(), layer.__name__,len(layer.nest_layer),len(numpy.where(layer.is_local_node)))
             # print 'Process:', self.get_my_process_id(),'Layer:', layer.__name__, 'Collected:', layer.MinIndex
             
             pass

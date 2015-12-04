@@ -17,6 +17,9 @@ class SynapticLayer(object):
     reaching a local cell).
     '''
     
+    # Memory block size. It determines how the connectivity matrixes will be splitted. It should be chosen according to the amount of memory in the computer.
+    memory_block =  512*1024*1024 # 512M of elements
+    
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates a new synaptic layer.
@@ -210,12 +213,12 @@ class SynapticLayer(object):
         rank = 0
          
         # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
-        local_target_cells = range(rank,self.target_layer.number_of_neurons,size)        
+        local_target_cells, = numpy.where(self.target_layer.is_local_node)        
          
         self.number_of_synapses = len(local_target_cells) * self.connectivity_parameters['number_of_source_cells']
          
         # Generate source cell indexes of the connections
-        self.source_index = [self.connectivity_parameters['number_of_source_cells']*index for index in local_target_cells]
+        self.source_index = numpy.concatenate([range(self.connectivity_parameters['number_of_source_cells']*index,self.connectivity_parameters['number_of_source_cells']*(index+1)) for index in local_target_cells])
         self.target_index = numpy.repeat(local_target_cells,self.connectivity_parameters['number_of_source_cells']).tolist()
         return
      
@@ -230,7 +233,7 @@ class SynapticLayer(object):
         num_source_cells = self.connectivity_parameters['number_of_source_cells']
          
         # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
-        local_target_cells = range(rank,self.target_layer.number_of_neurons,size)
+        local_target_cells, = numpy.where(self.target_layer.is_local_node)
         self.number_of_synapses = len(local_target_cells) * num_source_cells
          
         # For each target cell generate a permutation of the source indexes
@@ -252,20 +255,38 @@ class SynapticLayer(object):
         probability = self.connectivity_parameters['connection_probability']
  
         # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
-        local_target_cells = numpy.arange(rank,self.target_layer.number_of_neurons,size)
-         
-        # Generate num_source_cells * num_target_cells rand numbers
-        rand_numbers = self.random_generator.rand(self.source_layer.number_of_neurons,len(local_target_cells))
-         
-        # Autoconnections are not allowed
-        if self.source_layer == self.target_layer:
-            for index in range(len(local_target_cells)):
-                rand_numbers[local_target_cells[index],index] = 1.0
-         
-        (source_array,target_array) = numpy.where(rand_numbers<probability)
-        self.source_index = source_array
-        self.target_index = local_target_cells[target_array]  
-        self.number_of_synapses = self.target_index.shape[0]      
+        local_target_cells, = numpy.where(self.target_layer.is_local_node)
+        
+        # Number of target cells in each memory block
+        target_layers_in_block = self.memory_block / self.source_layer.number_of_neurons
+        
+        # Distribute the local target cells in the number of blocks
+        local_target_indexes = range(0,len(local_target_cells), target_layers_in_block)
+        
+        self.source_index = numpy.array([])
+        self.target_index = numpy.array([])
+        
+        for i,_ in enumerate(local_target_indexes):
+            if i==(len(local_target_indexes)-1):
+                target_cells = local_target_cells[local_target_indexes[i]:]
+            else:
+                target_cells = local_target_cells[local_target_indexes[i]:local_target_indexes[i+1]]  
+        
+            # Generate num_source_cells * num_target_cells rand numbers
+            rand_numbers = self.random_generator.rand(self.source_layer.number_of_neurons,len(target_cells))
+     
+            # Autoconnections are not allowed
+            if self.source_layer == self.target_layer:
+                for index in range(len(target_cells)):
+                    rand_numbers[index,index] = 1.0
+     
+            (source_array,target_array) = numpy.where(rand_numbers<probability)
+            self.source_index = numpy.append(self.source_index,source_array)
+            self.target_index = numpy.append(self.target_index, target_cells[target_array])
+            
+            logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_array))  
+    
+        self.number_of_synapses = self.numpyself.target_index.shape[0]      
         return
     
     def _generate_random_n2one_local_connections_(self):
@@ -280,22 +301,49 @@ class SynapticLayer(object):
         n_source_cells = source_coord.shape[0]
         n_target_cells = target_coord.shape[0]
         
+        # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
+        local_target_cells, = numpy.where(self.target_layer.is_local_node)
+        
         lambda_val = 1./self.connectivity_parameters['average_dendritic_length']
-                
-        distance = scipy.spatial.distance.cdist(source_coord, target_coord, 'euclidean')
         
-        # Generate the probability of connection for each pair of source/target neurons following an exponential distribution with average_dendritic_length
-        probability = lambda_val * numpy.exp(-lambda_val*distance)
-        # For each target neuron normalize the probability and multiply by the average number of source cells
-        norm_probability = probability / numpy.sum(probability,axis=0) * self.connectivity_parameters['average_number_of_source_cells']
+        # Number of target cells in each memory block
+        target_layers_in_block = self.memory_block / self.source_layer.number_of_neurons
         
-        # Generate random numbers according to uniform distribution and compare with the probability of each connection
-        rand_nums = self.random_generator.uniform(0,1,probability.shape)
+        # Distribute the local target cells in the number of blocks
+        local_target_indexes = range(0,len(local_target_cells), target_layers_in_block)
         
-        indexes = numpy.where(rand_nums<norm_probability)
+        self.source_index = numpy.array([])
+        self.target_index = numpy.array([])
         
-        self.source_index = indexes[0]
-        self.target_index = indexes[1]
+        for i,_ in enumerate(local_target_indexes):
+            if i==(len(local_target_indexes)-1):
+                target_cells = local_target_cells[local_target_indexes[i]:]
+            else:
+                target_cells = local_target_cells[local_target_indexes[i]:local_target_indexes[i+1]]  
+        
+            distance = scipy.spatial.distance.cdist(source_coord, target_coord[target_cells], 'euclidean')
+            
+            # Generate the probability of connection for each pair of source/target neurons following an exponential distribution with average_dendritic_length
+            probability = lambda_val * numpy.exp(-lambda_val*distance)
+            # For each target neuron normalize the probability and multiply by the average number of source cells
+            norm_probability = probability / numpy.sum(probability,axis=0) * self.connectivity_parameters['average_number_of_source_cells']
+            
+            # Generate random numbers according to uniform distribution and compare with the probability of each connection
+            rand_nums = self.random_generator.uniform(0,1,probability.shape)
+     
+            # Autoconnections are not allowed
+            if self.source_layer == self.target_layer:
+                for index in range(len(target_cells)):
+                    rand_numbers[index,index] = 1.0
+     
+            (source_array,target_array) = numpy.where(rand_nums<norm_probability)
+            self.source_index = numpy.append(self.source_index,source_array)
+            self.target_index = numpy.append(self.target_index, target_cells[target_array])
+            
+            logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_array))
+            
+            
+            
         self.number_of_synapses = self.target_index.shape[0]
         return
      
@@ -313,6 +361,8 @@ class SynapticLayer(object):
             logger.error('Non-specified intermediate_to_target synaptic layer. It is required in glomeruli-type connectivity creation.')
             raise Exception('Non-DefinedProperty')
         
+        
+        # It is assumed that every neuron layer stores the coordinates of all the neurons (not only the local ones).
         interm_coord = self.intermediate_layer.get_absolute_coordinates()
         source_coord = self.source_layer.get_absolute_coordinates()
         
@@ -335,7 +385,7 @@ class SynapticLayer(object):
         self.target_index = []
         
         # For each target neuron normalize the probability and multiply by the average number of source cells
-        for glomerulus_index in range(n_interm_cells):
+        for glomerulus_index in range(local_interm_cells):
             norm_probability[:,glomerulus_index] = probability[:,glomerulus_index] / numpy.sum(probability[:,glomerulus_index]) * self.connectivity_parameters['average_number_of_source_cells_per_glomerulus']
             
             connected_goc_indexes, = numpy.where(rand_nums[:,glomerulus_index]<norm_probability[:,glomerulus_index])

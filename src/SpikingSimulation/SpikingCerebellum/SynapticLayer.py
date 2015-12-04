@@ -210,10 +210,11 @@ class SynapticLayer(object):
         comm.Allgatherv([lsource, MPI.UNSIGNED_LONG], [gsource, num_sent, offset, MPI.UNSIGNED_LONG])
         comm.Allgatherv([ltarget, MPI.UNSIGNED_LONG], [gtarget, num_sent, offset, MPI.UNSIGNED_LONG])
          
-        self.number_of_synapses = gsum
-        self.source_index = gsource
-        self.target_index = gtarget
-        self.weights = gweight
+        source_index = gsource
+        target_index = gtarget
+        weights = gweight
+        
+        return (source_index, target_index, weights)
          
         # print 'Process',comm.Get_rank(),':','Collected sources ->',self.source_index,'Collected Targets ->',self.target_index,'Collected Weights ->',self.weights
          

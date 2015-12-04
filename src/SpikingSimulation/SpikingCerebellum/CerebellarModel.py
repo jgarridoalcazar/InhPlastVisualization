@@ -216,19 +216,6 @@ class CerebellarModel(object):
         
         return
     
-    def _build_network(self):
-        '''
-        Generate a model based on the inherited cerebellar model.
-        '''
-        
-        # Create the network elements
-        self._create_network_elements();
-        
-        # Connect those elements each others
-        self._create_synapses();
-        
-        return
-    
     def visualize_network(self):
         '''
         Visualize the network structure by using matplotlib
