@@ -112,7 +112,7 @@ class CerebellarModel(object):
         self.synaptic_layers = []
         
         if (self.config_dict['simulation']['use_mpi']):
-            import SynapticLayer as SynapticLayer
+            import SynapticLayerMPI as SynapticLayer
         else:
             import SynapticLayerNoMPI as SynapticLayer
         

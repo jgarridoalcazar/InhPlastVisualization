@@ -341,10 +341,10 @@ class FrequencySimulation(object):
 #         animation.add_subplot(fig_position=6,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'property':'Vm',
-#                                               'layer':'mflayer',
+#                                               'layer':'grclayer',
 #                                               'cell_index': range(5),
 #                                               'visible_data_only':True,
-#                                               'show_legend':True,
+#                                               'show_legend':False,
 #                                               'y_window_lim':[-0.090, -0.040],
 #                                               'x_length': 1.})
         animation.add_subplot(fig_position=6,axes_type=AxesPatternLine.AxesPatternLine,
