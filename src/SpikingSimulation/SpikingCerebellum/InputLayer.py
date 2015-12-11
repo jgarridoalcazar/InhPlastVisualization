@@ -112,8 +112,17 @@ class InputLayer(object):
                 
         n_dimensions = len(self.size)
         
-        self.relative_positions = self.random_generator.uniform(0,1,(self.number_of_neurons, n_dimensions)) 
+        self.relative_positions = self.random_generator.uniform(0,1,(self.number_of_neurons, n_dimensions)).astype(numpy.float32)
         
+        self._share_positions_() 
+        
+        return
+    
+    def _share_positions_(self):
+        '''
+        This function sends the positions stored in the first process to all the MPI processes. This function will be reimplemented in
+        inheriting classes. 
+        '''
         return
     
     def get_relative_coordinates(self):

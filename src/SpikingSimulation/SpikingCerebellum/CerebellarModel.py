@@ -61,6 +61,11 @@ class CerebellarModel(object):
         '''
         self.neuron_layers = []
         
+        if (self.config_dict['simulation']['use_mpi']):
+            import NeuronLayerMPI as NeuronLayer
+        else:
+            import NeuronLayerNoMPI as NeuronLayer
+        
         # Create cerebellar inputs (mossy fibers and inferior olive)
         mf_options = self.config_dict['mflayer']
         mf_options['random_generator'] = self.get_local_py_rng()

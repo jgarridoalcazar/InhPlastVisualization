@@ -18,7 +18,7 @@ class SynapticLayer(object):
     '''
     
     # Memory block size. It determines how the connectivity matrixes will be splitted. It should be chosen according to the amount of memory in the computer.
-    memory_block =  256*1024*1024 # 256M of elements
+    memory_block =  32*1024*1024 # 32M of elements
     
     def __init__(self,**kwargs):
         '''

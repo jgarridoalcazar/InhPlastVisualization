@@ -2,7 +2,8 @@
 import logging
 import socket
 import os
-from mpi4py import MPI
+
+#from mpi4py import MPI
 
 log_files = []
 
@@ -12,7 +13,7 @@ formatter = None
 
 def InitializeLogger(name):
     
-    mpirank = MPI.COMM_WORLD.Get_rank()
+    # mpirank = MPI.COMM_WORLD.Get_rank()
 
     class ContextFilter(logging.Filter):
         """
@@ -22,7 +23,7 @@ def InitializeLogger(name):
         data in this demo.
         """
         def filter(self, record):
-            record.mpiid = mpirank
+            # record.mpiid = mpirank
             return True
 
 
@@ -37,7 +38,8 @@ def InitializeLogger(name):
         # Create formatter
         global formatter
         if formatter is None:
-            formatter = logging.Formatter('%(asctime)s - P%(process)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
+            #formatter = logging.Formatter('%(asctime)s - P%(process)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
+            formatter = logging.Formatter('%(asctime)s - P%(process)s - %(name)s - %(levelname)s: %(message)s')
     
         # Create stdout handler
         handler = logging.StreamHandler()
