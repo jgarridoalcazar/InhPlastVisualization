@@ -22,25 +22,32 @@
 
 libdir= @libdir@/nest
 
-lib_LTLIBRARIES=      glplasticitymodule.la libglplasticitymodule.la
+# We need to install the module header for static linking on BlueGene
+include_HEADERS = glplasticitymodule.h
 
-glplasticitymodule_la_CXXFLAGS= @AM_CXXFLAGS@
-glplasticitymodule_la_SOURCES=  glplasticitymodule.cpp      glplasticitymodule.h      \
+# All other source files
+source_files=  glplasticitymodule.cpp      glplasticitymodule.h      \
 				  iaf_cond_exp_sto_ip.cpp 	iaf_cond_exp_sto_ip.h \
                   iaf_cond_exp_ip.cpp 	iaf_cond_exp_ip.h \
 				  iaf_cond_exp_ip_sym.cpp 	iaf_cond_exp_ip_sym.h \
 				  iaf_cond_exp_sym.cpp 	iaf_cond_exp_sym.h \
 				  histentry_sym.cpp			histentry_sym.h \
-				  archiving_node_sym.cpp	archiving_node_sym.h \
-                  stdp_sym_connection_hom.cpp	stdp_sym_connection_hom.h \
-                  estdp_connection_hom.cpp	estdp_connection_hom.h \
-                  istdp_connection_hom.cpp	istdp_connection_hom.h
+				  stdp_sym_connection_hom.h \
+				  estdp_connection_hom.h \
+				  istdp_connection_hom.h \
+				  archiving_node_sym.cpp	archiving_node_sym.h
 
+if BUILD_DYNAMIC_USER_MODULES
+  lib_LTLIBRARIES= libglplasticitymodule.la glplasticitymodule.la
+  glplasticitymodule_la_CXXFLAGS= @AM_CXXFLAGS@
+  glplasticitymodule_la_SOURCES=  $(source_files)
+  glplasticitymodule_la_LDFLAGS=  -module
+else
+  lib_LTLIBRARIES= libglplasticitymodule.la
+endif
 
-glplasticitymodule_la_LDFLAGS=  -module
-
-libglplasticitymodule_la_CXXFLAGS= $(glplasticitymodule_la_CXXFLAGS) -DLINKED_MODULE
-libglplasticitymodule_la_SOURCES=  $(glplasticitymodule_la_SOURCES)
+libglplasticitymodule_la_CXXFLAGS= @AM_CXXFLAGS@ -DLINKED_MODULE
+libglplasticitymodule_la_SOURCES=  $(source_files)
 
 MAKEFLAGS= @MAKE_FLAGS@
 

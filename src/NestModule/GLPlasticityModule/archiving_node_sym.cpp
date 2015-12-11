@@ -90,22 +90,6 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
     n_incoming_sym_++;
   }
 
-  void Archiving_Node_Sym::unregister_stdp_connection(nest::double_t t_last_read)
-  {
-    // Mark all entries in the deque we have read as unread
-    // so that we can savely decrement the incoming number of
-    // connections afterwards without loosing entries, which
-    // are still needed. For details see bug #218. MH 08-04-22
-	Archiving_Node::unregister_stdp_connection(t_last_read);
-
-    for ( std::deque<mynest::histentry_sym>::iterator runner = history_sym_.begin();
-	  runner != history_sym_.end() && runner->t_ <= t_last_read;
-	  ++runner)
-      (runner->access_counter_)--;
-
-    n_incoming_sym_--;
-  }
-
     void mynest::Archiving_Node_Sym::get_sym_K_value(nest::double_t t, nest::double_t & central, nest::double_t & external)
     {
     	central = external = 0.0;

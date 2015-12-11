@@ -41,6 +41,21 @@ AC_ARG_WITH(nest,[  --with-nest=script	nest-config script including path],
   fi
 ])
 
+# ---------------------------------------------------------------
+# Do not build dynamic libraries for user models if on BlueGene
+# ---------------------------------------------------------------
+
+configure_bluegene=`$NEST_CONFIG --configure-bluegene`
+AM_CONDITIONAL(BUILD_DYNAMIC_USER_MODULES, test x$configure_bluegene = xno) 
+
+if test x$configure_bluegene = xyes ; then
+  AC_DISABLE_SHARED
+  AC_ENABLE_STATIC
+else
+  AC_DISABLE_STATIC
+  AC_ENABLE_SHARED
+fi
+
 # -------------------------------------------
 # END Handle options
 # -------------------------------------------
@@ -107,6 +122,7 @@ AC_LANG_CPLUSPLUS
 AC_PROG_CXXCPP
 AM_PROG_LIBTOOL
 AC_PATH_PROGS([MAKE],[gmake make],[make])
+
 
 # ---------------------------------------------------------------
 # Configure directories to be built
@@ -176,9 +192,9 @@ echo "NEST compiler flags : $NEST_CPPFLAGS"
 
 # these variables will still contain '${prefix}'
 # we want to have the versions where this is resolved, too:
-eval eval eval  PKGDOCDIR_AS_CONFIGURED=$PKGDOCDIR
-eval eval eval  PKGDATADIR_AS_CONFIGURED=$PKGDATADIR
-
+eval eval eval PKGDOCDIR_AS_CONFIGURED=$PKGDOCDIR
+eval eval eval PKGDATADIR_AS_CONFIGURED=$PKGDATADIR
+eval eval eval LIBDIR_AS_CONFIGURED=$libdir
 echo
 echo "-------------------------------------------------------"
 echo
@@ -186,6 +202,5 @@ echo "You can build and install MyModule now, using"
 echo "  make"
 echo "  make install"
 echo
-echo "MyModule will be installed to:"
-echo -n "  "; eval eval echo "$libdir"
+echo "MyModule will be installed to: $LIBDIR_AS_CONFIGURED"
 echo

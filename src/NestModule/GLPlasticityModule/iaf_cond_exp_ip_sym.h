@@ -118,18 +118,18 @@ namespace mynest
      * happily live without.
      */
 
-    using nest::Node::connect_sender;
+    using nest::Node::handles_test_event;
     using nest::Node::handle;
 
-    nest::port check_connection(nest::Connection&, nest::port);
+    nest::port send_test_event(nest::Node&, nest::rport, nest::synindex, bool);
     
     void handle(nest::SpikeEvent &);
     void handle(nest::CurrentEvent &);
     void handle(nest::DataLoggingRequest &); 
     
-    nest::port connect_sender(nest::SpikeEvent &, nest::port);
-    nest::port connect_sender(nest::CurrentEvent &, nest::port);
-    nest::port connect_sender(nest::DataLoggingRequest &, nest::port);
+    nest::port handles_test_event(nest::SpikeEvent &, nest::rport);
+    nest::port handles_test_event(nest::CurrentEvent &, nest::rport);
+    nest::port handles_test_event(nest::DataLoggingRequest &, nest::rport);
     
     void get_status(DictionaryDatum &) const;
     void set_status(const DictionaryDatum &);
@@ -276,17 +276,15 @@ namespace mynest
   };
 
   
-  inline
-  nest::port iaf_cond_exp_ip_sym::check_connection(nest::Connection& c, nest::port receptor_type)
+  inline nest::port iaf_cond_exp_ip_sym::send_test_event(nest::Node& target, nest::rport receptor_type, nest::synindex, bool)
   {
-	nest::SpikeEvent e;
+    nest::SpikeEvent e;
     e.set_sender(*this);
-    c.check_event(e);
-    return c.get_target()->connect_sender(e, receptor_type);
+    return target.handles_test_event(e, receptor_type);
   }
 
   inline
-  nest::port iaf_cond_exp_ip_sym::connect_sender(nest::SpikeEvent&, nest::port receptor_type)
+  nest::port iaf_cond_exp_ip_sym::handles_test_event(nest::SpikeEvent&, nest::rport receptor_type)
   {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
@@ -294,7 +292,7 @@ namespace mynest
   }
  
   inline
-  nest::port iaf_cond_exp_ip_sym::connect_sender(nest::CurrentEvent&, nest::port receptor_type)
+  nest::port iaf_cond_exp_ip_sym::handles_test_event(nest::CurrentEvent&, nest::rport receptor_type)
   {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
@@ -302,8 +300,8 @@ namespace mynest
   }
 
   inline
-  nest::port iaf_cond_exp_ip_sym::connect_sender(nest::DataLoggingRequest& dlr,
-		  nest::port receptor_type)
+  nest::port iaf_cond_exp_ip_sym::handles_test_event(nest::DataLoggingRequest& dlr,
+		  nest::rport receptor_type)
   {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
