@@ -2,8 +2,6 @@ import numpy
 import bisect
 import AxesPlot
 import logging
-from mpi4py import MPI
-from numpy import source
 
 logger = logging.getLogger('Simulation')
 
@@ -84,9 +82,7 @@ class AxesReceptiveField(AxesPlot.AxesPlot):
             
         # Time of the last update
         self.data_update = 0
-        
-                
-                
+                                        
     def initialize(self):
         '''
         Perform all the required operations needed in order to initialize the axes.
@@ -189,6 +185,8 @@ class AxesReceptiveField(AxesPlot.AxesPlot):
         
         self.data_update = simulation_time
         
+        from mpi4py import MPI
+
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()

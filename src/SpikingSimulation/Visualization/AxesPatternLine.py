@@ -3,7 +3,6 @@ import bisect
 import AxesPlot
 import logging
 import math
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
@@ -210,6 +209,8 @@ class AxesPatternLine(AxesPlot.AxesPlot):
         
         self.data_update = simulation_time
         
+        from mpi4py import MPI
+
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()

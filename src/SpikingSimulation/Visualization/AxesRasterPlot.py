@@ -2,7 +2,6 @@ import numpy
 import bisect
 import AxesPlot
 import logging
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
@@ -207,6 +206,8 @@ class AxesRasterPlot(AxesPlot.AxesPlot):
                                                                init_time = load_data_init, end_time = simulation_time)
         
         self.data_update = simulation_time
+
+        from mpi4py import MPI
         
         comm = MPI.COMM_WORLD
         

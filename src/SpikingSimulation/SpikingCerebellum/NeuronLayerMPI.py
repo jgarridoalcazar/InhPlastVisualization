@@ -38,7 +38,7 @@ class NeuronLayer(NeuronLayerNoMPI.NeuronLayer):
         # Broadcast the position array
         comm.Bcast([positions_array, MPI.FLOAT], root=0)
             
-        print 'Process', rank,':','Broadcasting position array:',positions_array
+        #print 'Process', rank,':','Broadcasting position array:',positions_array
             
         self.relative_positions = numpy.reshape(positions_array, (self.number_of_neurons, len(self.size)), order='C')
         

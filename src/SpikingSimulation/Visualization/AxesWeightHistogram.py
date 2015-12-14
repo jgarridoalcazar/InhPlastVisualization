@@ -1,7 +1,6 @@
 import numpy
 import AxesPlot
 import logging
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
@@ -130,6 +129,8 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         
         # Load data from the data provider
         gtime,_,gvalue = self.data_provider.get_synaptic_weights(**self.param)
+        
+        from mpi4py import MPI
         
         comm = MPI.COMM_WORLD
         

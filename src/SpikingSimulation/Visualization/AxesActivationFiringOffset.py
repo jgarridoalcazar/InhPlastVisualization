@@ -2,7 +2,6 @@ import numpy
 import bisect
 import AxesPlot
 import logging
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
@@ -158,6 +157,8 @@ class AxesActivationFiringOffset(AxesPlot.AxesPlot):
         
         self.data_update = simulation_time
         
+        from mpi4py import MPI
+        
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()
@@ -187,6 +188,4 @@ class AxesActivationFiringOffset(AxesPlot.AxesPlot):
             self.axesLines[0].set_xdata(new_time_data)
             self.axesLines[0].set_ydata(new_signal_data)
                 
-                
-    
         return self.animated_artists

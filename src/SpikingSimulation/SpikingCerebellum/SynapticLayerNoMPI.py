@@ -218,8 +218,8 @@ class SynapticLayer(object):
         self.number_of_synapses = len(local_target_cells) * self.connectivity_parameters['number_of_source_cells']
          
         # Generate source cell indexes of the connections
-        self.source_index = numpy.concatenate([range(self.connectivity_parameters['number_of_source_cells']*index,self.connectivity_parameters['number_of_source_cells']*(index+1)) for index in local_target_cells])
-        self.target_index = numpy.repeat(local_target_cells,self.connectivity_parameters['number_of_source_cells']).tolist()
+        self.source_index = numpy.concatenate([range(self.connectivity_parameters['number_of_source_cells']*index,self.connectivity_parameters['number_of_source_cells']*(index+1)) for index in local_target_cells]).astype(numpy.uint32)
+        self.target_index = numpy.repeat(local_target_cells,self.connectivity_parameters['number_of_source_cells']).tolist().astype(numpy.uint32)
         return
      
     def _generate_random_n2one_connections_(self):
@@ -239,8 +239,8 @@ class SynapticLayer(object):
         # For each target cell generate a permutation of the source indexes
         self.source_index = numpy.array([None]*self.number_of_synapses,dtype = numpy.uint32)
         for i in range(len(local_target_cells)):
-            self.source_index[i*num_source_cells:(i+1)*num_source_cells] = self.random_generator.permutation(numpy.arange(self.source_layer.number_of_neurons)).tolist()[0:num_source_cells]
-        self.target_index = numpy.repeat(local_target_cells,num_source_cells).tolist()
+            self.source_index[i*num_source_cells:(i+1)*num_source_cells] = self.random_generator.permutation(numpy.arange(self.source_layer.number_of_neurons)).tolist()[0:num_source_cells].astype(numpy.uint32)
+        self.target_index = numpy.repeat(local_target_cells,num_source_cells).tolist().astype(numpy.uint32)
          
         return
      
@@ -281,8 +281,8 @@ class SynapticLayer(object):
                     rand_numbers[index,index] = 1.0
      
             (source_array,target_array) = numpy.where(rand_numbers<probability)
-            self.source_index = numpy.append(self.source_index,source_array)
-            self.target_index = numpy.append(self.target_index, target_cells[target_array])
+            self.source_index = numpy.append(self.source_index,source_array.astype(numpy.uint32))
+            self.target_index = numpy.append(self.target_index, target_cells[target_array].astype(numpy.uint32))
             
             logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_array))  
     
@@ -337,8 +337,8 @@ class SynapticLayer(object):
                     rand_nums[index,index] = 1.0
      
             (source_array,target_array) = numpy.where(rand_nums<norm_probability)
-            self.source_index = numpy.append(self.source_index,source_array)
-            self.target_index = numpy.append(self.target_index, target_cells[target_array])
+            self.source_index = numpy.append(self.source_index,source_array.astype(numpy.uint32))
+            self.target_index = numpy.append(self.target_index, target_cells[target_array].astype(numpy.uint32))
             
             logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_array))
         

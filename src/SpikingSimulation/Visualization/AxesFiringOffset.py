@@ -2,7 +2,6 @@ import numpy
 import bisect
 import AxesPlot
 import logging
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
@@ -78,7 +77,6 @@ class AxesFiringOffset(AxesPlot.AxesPlot):
         else:
             self.x_length = None
             
-        
         # Time of the last update
         self.data_update = 0
         
@@ -186,7 +184,9 @@ class AxesFiringOffset(AxesPlot.AxesPlot):
                                                                init_time = load_data_init, end_time = simulation_time)
         
         self.data_update = simulation_time
-        
+
+        from mpi4py import MPI
+
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()

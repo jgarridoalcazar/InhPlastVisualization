@@ -8,7 +8,6 @@ import time
 import logging
 import scipy.spatial.distance
 import SynapticLayerNoMPI
-from numpy import rank
 
 logger = logging.getLogger('Simulation')
 
@@ -57,42 +56,42 @@ class SynapticLayer(SynapticLayerNoMPI.SynapticLayer):
         
         comm = MPI.COMM_WORLD
         
-        comm.Barrier()
-        
         nprocs = comm.Get_size()
         rank = comm.Get_rank()
         
         # Send the number of elements
         lsyn = numpy.array([self.intermediate_to_target_synaptic_layer.number_of_synapses], dtype=numpy.uint64)
         num_synapses = numpy.empty(comm.Get_size(), dtype=numpy.uint64)
-        comm.AllGather([lsyn, MPI.UNSIGNED_LONG], [num_synapses, MPI.UNSIGNED_LONG], root=0) 
+        comm.Allgather([lsyn, MPI.UNSIGNED_LONG], [num_synapses, MPI.UNSIGNED_LONG]) 
         
-        print 'Process', rank,':','Sent number:',lsyn,'Collected numbers ->',num_synapses
+        #print 'Process', rank,':','Sent number:',lsyn,'Collected numbers ->',num_synapses
         
         # Total number of synapses to be gathered
         intermediate_to_target_synaptic_count = num_synapses.sum()
-        offset = numpy.roll(numpy.cumsum(num_synapses),1)
+        offset = numpy.concatenate(([0],numpy.cumsum(num_synapses)[:-1])).astype(numpy.uint64)
         
-        intermediate_to_target_source_indexes = numpy.empty(intermediate_to_target_synaptic_count, dtype=numpy.uint32)
-        intermediate_to_target_target_indexes = numpy.empty(intermediate_to_target_synaptic_count, dtype=numpy.uint32)
+        intermediate_to_target_source_index = numpy.empty(intermediate_to_target_synaptic_count, dtype=numpy.uint32)
+        intermediate_to_target_target_index = numpy.empty(intermediate_to_target_synaptic_count, dtype=numpy.uint32)
+        
+        #print 'Process', rank,':','Total elements:',intermediate_to_target_synaptic_count,'NumElements to Transmit:',num_synapses, 'Offset: ', offset, 'Size:', intermediate_to_target_source_index.shape, 'Size2:', intermediate_to_target_target_index.shape, 'Type:',self.intermediate_to_target_synaptic_layer.source_index.dtype 
         
         # Gather the time and neuron_id arrays
-        comm.Allgatherv(self.intermediate_to_target_synaptic_layer.source_indexes, [intermediate_to_target_source_indexes, num_synapses, offset, MPI.UNSIGNED_INT])
+        comm.Allgatherv(self.intermediate_to_target_synaptic_layer.source_index, [intermediate_to_target_source_index, num_synapses, offset, MPI.UNSIGNED])
         
-        print 'Process', rank,':','Sent number:',self.intermediate_to_target_synaptic_layer.source_indexes,'Collected numbers ->',intermediate_to_target_source_indexes
+        #print 'Process', rank,':','Sent number:',self.intermediate_to_target_synaptic_layer.source_index,'Collected numbers ->',intermediate_to_target_source_index
         
-        comm.Allgatherv(self.intermediate_to_target_synaptic_layer.target_indexes, [intermediate_to_target_target_indexes, num_synapses, offset, MPI.UNSIGNED_INT])
+        comm.Allgatherv(self.intermediate_to_target_synaptic_layer.target_index, [intermediate_to_target_target_index, num_synapses, offset, MPI.UNSIGNED])
         
-        print 'Process', rank,':','Sent number:',self.intermediate_to_target_synaptic_layer.target_indexes,'Collected numbers ->',intermediate_to_target_target_indexes
+        #print 'Process', rank,':','Sent number:',self.intermediate_to_target_synaptic_layer.target_index,'Collected numbers ->',intermediate_to_target_target_index
         
         # intermediate_to_target_source_indexes -> Array with all the source indexes in the connections Glomeruli -> GrC
         # intermediate_to_target_target_indexes -> Array with all the target indexes in the connections Glomeruli -> GrC
         # intermediate_to_target_synaptic_count -> Number of synapses in the connections Glomeruli -> GrC
         
         # Sort the intermediate_to_target_synaptic_layer (target_indexes) according to the source layer
-        target_order = intermediate_to_target_source_indexes.argsort()
-        unique_source,split_indices = numpy.unique(intermediate_to_target_source_indexes[target_order], return_index=True)
-        target_ordered = numpy.split(intermediate_to_target_target_indexes[target_order], split_indices[1:])
+        target_order = intermediate_to_target_source_index.argsort()
+        unique_source,split_indices = numpy.unique(intermediate_to_target_source_index[target_order], return_index=True)
+        target_ordered = numpy.split(intermediate_to_target_target_index[target_order], split_indices[1:])
         
         target_all_ordered = []
         source_index = 0
@@ -108,9 +107,9 @@ class SynapticLayer(SynapticLayerNoMPI.SynapticLayer):
                 
         
         # Sort the intermediate_to_target_synaptic_layer (source_indexes) according to the target layer
-        source_order = intermediate_to_target_target_indexes.argsort()
-        unique_target,split_indices = numpy.unique(intermediate_to_target_target_indexes[source_order], return_index=True)
-        source_ordered = numpy.split(intermediate_to_target_source_indexes[source_order], split_indices[1:])
+        source_order = intermediate_to_target_target_index.argsort()
+        unique_target,split_indices = numpy.unique(intermediate_to_target_target_index[source_order], return_index=True)
+        source_ordered = numpy.split(intermediate_to_target_source_index[source_order], split_indices[1:])
         
         source_all_ordered = []
         target_index = 0
@@ -202,27 +201,27 @@ class SynapticLayer(SynapticLayerNoMPI.SynapticLayer):
         if rank==0:    
             ncon = numpy.array([len(glomerulus_connection_index)], dtype=numpy.uint64)
         else:
-            ncon = numpy.empty(1, dtyp = numpy.uint64)
+            ncon = numpy.empty(1, dtype = numpy.uint64)
         
         comm.Bcast([ncon, MPI.UNSIGNED_LONG], root=0) 
             
-        print 'Process', rank,':','Broadcasting number:',ncon
+        #print 'Process', rank,':','Broadcasting number:',ncon
         
         if rank==0:
-            glomerulus_connection_index = numpy.array(glomerulus_connection_index)
-            goc_connection_index = numpy.array(goc_connection_index)
+            glomerulus_connection_index = numpy.array(glomerulus_connection_index, dtype=numpy.uint32)
+            goc_connection_index = numpy.array(goc_connection_index, dtype=numpy.uint32)
         else:
             glomerulus_connection_index = numpy.empty(ncon, dtype=numpy.uint32)
-            goc_connection_index = numpy.array(ncon, dtype=numpy.uint32)
+            goc_connection_index = numpy.empty(ncon, dtype=numpy.uint32)
         
         # Broadcast the glomerulus and goc indexes
         comm.Bcast([glomerulus_connection_index, MPI.UNSIGNED_INT], root=0)
             
-        print 'Process', rank,':','Broadcasting list of glomerulus indexes:',glomerulus_connection_index
-            
+        #print 'Process', rank,':','Broadcasting list of glomerulus indexes:',glomerulus_connection_index
+        
         comm.Bcast([goc_connection_index, MPI.UNSIGNED_INT], root=0)
         
-        print 'Process', rank,':','Broadcasting list of goc indexes:',goc_connection_index
+        #print 'Process', rank,':','Broadcasting list of goc indexes:',goc_connection_index
             
         # Generate the GoC-GrC connections from the GoC-Glomerulus connections
         self.source_index = []

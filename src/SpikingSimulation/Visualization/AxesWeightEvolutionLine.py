@@ -1,7 +1,6 @@
 import numpy
 import AxesPlot
 import logging
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
@@ -123,47 +122,51 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         
         # self.connections = [[source,target] for source in source_cells for target in target_cells]
         
-        # Set axes lines and legends
-        data_labels = [str(syn[0]) + ' - ' + str(syn[1]) for syn in self.connections]
-        number_of_lines = len(data_labels)
-        
-        self.axesLines = []
-        animated_artists = []
-        
-        for _ in range(number_of_lines):
-            if (self.figure.blit):
-                newLine, = self.axes.plot([], [], animated=True)
-                animated_artists.append(newLine)
-            else:
-                newLine, = self.axes.plot([], [])
-            self.axesLines.append(newLine)
-        
-        if (self.show_legend):
-            self.axes.legend(self.axesLines,data_labels,loc='lower left')
-            
         synaptic_layer = self.data_provider.layer_map[self.layer]
         
         if synaptic_layer.learning_rule_type:
             max_weight = synaptic_layer.learning_rule_parameters['max_weight']
         else:
             max_weight = 1.
-        
-        if (self.y_window_lim is not None):
-            self.axes.set_ylim(self.y_window_lim)
-        else:
-            self.axes.set_ylim([0,max_weight*1.10])
             
         self.visual_time_window = self.getVisualTimeWindow(0)
         self.time_window = [0,0]
-        
-        self.axes.set_xlim(self.time_window)
-        
-        if (self.figure.blit and not self.x_length):
-            self.axes.xaxis.set_animated(True)
-            animated_artists.append(self.axes.xaxis)
-        
-        self.animated_artists = tuple(animated_artists)
+
+        if (self.connections is not None):
+            # Set axes lines and legends
+            data_labels = [str(syn[0]) + ' - ' + str(syn[1]) for syn in self.connections]
+            number_of_lines = len(data_labels)
             
+            self.axesLines = []
+            animated_artists = []
+            
+            for _ in range(number_of_lines):
+                if (self.figure.blit):
+                    newLine, = self.axes.plot([], [], animated=True)
+                    animated_artists.append(newLine)
+                else:
+                    newLine, = self.axes.plot([], [])
+                self.axesLines.append(newLine)
+            
+            if (self.show_legend):
+                self.axes.legend(self.axesLines,data_labels,loc='lower left')
+                
+        
+            if (self.y_window_lim is not None):
+                self.axes.set_ylim(self.y_window_lim)
+            else:
+                self.axes.set_ylim([0,max_weight*1.10])
+                
+            self.axes.set_xlim(self.time_window)
+            
+            if (self.figure.blit and not self.x_length):
+                self.axes.xaxis.set_animated(True)
+                animated_artists.append(self.axes.xaxis)
+            
+            self.animated_artists = tuple(animated_artists)
+        else:
+            self.animated_artists = tuple([])
+                
         super(AxesWeightEvolutionLine, self).initialize()
             
         return
@@ -221,6 +224,8 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         
         self.data_update = simulation_time
         
+        from mpi4py import MPI
+
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()

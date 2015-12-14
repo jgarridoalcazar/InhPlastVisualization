@@ -2,7 +2,6 @@ import numpy
 import bisect
 import AxesPlot
 import logging
-from mpi4py import MPI
 
 logger = logging.getLogger('Simulation')
 
@@ -164,6 +163,8 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         # Load data from the data provider
         _,gconnections,gvalue = self.data_provider.get_synaptic_weights(**self.param)
         
+        from mpi4py import MPI
+
         comm = MPI.COMM_WORLD
         
         process_id = comm.Get_rank()

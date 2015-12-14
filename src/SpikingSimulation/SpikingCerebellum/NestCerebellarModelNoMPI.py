@@ -267,24 +267,22 @@ class NestCerebellarModel(CerebellarModel):
                         pass
 
         # Synchronize all the processes to avoid start writting before deleting the folder
-        # comm = MPI.COMM_WORLD
-        
-        # comm.Barrier()   
+        self._synchronize_processes()   
             
         nest.SetKernelStatus(nest_options_dict)
         
         # Create the random number generators for each virtual process
         self.simulation_options['py_seeds'] = range(self.simulation_options['seed'],self.simulation_options['seed'] + self.get_number_of_virtual_processes())
-        self.simulation_options['py_rngs'] = [numpy.random.RandomState(s) for s in self.simulation_options['py_seeds']]
+        self.simulation_options['py_rng'] = [numpy.random.RandomState(s) for s in self.simulation_options['py_seeds']]
         # Create a random number generator to be used for serial operations (such as pattern generation) -> The same for all the virtual processes
         self.simulation_options['py_serial_rng'] = numpy.random.RandomState(self.simulation_options['seed'] + self.get_number_of_virtual_processes())
         
         # Set random seeds
         nest_options_dict = dict()
-        nest_options_dict['grng_seed'] = self.simulation_options['seed'] + self.get_number_of_virtual_processes()
+        nest_options_dict['grng_seed'] = self.simulation_options['seed'] + self.get_number_of_virtual_processes() + 1
         logger.debug('Setting Global NEST Seed: %s', nest_options_dict['grng_seed'])
-        nest_options_dict['rng_seeds'] = range(self.simulation_options['seed'] + self.get_number_of_virtual_processes() + 1,
-                                               self.simulation_options['seed'] + 2*self.get_number_of_virtual_processes() + 1)
+        nest_options_dict['rng_seeds'] = range(self.simulation_options['seed'] + self.get_number_of_virtual_processes() + 2,
+                                               self.simulation_options['seed'] + 2*self.get_number_of_virtual_processes() + 2)
         logger.debug('Setting Per-Process NEST Seeds: %s', nest_options_dict['rng_seeds'])
         
         nest.SetKernelStatus(nest_options_dict)
@@ -310,6 +308,10 @@ class NestCerebellarModel(CerebellarModel):
             self.init_time = time.time()
         
         return
+    
+    def _synchronize_processes(self):
+        
+        pass
     
     def _initialize_weight_normalization(self):
         # Check if weight_normalization_step is above 0
@@ -443,7 +445,7 @@ class NestCerebellarModel(CerebellarModel):
             
             # Create the layer nodes and store them in the NuronLayer object
             layer.nest_layer = numpy.array(nest.Create(model=layer.nest_model_name, params=nest_param_dict, n=layer.number_of_neurons))
-            layer.is_local_node = numpy.array([True]*layer.number_of_neurons)
+            layer.is_local_node = numpy.array(nest.GetStatus(layer.nest_layer.tolist(),'local'))
             
             # Check whether we have to record the activity. If that is the case, create the spike detector
             if layer.register_activity:
@@ -1094,7 +1096,7 @@ class NestCerebellarModel(CerebellarModel):
         '''
         Return the random number generator of this proccess
         '''
-        return self.simulation_options['py_rngs'][self.get_my_process_id()]
+        return self.simulation_options['py_rng'][self.get_my_process_id()]
     
     def get_global_py_rng(self):
         '''
