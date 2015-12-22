@@ -94,6 +94,7 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         It sets the title, axes titles, axes limits, legend and creates the lines.
         The DataProvider object must be initialized before calling this function.
         '''
+        
         self.figure_title = 'Weight Evolution - ' + self.layer
         self.figure_x_label = 'Time (s)'
         self.figure_y_label = 'Weight (S)'
@@ -120,6 +121,8 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         # Load data from the data provider
         _,self.connections,_ = self.data_provider.get_synaptic_weights(**self.param)
         
+        #print 'Process',process_id,':','Selected connections: ', self.connections
+        
         # self.connections = [[source,target] for source in source_cells for target in target_cells]
         
         synaptic_layer = self.data_provider.layer_map[self.layer]
@@ -134,6 +137,7 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
 
         if (self.connections is not None):
             # Set axes lines and legends
+            
             data_labels = [str(syn[0]) + ' - ' + str(syn[1]) for syn in self.connections]
             number_of_lines = len(data_labels)
             
@@ -166,6 +170,7 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
             self.animated_artists = tuple(animated_artists)
         else:
             self.animated_artists = tuple([])
+                
                 
         super(AxesWeightEvolutionLine, self).initialize()
             

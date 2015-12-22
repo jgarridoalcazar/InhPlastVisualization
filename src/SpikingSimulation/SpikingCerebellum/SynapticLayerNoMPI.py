@@ -38,6 +38,7 @@ class SynapticLayer(object):
         @param weight_initialization_parameters: Weight initialization parameters as described in the template_weight_parameters dictionary.
         @param learning_rule_type: Learning rule type associated to the connections. Only those rules included in template_rule_parameters are allowed.
         @param learning_rule_parameters: Learning rule parameters as described in the template_rule_parameters dictionary.
+        @param load_from_file: h5py group from which the synaptic layer connections and weights have to be loaded (optional).
         '''
         
         # Specific parameters for each learning rule
@@ -124,6 +125,12 @@ class SynapticLayer(object):
             logger.error('Non-specified synaptic delay')
             raise Exception('Non-DefinedProperty')
         
+        # Read if the synaptic connections have to be loaded from file
+        if ('load_from_file' in kwargs):
+            self.load_from_file = kwargs.pop('load_from_file')
+        else:
+            self.load_from_file = None
+        
         # Read connectivity type and its properties
         if ('connectivity_type' in kwargs):
             self.connectivity_type = kwargs.pop('connectivity_type')
@@ -145,8 +152,11 @@ class SynapticLayer(object):
                 else:
                     self.connectivity_parameters['allow_multiple_connections'] = True
                 
-                # Generate the individual connections
-                self.template_connectivity_parameters[self.connectivity_type][-1]()
+                if (self.load_from_file is None):
+                    # Generate the individual connections
+                    self.template_connectivity_parameters[self.connectivity_type][-1]()
+                else:
+                    self.load_layer(self.load_from_file)
             else:
                 logger.error('Unknown connectivity type: %s', self.connectivity_type)
                 raise Exception('UnknownConnectivityType')                         
@@ -166,7 +176,9 @@ class SynapticLayer(object):
                         logger.error('Non-specified weight initialization parameter: %s',param)
                         raise Exception('Non-DefinedWeightInitializationParameter')
                 # Generate the individual connections
-                self.template_weight_parameters[self.weight_initialization_type][-1]()
+                if (self.load_from_file is None):
+                    # Generate the synaptic weights
+                    self.template_weight_parameters[self.weight_initialization_type][-1]()
             else:
                 logger.error('Unknown weight initialization type: %s', self.weight_initialization_type)
                 raise Exception('UnknownWeightInitializationType')                         
@@ -450,18 +462,20 @@ class SynapticLayer(object):
             
             # Generate the neighbouring glomeruli
             if glomerulus_connection_index:
-                target_cells = numpy.unique(numpy.hstack(target_ordered[glomerulus_connection_index]))
+                target_cells = target_ordered[glomerulus_connection_index]
             else:
                 target_cells = numpy.array([],dtype=numpy.uint32)
-            neighbouring_glomeruli = source_ordered[target_cells]
             
-            for index_glom, glomeruli_array in enumerate(neighbouring_glomeruli):
-                current_glomeruli = numpy.logical_and(glomeruli_array>=glomerulus_indexes_block[0], glomeruli_array<=glomerulus_indexes_block[-1])
-                
-                adjusted_neighbour_indexes = numpy.array(glomeruli_array[current_glomeruli]) - glomerulus_indexes_block[0]
-                
-                probability[goc_connection_index[index_glom],adjusted_neighbour_indexes] = 0.0
+            for index_glom, grc_array in enumerate(target_cells):
+                neighbouring_glomeruli = numpy.unique(numpy.hstack(source_ordered[grc_array]))
             
+                current_glomeruli = numpy.logical_and(neighbouring_glomeruli>=glomerulus_indexes_block[0], neighbouring_glomeruli<=glomerulus_indexes_block[-1])
+                
+                adjusted_neighbour_indexes = numpy.array(neighbouring_glomeruli[current_glomeruli]) - glomerulus_indexes_block[0]
+                
+                goc_index_repeated = numpy.repeat([goc_connection_index[index_glom]],adjusted_neighbour_indexes.shape[0])
+                
+                probability[goc_index_repeated,adjusted_neighbour_indexes] = 0.0            
             
             logger.debug('Calculating  glomerulus connections in layer %s and block %s. %s glomeruli', self.__name__, i+1, len(glomerulus_indexes_block))
             # For each target neuron normalize the probability and multiply by the average number of source cells
@@ -499,12 +513,12 @@ class SynapticLayer(object):
         
         # Generate the target GrCs of the selected glomeruli
         target_grcs = target_ordered[glomerulus_connection_index]
-        local_target_cells, = numpy.where(self.target_layer.is_local_node)
         for i, target_group in enumerate(target_grcs):
+            
             # Select the target grcs which are local to the current processor
-            selected_local_grcs, = numpy.where(numpy.in1d(target_group, local_target_cells)) 
-            self.source_index.extend(numpy.repeat(goc_connection_index[i],len(selected_local_grcs)))
-            self.target_index.extend(selected_local_grcs)
+            selected_target = self.target_layer.is_local_node[target_group] 
+            self.source_index.extend(numpy.repeat(goc_connection_index[i],numpy.count_nonzero(selected_target)))
+            self.target_index.extend(target_group[selected_target])
         
         logger.debug('Generated glomerulus-like connections in layer %s. Local: %s', self.__name__,len(self.source_index))
         
@@ -531,6 +545,54 @@ class SynapticLayer(object):
          
         initial_weight = self.weight_initialization_parameters['initial_weight']
         self.weights = numpy.array([initial_weight] * self.number_of_synapses)
+        return
+    
+    def save_layer(self, root):
+        '''
+        This function stores the connectivity data and the synaptic weights in the hdf5 group passed as an argument.
+        '''
+        import h5py
+        
+        # Store the hdf5 group object for future links
+        self.hdf5_group = root
+        
+        # Define the attributes of the layer
+        root.attrs['name'] = self.__name__
+        root.attrs['source_layer'] = self.source_layer.__name__
+        root.attrs['target_layer'] = self.target_layer.__name__
+        
+        # Store the source and target indexes and the weights of the layer
+        source_dataset = root.create_dataset('source_index', data = self.source_index)
+        target_dataset = root.create_dataset('target_index', data = self.target_index)
+        weight_dataset = root.create_dataset('weight', data = self.weights)
+        
+        return
+    
+    def load_layer(self, root):
+        '''
+        This function loads the connectivity data and the synaptic weights in the hdf5 group passed as an argument.
+        '''
+        import h5py
+        
+        # Store the hdf5 group object for future links
+        self.hdf5_group = root
+        root.associated_object = self
+        
+        # Load the attributes of the layer
+        #self.__name__ = root.attrs['name']
+        
+        # Load the source and target indexes and the weights of the layer
+        target_index = root['target_index'][:]
+        
+        # Select only those synapses targetting local neurons
+        selected_target = self.target_layer.is_local_node[target_index] 
+        self.target_index = target_index[selected_target]
+        self.source_index = root['source_index'][selected_target]
+        self.weights = root['weight'][selected_target]
+        
+        # Set the number of synapses
+        self.number_of_synapses = self.target_index.shape[0]
+        
         return
 
 def _calculate_distance_(source_coord, target_coord):

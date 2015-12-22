@@ -25,6 +25,7 @@ class InputLayer(object):
         @param density_of_neurons: Density of neurons in the volume (optional).
         @param random_generator: The random number generator to use (optional).
         @param soma_size: Size of the soma for this neuron layer (optional). It should be used only for visualization purposes.
+        @param load_from_file: h5py group from which the neuron layer positions have to be loaded (optional).
         '''
         
         # Read name
@@ -90,6 +91,11 @@ class InputLayer(object):
         else:
             self.soma_size = None
             
+        if ('load_from_file' in kwargs):
+            self.load_from_file = kwargs.pop('load_from_file')
+        else:
+            self.load_from_file = None
+            
         # Check whether additional parameters have been used.
         for param in kwargs:
             logger.warning('Unrecognized parameter %s in layer %s',param,self.__name__)
@@ -112,7 +118,10 @@ class InputLayer(object):
                 
         n_dimensions = len(self.size)
         
-        self.relative_positions = self.random_generator.uniform(0,1,(self.number_of_neurons, n_dimensions)).astype(numpy.float32)
+        if (self.load_from_file is None):
+            self.relative_positions = self.random_generator.uniform(0,1,(self.number_of_neurons, n_dimensions)).astype(numpy.float32)
+        else:
+            self.load_layer(self.load_from_file)
         
         self._share_positions_() 
         
@@ -130,4 +139,44 @@ class InputLayer(object):
     
     def get_absolute_coordinates(self):
         return self.relative_positions * self.size
+    
+    def save_layer(self, root):
+        '''
+        This function stores the relative positions of the neurons and other attributes in the hdf5 group passed as an argument.
+        '''
+        import h5py
+        
+        # Store the hdf5 group object for future links
+        self.hdf5_group = root
+        
+        # Define the attributes of the layer
+        root.attrs['name'] = self.__name__
+        root.attrs['size'] = self.size
+        
+        # Define the relative positions of the layer
+        positions_dataset = root.create_dataset('relative_positions', data = self.relative_positions)
+        
+        return
+    
+    def load_layer(self, root):
+        '''
+        This function load the relative positions of the neurons and other attributes in the hdf5 group passed as an argument.
+        '''
+        import h5py
+        
+        # Store the hdf5 group object for future links
+        self.hdf5_group = root
+        root.associated_object = self
+        
+        # Load the attributes of the layer
+        self.__name__ = root.attrs['name']
+        self.size = root.attrs['size']
+        
+        # Load the relative positions of the layer
+        self.relative_positions = root['relative_positions'][:,:]
+        
+        # Set the number of neurons
+        self.number_of_neurons = self.relative_positions.shape[0]
+        
+        return
                 

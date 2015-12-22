@@ -44,3 +44,19 @@ class NeuronLayer(NeuronLayerNoMPI.NeuronLayer):
         
         return
     
+    def save_layer(self, root):
+        '''
+        This function stores the relative positions of the neurons and other attributes in the hdf5 group passed as an argument.
+        '''
+        
+        from mpi4py import MPI
+        
+        comm = MPI.COMM_WORLD
+        
+        rank = comm.Get_rank()
+        
+        if rank==0:
+            super(NeuronLayer, self).save_layer(root)
+        
+        return
+    

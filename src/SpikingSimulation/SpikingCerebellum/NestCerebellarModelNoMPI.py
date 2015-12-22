@@ -322,14 +322,9 @@ class NestCerebellarModel(CerebellarModel):
             if layer.weight_normalization:
                 layer.weight_sum = dict()
                 
-                layer.weight_sum['con'] = nest.GetConnections(source=layer.source_layer.nest_layer,target=layer.target_layer.nest_layer)
-                layer.weight_sum['targets'] = numpy.array(nest.GetStatus(layer.weight_sum['con'],'target'))
-                layer.weight_sum['sum'] = dict()
-                target_set = set(layer.weight_sum['targets'])
-                for elem in target_set:
-                    layer.weight_sum['sum'][elem] = 0.0
-        
-        
+                layer.weight_sum['con'] = nest.GetConnections(synapse_model=layer.__name__)
+                layer.weight_sum['targets'] = (numpy.array(nest.GetStatus(layer.weight_sum['con'],'target')) - layer.target_layer.MinIndex).astype(numpy.uint32)
+                
         self.next_normalization_step = 0
                 
         # Normalize weights
@@ -359,34 +354,43 @@ class NestCerebellarModel(CerebellarModel):
                 # logger.debug('Source layer: %s. Target layer: %s',layer.source_layer.nest_layer,layer.target_layer.nest_layer)
                 # Store the source and target cells to know the order to be stored
                 # We assume GetConnections return only those connections whose target node is local to the process
-                layer.weight_record['con'] = nest.GetConnections(source=layer.source_layer.nest_layer.tolist(),target=layer.target_layer.nest_layer.tolist())
-                global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['source','target']))
+                # We use the layer name to search those connections in the layer. Otherwise it take ours to search by the source/target neurons.
+                #layer.weight_record['con'] = nest.GetConnections(source=layer.source_layer.nest_layer.tolist(),target=layer.target_layer.nest_layer.tolist())
+                layer.weight_record['con'] = nest.GetConnections(synapse_model=layer.__name__)
+                global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['source','target','weight']))
                 min_source = layer.source_layer.MinIndex
                 min_target = layer.target_layer.MinIndex
-                layer.weight_record['connections'] = numpy.array([(val[0]-min_source,val[1]-min_target) for val in global_connections])
-                
-                # logger.debug('Connections created in the weight record of layer %s: %s', layer.__name__, layer.weight_record['connections'])
-                
-                # Record the initial weights
-                scaled_weights = [weight*1.e-9 for weight in nest.GetStatus(layer.weight_record['con'],'weight')]
-                layer.weight_record['weights'] = numpy.array([scaled_weights])
-                layer.weight_record['time'] = numpy.array([0])
-                
+                layer.weight_record['connections'] = global_connections[:,:2].astype(numpy.uint32)
+                layer.weight_record['connections'][:,0] = layer.weight_record['connections'][:,0]-min_source
+                layer.weight_record['connections'][:,1] = layer.weight_record['connections'][:,1]-min_target
+                layer.weight_record['weights'] = numpy.array([global_connections[:,2] * 1.e-9],dtype=numpy.float32)
+                layer.weight_record['time'] = numpy.array([0],dtype=numpy.float32)
+                                
                 # logger.debug('Initial weights in the weight record of layer %s: %s', layer.__name__, layer.weight_record['weights'])
                 
                 # Open the file when the weights are going to be stored
                 if self.simulation_options['record_to_file']:
-                    file_name = data_path + '/' + layer.__name__ + '_weights_' + str(self.get_my_process_id()) + '.dat'
-                    layer.weight_record['f_handle'] =  open(file_name,'w')
+                    file_name = data_path + '/' + layer.__name__ + '_weights_' + str(self.get_my_process_id()) + '.h5'
+                    
+                    import h5py
+                    
+                    layer.weight_record['f_handle'] =  h5py.File(file_name,'w')
                     
                     # Write the connections in the first line
-                    numpy.savetxt(layer.weight_record['f_handle'], layer.weight_record['connections'], fmt='%1.1u', delimiter=' ', newline=' ')
-                    layer.weight_record['f_handle'].write('\n')
+                    layer.weight_record['connections_dset'] = layer.weight_record['f_handle'].create_dataset('connections', data=layer.weight_record['connections']) 
+                    #numpy.savetxt(layer.weight_record['f_handle'], layer.weight_record['connections'], fmt='%1.1u', delimiter=' ', newline=' ')
+                    #layer.weight_record['f_handle'].write('\n')
+                    
                     # Write the initial weights and time
-                    numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
-                    layer.weight_record['f_handle'].write('\n')
+                    weight_row = numpy.array([numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:])])
+                    layer.weight_record['weights_dset'] = layer.weight_record['f_handle'].create_dataset('weights', data=weight_row, maxshape=(None,weight_row.shape[1]))
+                    #numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
+                    #layer.weight_record['f_handle'].write('\n')
+                    
+                    
                     # Store the IO buffer
                     layer.weight_record['f_handle'].flush()
+                    #layer.weight_record['f_handle'].flush()
                     
                 
                 # print 'Process',self.get_my_process_id(),':','Weight record:',layer.weight_record
@@ -404,13 +408,16 @@ class NestCerebellarModel(CerebellarModel):
         '''
         
         # Create the network elements
-        super(NestCerebellarModel, self)._create_network_elements();
+        super(NestCerebellarModel, self)._create_neurons();
         
         # Create nodes in the network
         self._create_nodes()
         
         # Create the synapses
         super(NestCerebellarModel, self)._create_synapses();
+        
+        # Save the network structure to the file
+        self.save_network()
         
         # Create the connections in the network
         self._create_connections()
@@ -559,7 +566,7 @@ class NestCerebellarModel(CerebellarModel):
                 def_delay = nest.GetDefaults(layer.__name__,'delay')
                 nest.OneToOneConnect(pre=source_nest_nodes, post=target_nest_nodes, params=layer.weights*1.e9, delay=def_delay, model=layer.__name__)
             
-            logger.debug('Nest Process: %s. Connections created in layer %s: %s', nest.Rank(), layer.__name__,len(nest.GetConnections(source=layer.source_layer.nest_layer.tolist(),target=layer.target_layer.nest_layer.tolist())))
+            logger.debug('Nest Process: %s. Connections created in layer %s: %s', nest.Rank(), layer.__name__,source_nest_nodes.shape[0])
         return
     
     def _create_connection_pattern_dict(self, layer):
@@ -676,17 +683,23 @@ class NestCerebellarModel(CerebellarModel):
         for layer in self.synaptic_layers:
             if layer.weight_recording:
                 # Record the weights
-                scaled_weights = [weight*1.e-9 for weight in nest.GetStatus(layer.weight_record['con'],'weight')]
+                scaled_weights = (numpy.array(nest.GetStatus(layer.weight_record['con'],'weight'))*1.e-9).astype(numpy.float32)
                 layer.weight_record['weights'] = numpy.append(layer.weight_record['weights'],[scaled_weights], axis=0)
-                layer.weight_record['time'] = numpy.append(layer.weight_record['time'],self.next_weight_step * self.simulation_options['weight_recording_step'])
+                layer.weight_record['time'] = numpy.append(layer.weight_record['time'],numpy.float32(self.next_weight_step * self.simulation_options['weight_recording_step']))
                 
                 # Open the file when the weights are going to be stored
                 if self.simulation_options['record_to_file']:
-                    # Write the initial weights and time
-                    numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
-                    layer.weight_record['f_handle'].write('\n')
+                    weight_row = numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:])
+                    # Resize the dataset
+                    layer.weight_record['weights_dset'].resize(layer.weight_record['weights_dset'].shape[0],axis=0)
+                    # Add the time/weights at the end (last row) of the dataset
+                    layer.weight_record['weights_dset'][-1,:] = weight_row
+                    
+                    #numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
+                    #layer.weight_record['f_handle'].write('\n')
                     # Store the IO buffer
                     layer.weight_record['f_handle'].flush()
+                    #layer.weight_record['f_handle'].flush()
                     
                 
 
@@ -698,17 +711,15 @@ class NestCerebellarModel(CerebellarModel):
         for layer in self.synaptic_layers:
             if layer.weight_normalization:
                 # Record the weights
-                scaled_weights = [weight for weight in nest.GetStatus(layer.weight_sum['con'],'weight')]
+                scaled_weights = numpy.array(nest.GetStatus(layer.weight_sum['con'],'weight'),dtype=numpy.float32)
                 
                 # Initialize the weight sum to 0
-                for target in layer.weight_sum['sum']:
-                    layer.weight_sum['sum'][target] = 0
+                weight_sum = numpy.zeros(layer.target_layer.number_of_neurons,dtype=numpy.float64)
                 
                 for weight,target_cell in zip(scaled_weights,layer.weight_sum['targets']):
-                    layer.weight_sum['sum'][target_cell] = layer.weight_sum['sum'][target_cell] + weight
+                    weight_sum[target_cell] = weight_sum['sum'][target_cell] + weight
                     
-                normalized_weight = [weight*layer.weight_total_sum*1.e9/layer.weight_sum['sum'][target_cell]
-                                     for weight,target_cell in zip(scaled_weights,layer.weight_sum['targets'])]
+                normalized_weight = scaled_weights * layer.weight_total_sum * 1.e9 / weight_sum[layer.weight_sum['targets']]
                 
                 # Set new weights
                 nest.SetStatus(layer.weight_sum['con'], 'weight', normalized_weight)
@@ -812,25 +823,21 @@ class NestCerebellarModel(CerebellarModel):
             raise Exception('InvalidNeuronLayer')
         
         # If the spike detector is local to this process
-        # logger.debug('Checking locality in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'local'))
-        if nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'local')[0]:
-            # logger.debug('Getting spikes in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events'))
-            spike_events = nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events')[0]
-            time = spike_events['times']*1e-3
-            neuron_id = spike_events['senders']
-            
-            # Select only those events in the specified interval
-            index = (time>=init_time) & (time<=end_time) 
-            time = time[index]
-            neuron_id = neuron_id[index]
-            
-            # Select only those events in the specified cells
-            index = numpy.in1d(neuron_id, neuron_indexes)
-            time = time[index]
-            neuron_id = neuron_id[index]
-        else:
-            time = numpy.array([],dtype=numpy.float64)
-            neuron_id = numpy.array([],dtype=numpy.float64)
+        # Spike detectors are replicated in every thread so we don't have to check whether they are local
+        # logger.debug('Getting spikes in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events'))
+        spike_events = nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events')[0]
+        time = spike_events['times']*1e-3
+        neuron_id = spike_events['senders']
+        
+        # Select only those events in the specified interval
+        index = (time>=init_time) & (time<=end_time) 
+        time = time[index]
+        neuron_id = neuron_id[index]
+        
+        # Select only those events in the specified cells
+        index = numpy.in1d(neuron_id, neuron_indexes)
+        time = time[index]
+        neuron_id = neuron_id[index]
         
         # Send relative neuron_id
         neuron_id = neuron_id-neuron_layer.MinIndex

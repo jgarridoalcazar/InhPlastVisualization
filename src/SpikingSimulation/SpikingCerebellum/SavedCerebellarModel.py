@@ -146,10 +146,13 @@ class SavedCerebellarModel(CerebellarModel):
                     
                     logger.debug('Reading weight register file %s', file_name)
                     
-                    with open(file_name, 'r') as f:
+                    import h5py
+                    
+                    with h5py.File(file_name, 'r') as f:
                         # Get the connections array and transform into an array of tuples
-                        connections_array = numpy.array(f.readline().split(' ')[:-1], int)
-                        connections_matrix = numpy.reshape(connections_array,(-1,2))
+                        #connections_array = numpy.array(f.readline().split(' ')[:-1], int)
+                        #connections_matrix = numpy.reshape(connections_array,(-1,2))
+                        connections_matrix = f['connections'][:,:]
                         
                         if layer.weight_record['connections'] is None:
                             layer.weight_record['connections'] = connections_matrix
@@ -159,7 +162,8 @@ class SavedCerebellarModel(CerebellarModel):
                         # Check the number of connections in the file
                         if len(connections_matrix):
                             # Get the rest of the weight file
-                            data = numpy.genfromtxt(f, delimiter=' ')
+                            #data = numpy.genfromtxt(f, delimiter=' ')
+                            data = f['weights']
                         
                             # Extract the time and the wiehgts
                             if layer.weight_record['time'] is None:

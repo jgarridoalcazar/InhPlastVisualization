@@ -101,13 +101,9 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
                 animated_artists.append(rect)
         else:
             self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), max(abs(self.max_weight),abs(self.min_weight))/self.num_bins)
-    
-        comm = MPI.COMM_WORLD
-        
-        process_id = comm.Get_rank()
-        
-        if (process_id==0):
-            self.axes.set_xlim([self.min_weight,self.max_weight])
+
+        self.axes.set_xlim([self.min_weight,self.max_weight])    
+        if gcon is not None:
             self.axes.set_ylim([0,len(gcon)])
         
         self.animated_artists = tuple(animated_artists)

@@ -38,6 +38,16 @@ class CerebellarModel(object):
         if ('network' not in self.config_dict):
             self.config_dict['network'] = {}
             
+        if ('save_file' not in self.config_dict['network']):
+            self.save_file = None
+        else:
+            self.save_file = self.config_dict['network']['save_file']
+            
+        if ('load_file' not in self.config_dict['network']):
+            self.load_file = None
+        else:
+            self.load_file = self.config_dict['network']['load_file']
+            
         if ('length' not in self.config_dict['network']):
             self.config_dict['network']['length'] = None
             self.network_size = None
@@ -55,7 +65,7 @@ class CerebellarModel(object):
         return 
         
         
-    def _create_network_elements(self):
+    def _create_neurons(self):
         '''
         It creates all the cell layers of the cerebellar network.
         '''
@@ -66,11 +76,22 @@ class CerebellarModel(object):
         else:
             import NeuronLayerNoMPI as NeuronLayer
         
+        # Check if the network has to be loaded from file
+        if (self.load_file is not None):
+            import h5py
+        
+            file = h5py.File(self.load_file)
+        else:
+            file = None
+        
         # Create cerebellar inputs (mossy fibers and inferior olive)
         mf_options = self.config_dict['mflayer']
         mf_options['random_generator'] = self.get_local_py_rng()
         if (self.network_size is not None):
             mf_options['size'] = self.network_size
+        node = _search_hdf5_group(file, 'mflayer')
+        if node is not None:
+            mf_options['load_from_file'] = node
         self.mflayer = NeuronLayer.NeuronLayer(**mf_options)
         self.neuron_layers.append(self.mflayer)
         self.layer_map[self.mflayer.__name__] = self.mflayer
@@ -84,6 +105,9 @@ class CerebellarModel(object):
         grc_options['random_generator'] = self.get_local_py_rng()
         if (self.network_size is not None):
             grc_options['size'] = self.network_size
+        node = _search_hdf5_group(file, 'grclayer')
+        if node is not None:
+            grc_options['load_from_file'] = node
         self.grclayer = NeuronLayer.NeuronLayer(**grc_options)
         self.neuron_layers.append(self.grclayer)
         self.layer_map[self.grclayer.__name__] = self.grclayer
@@ -93,6 +117,9 @@ class CerebellarModel(object):
         goc_options['random_generator'] = self.get_local_py_rng()
         if (self.network_size is not None):
             goc_options['size'] = self.network_size
+        node = _search_hdf5_group(file, 'goclayer')
+        if node is not None:
+            goc_options['load_from_file'] = node
         self.goclayer = NeuronLayer.NeuronLayer(**goc_options)
         self.neuron_layers.append(self.goclayer)
         self.layer_map[self.goclayer.__name__] = self.goclayer
@@ -106,7 +133,10 @@ class CerebellarModel(object):
 #         dcn_options = self.config_dict['dcnlayer']
 #         self.dcnlayer = NeuronLayer.NeuronLayer(**dcn_options)
 #         self.neuron_layers.append(self.dcnlayer)
-#         
+#        
+        if file is not None:
+            file.close()
+        
         return       
         
     def _create_synapses(self):
@@ -124,12 +154,22 @@ class CerebellarModel(object):
         # Get the process_id to select the correct random number generator    
         process_id = self.get_my_process_id()
         
+        # Check if the network has to be loaded from file
+        if (self.load_file is not None):
+            import h5py
+        
+            file = h5py.File(self.load_file)
+        else:
+            file = None
+        
         # Create MF-GrC synaptic layer
         mfgrc_options = self.config_dict['mfgrcsynapsis']
         mfgrc_options['source_layer'] = self.mflayer
         mfgrc_options['target_layer'] = self.grclayer
         mfgrc_options['random_generator'] = self.get_local_py_rng()
-        
+        node = _search_hdf5_group(file, 'mfgrcsynapsis')
+        if node is not None:
+            mfgrc_options['load_from_file'] = node
         self.mfgrclayer = SynapticLayer.SynapticLayer(**mfgrc_options)
         self.synaptic_layers.append(self.mfgrclayer)
         self.layer_map[self.mfgrclayer.__name__] = self.mfgrclayer
@@ -139,6 +179,9 @@ class CerebellarModel(object):
         mfgoc_options['source_layer'] = self.mflayer
         mfgoc_options['target_layer'] = self.goclayer
         mfgoc_options['random_generator'] = self.get_local_py_rng()
+        node = _search_hdf5_group(file, 'mfgocsynapsis')
+        if node is not None:
+            mfgoc_options['load_from_file'] = node
         self.mfgoclayer = SynapticLayer.SynapticLayer(**mfgoc_options)
         self.synaptic_layers.append(self.mfgoclayer)
         self.layer_map[self.mfgoclayer.__name__] = self.mfgoclayer
@@ -148,6 +191,9 @@ class CerebellarModel(object):
         grcgoc_options['source_layer'] = self.grclayer
         grcgoc_options['target_layer'] = self.goclayer
         grcgoc_options['random_generator'] = self.get_local_py_rng()
+        node = _search_hdf5_group(file, 'grcgocsynapsis')
+        if node is not None:
+            grcgoc_options['load_from_file'] = node
         self.grcgoclayer = SynapticLayer.SynapticLayer(**grcgoc_options)
         self.synaptic_layers.append(self.grcgoclayer)
         self.layer_map[self.grcgoclayer.__name__] = self.grcgoclayer
@@ -159,6 +205,9 @@ class CerebellarModel(object):
         gocgrc_options['intermediate_layer'] = self.mflayer
         gocgrc_options['intermediate_to_target_synaptic_layer'] = self.mfgrclayer
         gocgrc_options['random_generator'] = self.get_local_py_rng()
+        node = _search_hdf5_group(file, 'gocgrcsynapsis')
+        if node is not None:
+            gocgrc_options['load_from_file'] = node
         self.gocgrclayer = SynapticLayer.SynapticLayer(**gocgrc_options)
         self.synaptic_layers.append(self.gocgrclayer)
         self.layer_map[self.gocgrclayer.__name__] = self.gocgrclayer
@@ -168,6 +217,9 @@ class CerebellarModel(object):
         gocgoc_options['source_layer'] = self.goclayer
         gocgoc_options['target_layer'] = self.goclayer
         gocgoc_options['random_generator'] = self.get_local_py_rng()
+        node = _search_hdf5_group(file, 'gocgocsynapsis')
+        if node is not None:
+            gocgoc_options['load_from_file'] = node
         self.gocgoclayer = SynapticLayer.SynapticLayer(**gocgoc_options)
         self.synaptic_layers.append(self.gocgoclayer)
         self.layer_map[self.gocgoclayer.__name__] = self.gocgoclayer
@@ -199,6 +251,9 @@ class CerebellarModel(object):
 #         pcdcn_options['target_layer'] = self.dcnlayer
 #         self.pcdcnlayer = SynapticLayer.SynapticLayer(**pcdcn_options)
 #         self.synaptic_layers.append(self.pcdcnlayer)
+
+        if file is not None:
+            file.close()        
         
         return 
 
@@ -221,6 +276,56 @@ class CerebellarModel(object):
         
         return
     
+    def save_network(self):
+        '''
+        Save the network to the specified hdf5 file.
+        @param filename: Name of the file to store the network.
+        '''
+        
+        if self.save_file is None:
+            return
+        
+        filename = self.save_file
+        
+        logger.info('Saving network to hdf5 file %s', filename)
+       
+       
+        if self.get_my_process_id()==0:
+            import h5py
+            
+            with h5py.File(filename, 'w') as file:
+                
+                # Saving neuron layers
+                for ind, layer in enumerate(self.neuron_layers):
+                    # Show info
+                    logger.debug('Writing neuron layer %s',layer.__name__)
+                    # Create a subgroup for this neuron layer
+                    subgroup = file.create_group('neuron_layer_'+str(ind))
+                    # Save the neuron layer in it
+                    layer.save_layer(subgroup)
+                    
+                # Saving synaptic layers
+                for ind, layer in enumerate(self.synaptic_layers):
+                    # Show info
+                    logger.debug('Writing neuron layer %s',layer.__name__)
+                    # Create a subgroup for this synaptic layer
+                    subgroup = file.create_group('synaptic_layer_'+str(ind))
+                    # Save the synaptic layer in it
+                    layer.save_layer(subgroup)
+                
+                file.flush()
+        else:
+            # This is just in case other processes have to communicate something (neurons or connections)
+            for ind, layer in enumerate(self.neuron_layers):
+                # Save the neuron layer in it
+                layer.save_layer(None)
+                    
+            for ind, layer in enumerate(self.synaptic_layers):
+                # Save the synaptic layer in it
+                layer.save_layer(None)
+        
+        logger.debug('File writing ended')
+            
     def visualize_network(self):
         '''
         Visualize the network structure by using matplotlib
@@ -403,4 +508,20 @@ class CerebellarModel(object):
         '''
         return
         
-        
+def _search_hdf5_group(file, name):
+    '''
+    This function searches the first element in a hdf5 file with the specified name. If it cannot find any element it returns None
+    @param file The hdf5 file to explore.
+    @param name The name to search.
+    '''
+    
+    if file is None:
+        return None
+    
+    import h5py
+    
+    for _, elem in file.iteritems():
+        if 'name' in elem.attrs and elem.attrs['name']==name:
+            return elem
+    
+    return None

@@ -13,6 +13,7 @@ import os
 import time
 import logging
 import NestCerebellarModelNoMPI
+import nest
 
 logger = logging.getLogger('Simulation')
 
@@ -106,24 +107,20 @@ class NestCerebellarModel(NestCerebellarModelNoMPI.NestCerebellarModel):
         
         # If the spike detector is local to this process
         # logger.debug('Checking locality in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector,'local'))
-        if nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'local')[0]:
-            # logger.debug('Getting spikes in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector,'events'))
-            spike_events = nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events')[0]
-            time = spike_events['times']*1e-3
-            neuron_id = spike_events['senders']
-            
-            # Select only those events in the specified interval
-            index = (time>=init_time) & (time<=end_time) 
-            time = time[index]
-            neuron_id = neuron_id[index]
-            
-            # Select only those events in the specified cells
-            index = numpy.in1d(neuron_id, neuron_indexes)
-            time = time[index]
-            neuron_id = neuron_id[index]
-        else:
-            time = numpy.array([],dtype=numpy.float64)
-            neuron_id = numpy.array([],dtype=numpy.float64)
+        # logger.debug('Getting spikes in layer %s from %s: %s',neuron_layer.__name__, neuron_layer.nest_spike_detector, nest.GetStatus(neuron_layer.nest_spike_detector,'events'))
+        spike_events = nest.GetStatus(neuron_layer.nest_spike_detector.tolist(),'events')[0]
+        time = spike_events['times']*1e-3
+        neuron_id = spike_events['senders']
+        
+        # Select only those events in the specified interval
+        index = (time>=init_time) & (time<=end_time) 
+        time = time[index]
+        neuron_id = neuron_id[index]
+        
+        # Select only those events in the specified cells
+        index = numpy.in1d(neuron_id, neuron_indexes)
+        time = time[index]
+        neuron_id = neuron_id[index]
         
         # Send relative neuron_id
         neuron_id = neuron_id-neuron_layer.MinIndex
@@ -133,12 +130,12 @@ class NestCerebellarModel(NestCerebellarModelNoMPI.NestCerebellarModel):
         comm = MPI.COMM_WORLD
         
         # Send the number of elements
-        lsum = numpy.array([len(time)], dtype=numpy.uint64)
+        lsum = numpy.array([len(time)], dtype=numpy.uint32)
         if self.get_my_process_id()==0:
-            num_spikes = numpy.empty(comm.Get_size(), dtype=numpy.uint64)
+            num_spikes = numpy.empty(comm.Get_size(), dtype=numpy.uint32)
         else:
             num_spikes = None
-        comm.Gather([lsum, MPI.UNSIGNED_LONG], [num_spikes, MPI.UNSIGNED_LONG], root=0) 
+        comm.Gather([lsum, MPI.UNSIGNED_INT], [num_spikes, MPI.UNSIGNED_INT], root=0) 
         
         # print 'Process',self.get_my_process_id(),':','Sent number:',lsum,'Collected numbers ->',num_spikes
         
@@ -352,10 +349,24 @@ class NestCerebellarModel(NestCerebellarModelNoMPI.NestCerebellarModel):
         
         # Calculate selected connection indexes
         connections = synaptic_layer.weight_record['connections']
-        connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes) and (connections[index][1] in target_indexes)]
+        # Optimize connection indexes selection
+        if (source_indexes == range(synaptic_layer.source_layer.number_of_neurons)):
+            if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
+                # No selection -> All the connections in the layer
+                connection_indexes = range(len(connections))
+            else:
+                # Target indexes selection
+                connection_indexes = [index for index in range(len(connections)) if (connections[index][1] in target_indexes)]
+        else:
+            if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
+                # Source indexes selection
+                connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes)]
+            else:
+                # Source and target selection
+                connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes) and (connections[index][1] in target_indexes)]
         selected_connections = connections[connection_indexes]
         
-        # print 'Process',self.get_my_process_id(),':','Selected connections:',selected_connections
+        #logger.debug('Selected connections: %s',selected_connections)
         
         # Calculate selected time indexes
         time = synaptic_layer.weight_record['time']
@@ -388,7 +399,7 @@ class NestCerebellarModel(NestCerebellarModelNoMPI.NestCerebellarModel):
             connection_elements = None
         comm.Gather([connection_aux, MPI.UNSIGNED_LONG], [connection_elements, MPI.UNSIGNED_LONG], root=0) 
         
-        # logger.debug('Sent number: %s. Collected numbers: %s',connection_aux,connection_elements)
+        #logger.debug('Sent number: %s. Collected numbers: %s',connection_aux,connection_elements)
         
         if self.get_my_process_id()==0:
             # Total number of spikes to be gathered
@@ -401,8 +412,8 @@ class NestCerebellarModel(NestCerebellarModelNoMPI.NestCerebellarModel):
             weight_offset = tuple(aux_array*time_elements)
             
             gtime = selected_time
-            gconnections = numpy.empty((gsum,2), dtype=numpy.uint64)
-            gweights = numpy.empty((gsum, time_elements), dtype=numpy.float64)
+            gconnections = numpy.empty(gsum*2, dtype=numpy.uint32)
+            gweights = numpy.empty((gsum, time_elements), dtype=numpy.float32)
         else:
             con_num_sent = None
             weight_num_sent = None
@@ -413,11 +424,17 @@ class NestCerebellarModel(NestCerebellarModelNoMPI.NestCerebellarModel):
             gweights = None
         
         # Gather the time and neuron_id arrays
+        #print 'Process',self.get_my_process_id(),':','Sent Connections ->',selected_connections.ravel(order='C'),'Sent weights ->',selected_weights
+        #print 'Process',self.get_my_process_id(),':','Number Sent: ->',con_num_sent,'Sent offset: ->',con_offset
         #comm.Gatherv(time, [gtime, num_sent, offset, MPI.DOUBLE], root=0)
-        comm.Gatherv(selected_connections, [gconnections, con_num_sent, con_offset, MPI.UNSIGNED_LONG], root=0)
-        comm.Gatherv(selected_weights.ravel(), [gweights, weight_num_sent, weight_offset, MPI.DOUBLE], root=0)
+        comm.Gatherv(selected_connections.ravel(order='C'), [gconnections, con_num_sent, con_offset, MPI.UNSIGNED_INT], root=0)
+        comm.Gatherv(selected_weights.ravel(order='C'), [gweights, weight_num_sent, weight_offset, MPI.FLOAT], root=0)
         
-        # print 'Process',self.get_my_process_id(),':','Collected time ->',gtime,'Collected Connections ->',gconnections,'Collected weights ->',gweights
+        #print 'Process',self.get_my_process_id(),':','Collected time ->',gtime,'Collected Connections ->',gconnections,'Collected weights ->',gweights
+        
+        if self.get_my_process_id()==0:
+            gconnections = numpy.reshape(gconnections,(gsum,2),order='C')
+            gweights = numpy.reshape(gweights,(gsum, time_elements), order='C')
         
         return (gtime,gconnections,gweights)
         

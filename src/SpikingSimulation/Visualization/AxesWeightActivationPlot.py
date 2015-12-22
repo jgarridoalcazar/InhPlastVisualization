@@ -191,7 +191,6 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
                 
                 # Select the activation values
                 activation_values = self.pattern_provider.activation_levels[self.pattern_provider.pattern_id_index[pat][0],source_fibers]
-                
                 self.axesLines[i].set_xdata(activation_values)
                 self.axesLines[i].set_ydata(weight_values)  
     
