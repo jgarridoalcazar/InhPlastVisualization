@@ -7,7 +7,7 @@ Created on May 12, 2014
 import abc
 from CerebellarModel import CerebellarModel
 import InputLayer
-import SynapticLayer
+import SynapticLayerNoMPI as SynapticLayer
 import numpy
 import os
 import glob

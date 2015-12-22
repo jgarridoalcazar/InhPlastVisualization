@@ -5,7 +5,6 @@ Created on May 12, 2014
 '''
 
 import abc
-import NeuronLayer
 import InputLayer
 import time
 import numpy
