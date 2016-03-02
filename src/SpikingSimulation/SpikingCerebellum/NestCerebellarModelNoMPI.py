@@ -717,7 +717,7 @@ class NestCerebellarModel(CerebellarModel):
                 weight_sum = numpy.zeros(layer.target_layer.number_of_neurons,dtype=numpy.float64)
                 
                 for weight,target_cell in zip(scaled_weights,layer.weight_sum['targets']):
-                    weight_sum[target_cell] = weight_sum['sum'][target_cell] + weight
+                    weight_sum[target_cell] = weight_sum[target_cell] + weight
                     
                 normalized_weight = scaled_weights * layer.weight_total_sum * 1.e9 / weight_sum[layer.weight_sum['targets']]
                 

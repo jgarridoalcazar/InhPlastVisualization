@@ -101,7 +101,7 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
                 animated_artists.append(rect)
         else:
             self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), max(abs(self.max_weight),abs(self.min_weight))/self.num_bins)
-
+            
         self.axes.set_xlim([self.min_weight,self.max_weight])    
         if gcon is not None:
             self.axes.set_ylim([0,len(gcon)])
@@ -123,21 +123,23 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         
         self.param['end_time'] = simulation_time
         
-        # Load data from the data provider
-        gtime,_,gvalue = self.data_provider.get_synaptic_weights(**self.param)
         
-        from mpi4py import MPI
-        
-        comm = MPI.COMM_WORLD
-        
-        process_id = comm.Get_rank()
-        
-        if (process_id==0):
+        if simulation_time!=0:
+            # Load data from the data provider
+            gtime,_,gvalue = self.data_provider.get_synaptic_weights(**self.param)
             
-            weights = gvalue[:,-1]
-            frequencies,_ = numpy.histogram(weights, bins=self.positions)
+            from mpi4py import MPI
             
-            for rect, f in zip(self.axesRect, frequencies):
-                rect.set_height(f)
+            comm = MPI.COMM_WORLD
+            
+            process_id = comm.Get_rank()
+            
+            if (process_id==0):
+                
+                weights = gvalue[:,-1]
+                frequencies,_ = numpy.histogram(weights, bins=self.positions)
+                
+                for rect, f in zip(self.axesRect, frequencies):
+                    rect.set_height(f)
             
         return self.animated_artists

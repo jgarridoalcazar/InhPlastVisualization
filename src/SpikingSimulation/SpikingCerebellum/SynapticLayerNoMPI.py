@@ -249,10 +249,10 @@ class SynapticLayer(object):
         self.number_of_synapses = len(local_target_cells) * num_source_cells
          
         # For each target cell generate a permutation of the source indexes
-        self.source_index = numpy.array([None]*self.number_of_synapses,dtype = numpy.uint32)
+        self.source_index = numpy.zeros(self.number_of_synapses,dtype = numpy.uint32)
         for i in range(len(local_target_cells)):
-            self.source_index[i*num_source_cells:(i+1)*num_source_cells] = self.random_generator.permutation(numpy.arange(self.source_layer.number_of_neurons)).tolist()[0:num_source_cells].astype(numpy.uint32)
-        self.target_index = numpy.repeat(local_target_cells,num_source_cells).tolist().astype(numpy.uint32)
+            self.source_index[i*num_source_cells:(i+1)*num_source_cells] = self.random_generator.permutation(numpy.arange(self.source_layer.number_of_neurons))[0:num_source_cells].astype(numpy.uint32)
+        self.target_index = numpy.repeat(local_target_cells,num_source_cells).astype(numpy.uint32)
          
         return
      
@@ -298,7 +298,7 @@ class SynapticLayer(object):
             
             logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_array))  
     
-        self.number_of_synapses = self.numpyself.target_index.shape[0]      
+        self.number_of_synapses = self.target_index.shape[0]      
         return
     
     def _generate_random_n2one_local_connections_(self):

@@ -160,38 +160,39 @@ class AxesWeightActivationPlot(AxesPlot.AxesPlot):
         
         self.param['end_time'] = simulation_time
         
-        # Load data from the data provider
-        _,gconnections,gvalue = self.data_provider.get_synaptic_weights(**self.param)
-        
-        from mpi4py import MPI
-
-        comm = MPI.COMM_WORLD
-        
-        process_id = comm.Get_rank()
-        
-        if (process_id==0):
+        if simulation_time!=0:        
+            # Load data from the data provider
+            _,gconnections,gvalue = self.data_provider.get_synaptic_weights(**self.param)
             
-            # Select the last weights
-            gvalue = gvalue[:,-1]
-                        
-            for i in range(len(self.pattern)):
-                pat = self.pattern[i]
+            from mpi4py import MPI
+    
+            comm = MPI.COMM_WORLD
             
-                # Find the pattern fibers
-                fibers = self.pattern_provider.fibers_in_pattern[pat]
+            process_id = comm.Get_rank()
+            
+            if (process_id==0):
                 
-                # Search fibers in connections
-                connection_indexes = numpy.array([index for index in range(len(gconnections)) if (gconnections[index,0]==fibers).any()])
+                # Select the last weights
+                gvalue = gvalue[:,-1]
+                            
+                for i in range(len(self.pattern)):
+                    pat = self.pattern[i]
                 
-                # Select the weight values
-                weight_values = gvalue[connection_indexes]
-                
-                # Select the number of the fibers
-                source_fibers = gconnections[connection_indexes,0]
-                
-                # Select the activation values
-                activation_values = self.pattern_provider.activation_levels[self.pattern_provider.pattern_id_index[pat][0],source_fibers]
-                self.axesLines[i].set_xdata(activation_values)
-                self.axesLines[i].set_ydata(weight_values)  
+                    # Find the pattern fibers
+                    fibers = self.pattern_provider.fibers_in_pattern[pat]
+                    
+                    # Search fibers in connections
+                    connection_indexes = numpy.array([index for index in range(len(gconnections)) if (gconnections[index,0]==fibers).any()])
+                    
+                    # Select the weight values
+                    weight_values = gvalue[connection_indexes]
+                    
+                    # Select the number of the fibers
+                    source_fibers = gconnections[connection_indexes,0]
+                    
+                    # Select the activation values
+                    activation_values = self.pattern_provider.activation_levels[self.pattern_provider.pattern_id_index[pat][0],source_fibers]
+                    self.axesLines[i].set_xdata(activation_values)
+                    self.axesLines[i].set_ydata(weight_values)  
     
         return self.animated_artists
