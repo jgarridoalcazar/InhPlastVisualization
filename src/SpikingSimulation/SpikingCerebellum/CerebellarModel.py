@@ -271,6 +271,11 @@ class CerebellarModel(object):
         if not 'weight_recording_step' in self.simulation_options:
             self.simulation_options['weight_recording_step'] = float("inf")
     
+        # Check activity recording time step
+        if not 'activity_recording_step' in self.simulation_options:
+            self.simulation_options['activity_recording_step'] = float("inf")
+    
+    
         logger.debug('Cerebellar simulation initialized')
         
         return
