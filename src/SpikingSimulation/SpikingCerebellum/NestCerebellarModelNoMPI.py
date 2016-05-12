@@ -334,6 +334,8 @@ class NestCerebellarModel(CerebellarModel):
     
     def _initialize_weight_recording_buffer(self):
         
+        self.next_weight_step = 1
+        
         # Check if recording_time_step is above 0
         if self.simulation_options['weight_recording_step'] >= float("inf"):
             return
@@ -395,12 +397,11 @@ class NestCerebellarModel(CerebellarModel):
             else:
                 layer.weight_recording = None
 
-        self.next_weight_step = 1
-        
-        
         return
     
     def _initialize_activity_recording(self):
+        
+        self.next_activity_step = 1
         
         # Check if recording_time_step is above 0
         if self.simulation_options['activity_recording_step'] >= float("inf"):
@@ -437,11 +438,7 @@ class NestCerebellarModel(CerebellarModel):
                         
                         # Store the IO buffer
                         f_handle.flush()
-                    
-            self.next_activity_step = 1
-        else:
-            self.next_activity_step = float('inf')       
-             
+
         return
     
     def _build_network(self):
