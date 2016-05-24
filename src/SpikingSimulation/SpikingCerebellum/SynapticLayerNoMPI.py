@@ -55,6 +55,7 @@ class SynapticLayer(object):
                                         'randomn2one': ['number_of_source_cells', self._generate_random_n2one_connections_],
                                         'random_with_probability': ['connection_probability', self._generate_random_connections_],
                                         'randomn2onelocal': ['average_number_of_source_cells', 'average_dendritic_length', self._generate_random_n2one_local_connections_],
+                                        'randomn2onestdlocal': ['average_number_of_source_cells', 'std_number_of_source_cells', 'average_dendritic_length', 'std_dendritic_length', self._generate_random_n2one_std_local_connections_],
                                         'glomerulin2onelocal': ['average_number_of_source_cells_per_glomerulus', 'average_dendritic_length', self._generate_glomeruli_n2one_local_connections_]
                                         }
 
@@ -353,6 +354,83 @@ class SynapticLayer(object):
             self.target_index = numpy.append(self.target_index, target_cells[target_array].astype(numpy.uint32))
             
             logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_array))
+        
+        self.number_of_synapses = self.target_index.shape[0]
+        return
+    
+    def _generate_random_n2one_std_local_connections_(self):
+        '''
+        Generate connections between source and target layers n2one with random selection of source cells (sr0,sr1,...,sr(n-1) to t0, srn, s(rn+1),...,s(r2n-1) to t1,...).
+        In this case the number of connections is generated according to a normal distribution (with mean and std indicated) and the probability of connection is
+        generated according to the distance between source and target cell (with normal distribution as indicated).
+        '''
+        
+        import scipy.stats
+        
+        target_coord = self.target_layer.get_absolute_coordinates()
+        source_coord = self.source_layer.get_absolute_coordinates()
+        
+        n_source_cells = source_coord.shape[0]
+        n_target_cells = target_coord.shape[0]
+        
+        # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
+        local_target_cells, = numpy.where(self.target_layer.is_local_node)
+        
+        mean_num_source = self.connectivity_parameters['average_number_of_source_cells']
+        std_num_source = self.connectivity_parameters['std_number_of_source_cells']
+        mean_dendritic_length = self.connectivity_parameters['average_dendritic_length']
+        std_dendritic_length  = self.connectivity_parameters['std_dendritic_length']
+        
+        # Number of target cells in each memory block
+        target_layers_in_block = self.memory_block / self.source_layer.number_of_neurons
+        
+        # Distribute the local target cells in the number of blocks
+        local_target_indexes = range(0,len(local_target_cells), target_layers_in_block)
+        
+        self.source_index = numpy.array([], dtype=numpy.uint32)
+        self.target_index = numpy.array([], dtype=numpy.uint32)
+        
+        for i,_ in enumerate(local_target_indexes):
+            if i==(len(local_target_indexes)-1):
+                target_cells = local_target_cells[local_target_indexes[i]:]
+            else:
+                target_cells = local_target_cells[local_target_indexes[i]:local_target_indexes[i+1]]  
+        
+            distance = scipy.spatial.distance.cdist(source_coord, target_coord[target_cells], 'euclidean')
+            
+            # Calculate the probability distribution from the distance and normalize
+            pdf_distance = scipy.stats.norm.pdf(distance, mean_dendritic_length, std_dendritic_length)
+            column_sums = pdf_distance.sum(axis=0)
+            norm_pdf_distance = pdf_distance / column_sums[numpy.newaxis, :]
+            cdf_distance = numpy.cumsum(norm_pdf_distance, axis=0)
+            
+            # Generate the number of source cells for each target cells
+            num_source_cells = numpy.rint(self.random_generator.normal(mean_num_source, std_num_source, target_cells.shape[0]))
+            
+            source_block_list = []
+            target_block_list = []
+            
+            for index, target_cell in enumerate(target_cells):
+                source_list = []
+                while len(source_list)<num_source_cells[index]:
+                    rand_num = self.random_generator.uniform()
+                    source_cell = numpy.argmax(cdf_distance[:,index]>rand_num)
+                    pdf_distance[source_cell,index] = 0.0
+                    if source_cell not in source_list:
+                        source_list.append(source_cell)
+                    else:
+                        # Renormalize the probability matrix to avoid long-lasting looping
+                        column_sum = pdf_distance[:,index].sum(axis=0)
+                        norm_pdf_distance = pdf_distance[:,index] / column_sum
+                        cdf_distance[:,index] = numpy.cumsum(norm_pdf_distance, axis=0) 
+            
+                source_block_list.extend(source_list)
+                target_block_list.extend([target_cell]*len(source_list))
+                
+            self.source_index = numpy.append(self.source_index,source_block_list)
+            self.target_index = numpy.append(self.target_index,target_block_list)
+            
+            logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_block_list))
         
         self.number_of_synapses = self.target_index.shape[0]
         return
