@@ -9,6 +9,7 @@ import numpy
 import bisect
 import operator
 import logging
+from __builtin__ import int
 
 logger = logging.getLogger('Simulation')
 
@@ -32,6 +33,8 @@ class PatternGenerator(object):
         @param simulation_time Total stimulation length (in seconds).
         @param number_of_normalizations Number of iterations to perform in the normalization process.
         @param overlapped_patterns Whether the patterns are allowed to overlap each other
+        @param save_pattern_file File where the levels of current and cells will be stored after the generation.
+        @param load_pattern_file File containing the levels of current and cells previously generated.
         '''
         
         if 'rng' in kwargs:
@@ -98,6 +101,16 @@ class PatternGenerator(object):
         else:
             logger.error('Non-specified stimulation simulation time')
             raise Exception('Non-DefinedSimulationTime')
+        
+        if ('save_pattern_file' not in kwargs):
+            self.save_pattern_file = None
+        else:
+            self.save_pattern_file = kwargs.pop('save_pattern_file')
+            
+        if ('load_pattern_file' not in kwargs):
+            self.load_pattern_file = None
+        else:
+            self.load_pattern_file = kwargs.pop('load_pattern_file')
         
         super(PatternGenerator, self).__init__()
         
@@ -220,18 +233,21 @@ class PatternGenerator(object):
         # Create a matrix indicating the length of activation for each pattern
         self.activation_length = numpy.tile(self.pattern_length.reshape((len(self.pattern_length),1)),(1,self.number_of_fibers))
         
-        self.pattern_activation = numpy.empty((self.number_of_patterns,self.number_of_selected_fibers))
+        # If pattern has not been loaded
+        if (self.load_pattern_file is None):
+            self.pattern_activation = numpy.empty((self.number_of_patterns,self.number_of_selected_fibers))
         
-        # Normalize the first realization of every pattern (except 0)
-        for index in range(self.number_of_patterns):
-            norm_pattern_values = self.activation_levels[self.pattern_id_index[index][0],self.fibers_in_pattern[index]]
+            # Normalize the first realization of every pattern (except 0)
+            for index in range(self.number_of_patterns):
+                norm_pattern_values = self.activation_levels[self.pattern_id_index[index][0],self.fibers_in_pattern[index]]
             
-            for _ in range(self.number_of_normalizations):
-                norm_pattern_values = norm_pattern_values/sum(norm_pattern_values)*total_pattern
-                norm_pattern_values [norm_pattern_values>1.0] = 1.0
+                for _ in range(self.number_of_normalizations):
+                    norm_pattern_values = norm_pattern_values/sum(norm_pattern_values)*total_pattern
+                    norm_pattern_values [norm_pattern_values>1.0] = 1.0
             
-            # Store a copy of the pattern
-            self.pattern_activation[index] = norm_pattern_values
+                # Store a copy of the pattern
+                self.pattern_activation[index] = norm_pattern_values
+        
             
         # Show fiber overlapping statistics
         for ind1 in range(self.number_of_patterns):
@@ -306,6 +322,83 @@ class PatternGenerator(object):
 #         pylab.show()
             
         return
+    
+    def _save_activation_pattern(self):
+        '''
+        Save the activation pattern currents in a hdf5 file.
+        '''
+        
+        if self.save_pattern_file is None:
+            return
+        
+        filename = self.save_pattern_file
+        
+        logger.info('Saving activation patterns to hdf5 file %s', filename)
+       
+       
+        import h5py
+        
+        with h5py.File(filename, 'w') as file:
+            
+            # Saving neuron layers
+            for ind, pattern in enumerate(self.pattern_activation):
+                # Show info
+                logger.debug('Writing stimulation pattern %s',ind)
+                # Define the relative positions of the layer
+                pattern_nd_array = numpy.array([self.fibers_in_pattern[ind],pattern[:]]).T                    
+                pattern_dataset = file.create_dataset('pattern_'+str(ind), data = pattern_nd_array)
+                pattern_dataset.attrs['pattern_id'] = ind 
+    
+            file.flush()
+    
+        logger.debug('File writing ended')
+        
+        return
+    
+    def _load_activation_pattern(self):
+        '''
+        Load the activation pattern currents from a hdf5 file.
+        '''
+        
+        # Check if the network has to be loaded from file
+        if (self.load_pattern_file is not None):
+            import h5py
+        
+            file = h5py.File(self.load_pattern_file)
+        else:
+            return
+        
+        logger.info('Loading activation patterns from hdf5 file %s', self.load_pattern_file)
+        
+        with h5py.File(self.load_pattern_file, 'r') as file:
+            
+            # Retrieve the number of patterns
+            number_datasets = len(file['.'].keys())
+            
+            # Create lists for the fibbers in patterns and the activation levels
+            fiber_lists = []
+            activation_levels = []
+            
+            for ind, dataset in enumerate(file['.'].values()):
+                # Show info
+                logger.debug('Loading stimulation pattern %s',ind)
+                    
+                fiber_lists.append(dataset[:,0].astype(int))
+                activation_levels.append(dataset[:,1])
+                
+        # Convert lists to arrays
+        self.fibers_in_pattern = numpy.array(fiber_lists)
+        self.pattern_activation = numpy.array(activation_levels)
+        
+        logger.debug('File reading ended')
+        
+        return
+            
+                
+        
+        
+    
+    
         
     def initialize(self):
         '''
@@ -321,11 +414,17 @@ class PatternGenerator(object):
         else:
             self._generate_pattern_id_non_overlapped()
         
-        # Choose the fibers that will be part of each pattern
-        self._generate_fibers_in_pattern()
+        
+        if (self.load_pattern_file is None):
+            self._generate_fibers_in_pattern()
+        else:
+            self._load_activation_pattern()
         
         # Generate the normalized activation levels
         self._generate_activation_levels()
+        
+        # Save the patterns if indicated
+        self._save_activation_pattern()
         
         return
     

@@ -31,4 +31,6 @@ if __name__ == "__main__":
     if simulation.new_config_options['simulation']['visualize_results']:
         simulation.visualize_results()
     
+    simulation.cerebellum.save_network()
+    
     simulation.analyze_results()    
