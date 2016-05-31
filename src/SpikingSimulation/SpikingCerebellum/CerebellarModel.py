@@ -435,6 +435,13 @@ class CerebellarModel(object):
             raise Exception('InvalidLayerName')
     
     @abc.abstractmethod
+    def update_network_weights(self):
+        '''
+        Update the weights of the cerebellar model according to the running implementation.
+        '''
+        return
+    
+    @abc.abstractmethod
     def add_ac_current(self, **kwargs):
         '''
         Set a new ac current that will be conveyed to the cerebellar mossy fibers according to the parameters.
