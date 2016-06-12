@@ -293,7 +293,7 @@ class FrequencySimulation(object):
         else:
             frame_rate = 0.1
         
-        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=3,numColumns=4,blit=True,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
+        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=4,numColumns=5,blit=True,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
 #         animation.add_subplot(fig_position=1,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'property':'Vm',
@@ -310,27 +310,33 @@ class FrequencySimulation(object):
 #                                               'x_length': 1.})
 
         
+#         animation.add_subplot(fig_position=1,axes_type=AxesRasterPlot.AxesRasterPlot,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'pattern_provider':self.pattern_generator,
+#                                               'layer':'mflayer',
+#                                               'cell_index': range(50),
+#                                               'visible_data_only':True,
+#                                               'show_legend':False,
+#                                               'x_length':1.})
         animation.add_subplot(fig_position=1,axes_type=AxesRasterPlot.AxesRasterPlot,
-                            axes_parameters= {'data_provider':self.cerebellum,
-                                              'pattern_provider':self.pattern_generator,
-                                              'layer':'mflayer',
-                                              'cell_index': range(50),
-                                              'visible_data_only':True,
-                                              'show_legend':False,
-                                              'x_length':1.})
-        animation.add_subplot(fig_position=2,axes_type=AxesRasterPlot.AxesRasterPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'layer':'grclayer',
                                               'visible_data_only':True,
                                               'show_legend':False,
                                               'cell_index': range(100),
                                               'x_length':1.})
-        animation.add_subplot(fig_position=3,axes_type=AxesRasterPlot.AxesRasterPlot,
+        animation.add_subplot(fig_position=2,axes_type=AxesRasterPlot.AxesRasterPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'layer':'goclayer',
                                               'visible_data_only':True,
                                               'show_legend':False,
                                               'x_length':1.})
+#         animation.add_subplot(fig_position=3,axes_type=AxesRasterPlot.AxesRasterPlot,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'layer':'pclayer',
+#                                               'visible_data_only':True,
+#                                               'show_legend':False,
+#                                               'x_length':1.})
 #         animation.add_subplot(fig_position=4,axes_type=AxesActivationFiringOffset.AxesActivationFiringOffset,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'oscillation_freq': self.config_options['oscillations']['frequency'],
@@ -345,7 +351,7 @@ class FrequencySimulation(object):
 #                                               'cell_index': range(100),
 #                                               'visible_data_only':True,
 #                                               'x_length': 1})  
-        animation.add_subplot(fig_position=4,axes_type=AxesPatternLine.AxesPatternLine,
+        animation.add_subplot(fig_position=3,axes_type=AxesPatternLine.AxesPatternLine,
                             axes_parameters= {'pattern_provider':self.pattern_generator,
                                               'visible_data_only':True,
                                               'show_legend':False,
@@ -355,49 +361,43 @@ class FrequencySimulation(object):
 #                                               'layer':'gocgocsynapsis',
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
-        animation.add_subplot(fig_position=5,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+        animation.add_subplot(fig_position=4,axes_type=AxesWeightHistogram.AxesWeightHistogram,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'layer':'mfgrcsynapsis',
+                                              'visible_data_only':True,
+                                              'show_legend':False})
+        animation.add_subplot(fig_position=5,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+                            axes_parameters= {'data_provider':self.cerebellum,
+                                              'layer':'mfgocsynapsis',
                                               'visible_data_only':True,
                                               'show_legend':False})
         animation.add_subplot(fig_position=6,axes_type=AxesWeightHistogram.AxesWeightHistogram,
                             axes_parameters= {'data_provider':self.cerebellum,
-                                              'layer':'mfgocsynapsis',
-                                              'visible_data_only':True,
-                                              'show_legend':False})
-        animation.add_subplot(fig_position=7,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
-                            axes_parameters= {'data_provider':self.cerebellum,
-                                              'pattern_provider': self.pattern_generator,
-                                              'layer':'mfgocsynapsis',
-                                              'show_legend':False})
-        animation.add_subplot(fig_position=8,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
-                            axes_parameters= {'data_provider':self.cerebellum,
-                                              'pattern_provider': self.pattern_generator,
-                                              'layer':'mfgrcsynapsis',
-                                              'show_legend':False})
-        animation.add_subplot(fig_position=9,axes_type=AxesWeightHistogram.AxesWeightHistogram,
-                            axes_parameters= {'data_provider':self.cerebellum,
                                               'layer':'grcgocsynapsis',
                                               'visible_data_only':True,
-                                              'show_legend':False})
-#         animation.add_subplot(fig_position=7,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
-#                             axes_parameters= {'data_provider':self.cerebellum,
-#                                               'pattern_provider': self.pattern_generator,
-#                                               'layer':'mfgocsynapsis',
-#                                               'target_indexes': [1],
-#                                               'show_legend':False})
-        animation.add_subplot(fig_position=10,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+                                              'show_legend':False,
+                                              'num_bins': 30})
+        
+        animation.add_subplot(fig_position=7,axes_type=AxesWeightHistogram.AxesWeightHistogram,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'layer':'gocgrcsynapsis',
                                               'visible_data_only':True,
                                               'show_legend':False})
-        animation.add_subplot(fig_position=11,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+#         animation.add_subplot(fig_position=9,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'layer':'grcpcsynapsis',
+#                                               'visible_data_only':True,
+#                                               'show_legend':False})
+        animation.add_subplot(fig_position=8,axes_type=AxesWeightHistogram.AxesWeightHistogram,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'layer':'gocgocsynapsis',
                                               'visible_data_only':True,
                                               'show_legend':False})
-        
-        
+#         animation.add_subplot(fig_position=11,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'layer':'pcpcsynapsis',
+#                                               'visible_data_only':True,
+#                                               'show_legend':False})        
 
 
 
@@ -524,41 +524,51 @@ class FrequencySimulation(object):
 #                                               'target_indexes': [4],
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
-#         animation.add_subplot(fig_position=13,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+        animation.add_subplot(fig_position=9,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+                            axes_parameters= {'data_provider':self.cerebellum,
+                                              'property':'rC',
+                                              'layer':'goclayer',
+                                              'visible_data_only':True,
+                                              'show_legend':False})
+        animation.add_subplot(fig_position=10,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+                            axes_parameters= {'data_provider':self.cerebellum,
+                                              'property':'gL',
+                                              'layer':'goclayer',
+                                              'visible_data_only':True,
+                                              'show_legend':False})
+        animation.add_subplot(fig_position=11,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+                            axes_parameters= {'data_provider':self.cerebellum,
+                                              'property':'rC',
+                                              'layer':'grclayer',
+                                              'cell_index': range(10),
+                                              'visible_data_only':True,
+                                              'show_legend':False})
+        animation.add_subplot(fig_position=12,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+                            axes_parameters= {'data_provider':self.cerebellum,
+                                              'property':'gL',
+                                              'layer':'grclayer',
+                                              'cell_index': range(10),
+                                              'visible_data_only':True,
+                                              'show_legend':False})
+#         animation.add_subplot(fig_position=17,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'property':'rC',
-#                                               'layer':'goclayer',
-#                                               'cell_index': range(1),
+#                                               'layer':'pclayer',
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
-#         animation.add_subplot(fig_position=14,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+#         animation.add_subplot(fig_position=18,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'property':'gL',
-#                                               'layer':'goclayer',
-#                                               'cell_index': range(1),
+#                                               'layer':'pclayer',
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
-#         animation.add_subplot(fig_position=15,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
-#                             axes_parameters= {'data_provider':self.cerebellum,
-#                                               'property':'rC',
-#                                               'layer':'grclayer',
-#                                               'cell_index': range(10),
-#                                               'visible_data_only':True,
-#                                               'show_legend':False})
-#         animation.add_subplot(fig_position=16,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
-#                             axes_parameters= {'data_provider':self.cerebellum,
-#                                               'property':'gL',
-#                                               'layer':'grclayer',
-#                                               'cell_index': range(10),
-#                                               'visible_data_only':True,
-#                                               'show_legend':False})
-#         for i in range(1):
-#             animation.add_subplot(fig_position=i+8,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
-#                             axes_parameters= {'data_provider':self.cerebellum,
-#                                               'pattern_provider': self.pattern_generator,
-#                                               'layer':'mfgocsynapsis',
-#                                               'target_indexes': [i],
-#                                               'show_legend':False})
+        for i in range(8):
+            animation.add_subplot(fig_position=i+13,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
+                            axes_parameters= {'data_provider':self.cerebellum,
+                                              'pattern_provider': self.pattern_generator,
+                                              'layer':'mfgocsynapsis',
+                                              'target_indexes': [i],
+                                              'show_legend':False})
 #             animation.add_subplot(fig_position=2*i+8,axes_type=AxesWeightEvolutionLine.AxesWeightEvolutionLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'layer':'mfgocsynapsis',

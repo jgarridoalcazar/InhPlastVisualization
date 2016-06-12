@@ -12,7 +12,7 @@ import matplotlib.pylab
 if __name__ == "__main__":
     
     config_dict = {}
-    config_dict ['MF-GoC'] = {'file_name'   : './results/search_state_mfgoc_2p_4p_4c_NoNormIP_40mf.txt',
+    config_dict ['MF-GoC'] = {'file_name'   : './results/search_state_mfgoc_01mm_8p_20mf_ip.txt',
                               'labels'      : ['MF-GoC Max Weight (x10^-9)','MF-GoC Ratio'],
                               'x'           : 'param1_values*1e9',
                               'y'           : 'param2_values'}
@@ -63,9 +63,9 @@ if __name__ == "__main__":
     # Interpolate; there's also method='cubic' for 2-D data such as here
     zi = scipy.interpolate.griddata((x, y), z, (xi, yi), method='linear')
 
-    surf = ax.imshow(zi, origin='lower', extent=[min(x), max(x), min(y), max(y)],  vmin=0, vmax=0.6)
+    surf = ax.imshow(zi, origin='lower', extent=[min(x), max(x), min(y), max(y)],  vmin=0, vmax=0.60)
     #surf = ax.plot_surface(xi, yi, zi, rstride=1, cstride=1, cmap=cm.coolwarm, linewidth=0, antialiased=False)
-    ax.scatter(x, y, c=z, vmin=0, vmax=0.6)
+    ax.scatter(x, y, c=z, vmin=0, vmax=0.60)
     fig.colorbar(surf, shrink=0.5, aspect=5)
     # Interpolate the data to generate the mesh
     ax.set_title('Mutual Information')

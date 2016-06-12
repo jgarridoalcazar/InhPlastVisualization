@@ -123,10 +123,18 @@ class CerebellarModel(object):
         self.neuron_layers.append(self.goclayer)
         self.layer_map[self.goclayer.__name__] = self.goclayer
                 
-        # Create Purkinje cell layer
-#         pc_options = self.config_dict['pclayer']
-#         self.pclayer = NeuronLayer.NeuronLayer(**pc_options)
-#         self.neuron_layers.append(self.pclayer)
+        # Create Purkinje cell layer (not compulsory yet)
+        if 'pclayer' in self.config_dict:
+            pc_options = self.config_dict['pclayer']
+            pc_options['random_generator'] = self.get_local_py_rng()
+            if (self.network_size is not None):
+                pc_options['size'] = self.network_size
+            node = _search_hdf5_group(file, 'pclayer')
+            if node is not None:
+                pc_options['load_from_file'] = node
+            self.pclayer = NeuronLayer.NeuronLayer(**pc_options)
+            self.neuron_layers.append(self.pclayer)
+            self.layer_map[self.pclayer.__name__] = self.pclayer
         
         # Create deep cerebellar nuclei cell layer
 #         dcn_options = self.config_dict['dcnlayer']
@@ -197,7 +205,7 @@ class CerebellarModel(object):
         self.synaptic_layers.append(self.grcgoclayer)
         self.layer_map[self.grcgoclayer.__name__] = self.grcgoclayer
         
-        # Create GoC-GoC synaptic layer
+        # Create GoC-GrC synaptic layer
         gocgrc_options = self.config_dict['gocgrcsynapsis']
         gocgrc_options['source_layer'] = self.goclayer
         gocgrc_options['target_layer'] = self.grclayer
@@ -223,12 +231,31 @@ class CerebellarModel(object):
         self.synaptic_layers.append(self.gocgoclayer)
         self.layer_map[self.gocgoclayer.__name__] = self.gocgoclayer
         
-        # Create GrC-PC synaptic layer
-#         grcpc_options = self.config_dict['grcpcsynapsis']
-#         grcpc_options['source_layer'] = self.grclayer
-#         grcpc_options['target_layer'] = self.pclayer
-#         self.grcpclayer = SynapticLayer.SynapticLayer(**grcpc_options)
-#         self.synaptic_layers.append(self.grcpclayer)
+        # Create GrC-PC synaptic layer (optional)
+        if 'grcpcsynapsis' in self.config_dict:
+            grcpc_options = self.config_dict['grcpcsynapsis']
+            grcpc_options['source_layer'] = self.grclayer
+            grcpc_options['target_layer'] = self.pclayer
+            grcpc_options['random_generator'] = self.get_local_py_rng()
+            node = _search_hdf5_group(file, 'grcpcsynapsis')
+            if node is not None:
+                grcpc_options['load_from_file'] = node
+            self.grcpclayer = SynapticLayer.SynapticLayer(**grcpc_options)
+            self.synaptic_layers.append(self.grcpclayer)
+            self.layer_map[self.grcpclayer.__name__] = self.grcpclayer
+            
+        # Create PC-PC inhibitory connections (optional)
+        if 'pcpcsynapsis' in self.config_dict:
+            pcpc_options = self.config_dict['pcpcsynapsis']
+            pcpc_options['source_layer'] = self.pclayer
+            pcpc_options['target_layer'] = self.pclayer
+            pcpc_options['random_generator'] = self.get_local_py_rng()
+            node = _search_hdf5_group(file, 'pcpcsynapsis')
+            if node is not None:
+                pcpc_options['load_from_file'] = node
+            self.pcpclayer = SynapticLayer.SynapticLayer(**pcpc_options)
+            self.synaptic_layers.append(self.pcpclayer)
+            self.layer_map[self.pcpclayer.__name__] = self.pcpclayer
         
         # Create IO-PC synaptic layer
 #         iopc_options = self.config_dict['iopcsynapsis']
