@@ -72,6 +72,7 @@ class NestCerebellarModel(CerebellarModel):
         'epsilon_rC': 'epsilon_rc_ip*1.', # epsilon_rC parameter of the IP (unitless)
         'epsilon_rR': 'epsilon_rr_ip*1.', # epsilon_rR parameter of the IP (unitless)
         'r_C': '1./(cm*1.e12)', # Inverse of the membrane capacitance
+        'min_r_C': '1./(max_cm*1.e12)', # Inverse of the membrane capacitance
         # Stochastic IP model parameters
         'ip_rate': 'ip_rate', # IP rate
         'target_firing': 'target_freq', # Target firing frequency

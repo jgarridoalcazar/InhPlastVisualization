@@ -93,6 +93,7 @@ mynest::iaf_cond_exp_ip_sym::Parameters_::Parameters_()
     t_ref_     (  2.0    ),  // ms
     g_L        ( 16.6667 ),  // nS
     r_C        (  0.4    ),  // pF-1
+	min_r_C    (  1.0e-3 ),  // pF-1
     E_ex       (  0.0    ),  // mV
     E_in       (-85.0    ),  // mV
     E_L        (-70.0    ),  // mV
@@ -146,6 +147,7 @@ void mynest::iaf_cond_exp_ip_sym::Parameters_::get(DictionaryDatum &d) const
   def<double>(d,nest::names::E_ex,         E_ex);
   def<double>(d,nest::names::E_in,         E_in);
   def<double>(d,nest::names::r_C,          r_C);
+  def<double>(d,nest::names::min_r_C,      min_r_C);
   def<double>(d,nest::names::tau_syn_ex,   tau_synE);
   def<double>(d,nest::names::tau_syn_in,   tau_synI);
   def<double>(d,nest::names::I_e,          I_e);
@@ -167,6 +169,7 @@ void mynest::iaf_cond_exp_ip_sym::Parameters_::set(const DictionaryDatum& d)
   updateValue<double>(d,nest::names::E_in,    E_in);
   
   updateValue<double>(d,nest::names::r_C,     r_C);
+  updateValue<double>(d,nest::names::min_r_C, min_r_C);
   updateValue<double>(d,nest::names::g_L,     g_L);
 
   updateValue<double>(d,nest::names::tau_syn_ex, tau_synE);
@@ -184,6 +187,9 @@ void mynest::iaf_cond_exp_ip_sym::Parameters_::set(const DictionaryDatum& d)
     
   if ( r_C <= 0 )
     throw nest::BadProperty("Inverse capacitance must be strictly positive.");
+
+  if ( min_r_C <= 0 )
+      throw nest::BadProperty("Min inverse capacitance must be strictly positive.");
     
   if ( t_ref_ < 0 )
     throw nest::BadProperty("Refractory time cannot be negative.");
@@ -348,6 +354,13 @@ void mynest::iaf_cond_exp_ip_sym::update(nest::Time const & origin, const nest::
 
       if ( status != GSL_SUCCESS )
         throw nest::GSLSolverFailure(get_name(), status);
+
+      std::cerr << P_.min_r_C << std::endl;
+      if (S_.y_[State_::R_C] < P_.min_r_C){
+    	  std::cout << "RC menor after GSL" << std::endl;
+      }
+
+      S_.y_[State_::R_C] = std::max(S_.y_[State_::R_C],P_.min_r_C);
     }
 
     S_.y_[State_::G_EXC] += B_.spike_exc_.get_value(lag);
@@ -377,6 +390,13 @@ void mynest::iaf_cond_exp_ip_sym::update(nest::Time const & origin, const nest::
 	      const double I_total   = P_.I_e - I_syn_exc - I_syn_inh;
 	      const double DeltaRC 	 = - P_.epsilon_rC * (1.0 + P_.beta) * I_total / P_.tau_ip;
 	      S_.y_[State_::R_C] += DeltaRC;
+
+	      std::cout << P_.min_r_C << std::endl;
+	      if (S_.y_[State_::R_C] < P_.min_r_C){
+	    	  std::cout << "RC menor after event" << std::endl;
+	      }
+	      S_.y_[State_::R_C] = std::max(S_.y_[State_::R_C],P_.min_r_C);
+
 	      S_.y_[State_::G_L] += P_.epsilon_rR * (1.0 + P_.beta) / P_.tau_ip;
 	      //std::cout << "Spike elicited: I_total=" << I_total << " rC=" << S_.y_[State_::R_C] << "DeltarC=" << DeltaRC << std::endl;
 	      // Check if R_C goes to 0 or negative

@@ -16,9 +16,9 @@ nest.SetKernelStatus({"resolution": 0.1, "print_time": True})
 print('iaf_cond_exp_ip recordables: {0}'.format(nest.GetDefaults('iaf_cond_exp_ip')['recordables']))
 
 # create neuron and multimeter
-n = nest.Create('iaf_cond_exp_ip', 
+n = nest.Create('iaf_cond_exp_ip_sym', 
                 params = {'tau_syn_ex': 1.0, 'V_reset': -65.0, 'E_L': -65.0, 'E_ex': 0.0, 'E_in': -80.0, 'V_th': -50.0,
-                           'beta':1.2, 'tau_ip': 1.0e6, 'epsilon_rC': 42.0, 'epsilon_rR':600.0})
+                           'beta':1.2, 'tau_ip': 1.0e6, 'epsilon_rC': 42.0, 'epsilon_rR':600.0, 'min_r_C': 1.0})
 nest.SetStatus(n,{'r_C':1.0,'g_L':0.6, 'I_e':0.0})
 
 g = nest.Create('sinusoidal_poisson_generator', n=1, params={'rate': 100.0, 'amplitude': 100.0,

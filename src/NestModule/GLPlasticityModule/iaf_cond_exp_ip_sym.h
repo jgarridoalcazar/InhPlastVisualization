@@ -43,6 +43,7 @@ The following parameters can be set in the status dictionary.
 V_m        double - Membrane potential in mV 
 E_L        double - Leak reversal potential in mV.
 r_C         double - Inverse of the capacity of the membrane in pF-1
+min_r_C    double - Min of the inverse of the capacity of the membrane in pF-1 (hard bounded)
 t_ref      double - Duration of refractory period in ms. 
 V_th       double - Spike threshold in mV.
 V_reset    double - Reset potential of the membrane in mV.
@@ -78,6 +79,7 @@ namespace nest
 	{
     	// Neuron parameters
     	extern const Name r_C;                 	//!< Inverse of the capacity of the membrane
+    	extern const Name min_r_C;              //!< Min of the inverse of the capacity of the membrane
     	extern const Name tau_ip;				//!< IP time constant
     	extern const Name epsilon_rC;			//!< IP effect of postsynaptic spike in the rC variable
     	extern const Name epsilon_rR;			//!< IP effect of postsynaptic spike in the g_L variable
@@ -162,6 +164,7 @@ namespace mynest
       nest::double_t t_ref_;      //!< Refractory period in ms
       nest::double_t g_L;         //!< Initial leak Conductance in nS (also known as rR)
       nest::double_t r_C;         //!< Initial inverse of the membrane Capacitance in pF
+      nest::double_t min_r_C;     //!< Min of the inverse of the membrane Capacitance in pF
       nest::double_t E_ex;        //!< Excitatory reversal Potential in mV
       nest::double_t E_in;        //!< Inhibitory reversal Potential in mV
       nest::double_t E_L;         //!< Leak reversal Potential (aka resting potential) in mV
