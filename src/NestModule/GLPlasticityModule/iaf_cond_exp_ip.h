@@ -78,6 +78,7 @@ namespace nest
 	{
     	// Neuron parameters
     	extern const Name r_C;                 	//!< Inverse of the capacity of the membrane
+    	extern const Name min_r_C;              //!< Min of the inverse of the capacity of the membrane
     	extern const Name tau_ip;				//!< IP time constant
     	extern const Name epsilon_rC;			//!< IP effect of postsynaptic spike in the rC variable
     	extern const Name epsilon_rR;			//!< IP effect of postsynaptic spike in the g_L variable

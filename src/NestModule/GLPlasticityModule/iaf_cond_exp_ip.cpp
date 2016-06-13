@@ -57,6 +57,7 @@ namespace nest  // template specialization must be placed in namespace
   {
 
   	  const Name r_C("r_C");
+  	  const Name min_r_C("min_r_C");
       const Name tau_ip("tau_ip");
       const Name epsilon_rC("epsilon_rC");
       const Name epsilon_rR("epsilon_rR");

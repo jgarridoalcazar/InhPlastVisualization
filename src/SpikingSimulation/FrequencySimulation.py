@@ -289,9 +289,9 @@ class FrequencySimulation(object):
             
         # Adjust the frame_rate depending on whether the simulation is running at the same time
         if self.config_options['simulation']['run_simulation']:
-            frame_rate = 10.0
+            frame_rate = 0.1
         else:
-            frame_rate = 10.0
+            frame_rate = 0.1
         
         animation = SimulAnimation.SimulAnimation(simulation=self,numRows=4,numColumns=5,blit=True,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
 #         animation.add_subplot(fig_position=1,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,

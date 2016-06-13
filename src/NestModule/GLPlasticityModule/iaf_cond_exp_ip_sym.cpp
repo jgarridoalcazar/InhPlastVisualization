@@ -351,11 +351,11 @@ void mynest::iaf_cond_exp_ip_sym::update(nest::Time const & origin, const nest::
 			    B_.step_,            // to t <= step
 			   &B_.IntegrationStep_, // integration step size
 			    S_.y_); 	         // neuronal state
+      S_.y_[State_::R_C] = std::max(S_.y_[State_::R_C],P_.min_r_C);
 
       if ( status != GSL_SUCCESS )
         throw nest::GSLSolverFailure(get_name(), status);
 
-      std::cerr << P_.min_r_C << std::endl;
       if (S_.y_[State_::R_C] < P_.min_r_C){
     	  std::cout << "RC menor after GSL" << std::endl;
       }
@@ -391,11 +391,10 @@ void mynest::iaf_cond_exp_ip_sym::update(nest::Time const & origin, const nest::
 	      const double DeltaRC 	 = - P_.epsilon_rC * (1.0 + P_.beta) * I_total / P_.tau_ip;
 	      S_.y_[State_::R_C] += DeltaRC;
 
-	      std::cout << P_.min_r_C << std::endl;
+	      S_.y_[State_::R_C] = std::max(S_.y_[State_::R_C],P_.min_r_C);
 	      if (S_.y_[State_::R_C] < P_.min_r_C){
 	    	  std::cout << "RC menor after event" << std::endl;
 	      }
-	      S_.y_[State_::R_C] = std::max(S_.y_[State_::R_C],P_.min_r_C);
 
 	      S_.y_[State_::G_L] += P_.epsilon_rR * (1.0 + P_.beta) / P_.tau_ip;
 	      //std::cout << "Spike elicited: I_total=" << I_total << " rC=" << S_.y_[State_::R_C] << "DeltarC=" << DeltaRC << std::endl;
