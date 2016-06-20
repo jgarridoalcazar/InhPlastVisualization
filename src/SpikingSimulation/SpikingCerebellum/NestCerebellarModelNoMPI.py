@@ -45,6 +45,8 @@ class NestCerebellarModel(CerebellarModel):
          'ConductanceLIFSym' : 'iaf_cond_exp_sym',
          'ConductanceLIFwIP': 'iaf_cond_exp_ip',
          'ConductanceLIFwIPSym': 'iaf_cond_exp_ip_sym',
+         'ConductanceLIFwAT': 'iaf_cond_exp_at',
+         'ConductanceLIFwATSym': 'iaf_cond_exp_at_sym',
          'ConductanceLIFStowIP': 'iaf_cond_exp_sto_ip',
          'CurrentLIF' : 'iaf_neuron'
     }
@@ -73,11 +75,14 @@ class NestCerebellarModel(CerebellarModel):
         'epsilon_rR': 'epsilon_rr_ip*1.', # epsilon_rR parameter of the IP (unitless)
         'r_C': '1./(cm*1.e12)', # Inverse of the membrane capacitance
         'min_r_C': '1./(max_cm*1.e12)', # Inverse of the membrane capacitance
+        # Adaptive threshold parameters
+        'tau_th': 'tau_th*1.e3', # Threshold adaptation tau (s)
+        'th_C': 'th_cons*1.e3', # Threshold constant (v)
         # Stochastic IP model parameters
         'ip_rate': 'ip_rate', # IP rate
         'target_firing': 'target_freq', # Target firing frequency
         # Symmetric STDP parameters
-        'tau_sym': 'tau_sym*1.e3'
+        'tau_sym': 'tau_istdp*1.e3'
     }
     
     # This dictionary maps the state variables as used in the config file with the state variable names in NEST.
@@ -466,6 +471,30 @@ class NestCerebellarModel(CerebellarModel):
             
         return
     
+    def update_neuron_states(self):
+        '''
+        Update the values of the state variable indicated
+        '''
+        for layer in self.neuron_layers:
+            
+            # Get NEST model recordable variables
+            if (layer.save_state_vars):
+                
+                layer.neuron_states = dict()
+                
+                # If only an string has been used, embed it in an array
+                if isinstance(layer.save_state_vars,str):
+                    layer.save_state_vars = [layer.save_state_vars]
+                    
+                # Get recording variables in this cell model
+                for var in layer.save_state_vars:
+                    if var in self.stateTranslatorDict:
+                        layer.neuron_states[var] = numpy.array(nest.GetStatus(layer.nest_layer.tolist(), self.stateTranslatorDict[var][0])).astype(numpy.float32) * self.stateTranslatorDict[var][1]
+                    else:
+                        logger.warning('%s state variable is included in the recordable variable map. Ignoring',var)
+            
+        return
+    
     def _build_network(self):
         '''
         Generate a NEST model based on the inherited cerebellar model.
@@ -520,6 +549,14 @@ class NestCerebellarModel(CerebellarModel):
             # Create the layer nodes and store them in the NuronLayer object
             layer.nest_layer = numpy.array(nest.Create(model=layer.nest_model_name, params=nest_param_dict, n=layer.number_of_neurons))
             layer.is_local_node = numpy.array(nest.GetStatus(layer.nest_layer.tolist(),'local'))
+            
+            # Set the neuron status
+            if (layer.neuron_states):
+                for key, value in layer.neuron_states.iteritems():
+                    if key in self.stateTranslatorDict:
+                        nest.SetStatus(layer.nest_layer.tolist(), self.stateTranslatorDict[key][0], value/self.stateTranslatorDict[key][1])
+                    else:
+                        logger.warning('%s state variable is not included in the recordable variable map. Ignoring',key)
             
             # Check whether we have to record the activity. If that is the case, create the spike detector
             if layer.register_activity:

@@ -30,6 +30,8 @@ source_files=  glplasticitymodule.cpp      glplasticitymodule.h      \
 				  iaf_cond_exp_sto_ip.cpp 	iaf_cond_exp_sto_ip.h \
                   iaf_cond_exp_ip.cpp 	iaf_cond_exp_ip.h \
 				  iaf_cond_exp_ip_sym.cpp 	iaf_cond_exp_ip_sym.h \
+				  iaf_cond_exp_at.cpp 	iaf_cond_exp_at.h \
+				  iaf_cond_exp_at_sym.cpp 	iaf_cond_exp_at_sym.h \
 				  iaf_cond_exp_sym.cpp 	iaf_cond_exp_sym.h \
 				  histentry_sym.cpp			histentry_sym.h \
 				  stdp_sym_connection_hom.h \

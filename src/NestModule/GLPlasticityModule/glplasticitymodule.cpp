@@ -42,6 +42,8 @@
 #include "istdp_connection_hom.h"
 #include "iaf_cond_exp_ip.h"
 #include "iaf_cond_exp_ip_sym.h"
+#include "iaf_cond_exp_at.h"
+#include "iaf_cond_exp_at_sym.h"
 #include "iaf_cond_exp_sto_ip.h"
 #include "iaf_cond_exp_sym.h"
 #include "stdp_sym_connection_hom.h"
@@ -110,6 +112,21 @@ mynest::GLPlasticityModule::~GLPlasticityModule()
            Return value is a handle for later unregistration.
     */
     nest::register_model<iaf_cond_exp_ip_sym>(nest::NestModule::get_network(), "iaf_cond_exp_ip_sym");
+
+    /* Register a neuron or device model.
+	   Give node type as template argument and the name as second argument.
+	   The first argument is always a reference to the network.
+	   Return value is a handle for later unregistration.
+	*/
+	nest::register_model<iaf_cond_exp_at>(nest::NestModule::get_network(), "iaf_cond_exp_at");
+
+	/* Register a neuron or device model.
+		   Give node type as template argument and the name as second argument.
+		   The first argument is always a reference to the network.
+		   Return value is a handle for later unregistration.
+	*/
+	nest::register_model<iaf_cond_exp_at_sym>(nest::NestModule::get_network(), "iaf_cond_exp_at_sym");
+
 
     /* Register a neuron or device model.
 	   Give node type as template argument and the name as second argument.

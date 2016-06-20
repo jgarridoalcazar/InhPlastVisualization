@@ -117,6 +117,8 @@ class FrequencySimulation(object):
         logger.debug('Initializing cerebellum generator')
         self.cerebellum.initialize_simulation()
         
+        #self.cerebellum.visualize_network()
+        
         # Initialize oscillatory input current
         if 'oscillations' in self.config_options:
             logger.debug('Creating AC Current generator')
@@ -526,26 +528,13 @@ class FrequencySimulation(object):
 #                                               'show_legend':False})
         animation.add_subplot(fig_position=9,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
                             axes_parameters= {'data_provider':self.cerebellum,
-                                              'property':'rC',
+                                              'property':'Vth',
                                               'layer':'goclayer',
                                               'visible_data_only':True,
                                               'show_legend':False})
         animation.add_subplot(fig_position=10,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
                             axes_parameters= {'data_provider':self.cerebellum,
-                                              'property':'gL',
-                                              'layer':'goclayer',
-                                              'visible_data_only':True,
-                                              'show_legend':False})
-        animation.add_subplot(fig_position=11,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
-                            axes_parameters= {'data_provider':self.cerebellum,
-                                              'property':'rC',
-                                              'layer':'grclayer',
-                                              'cell_index': range(10),
-                                              'visible_data_only':True,
-                                              'show_legend':False})
-        animation.add_subplot(fig_position=12,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
-                            axes_parameters= {'data_provider':self.cerebellum,
-                                              'property':'gL',
+                                              'property':'Vth',
                                               'layer':'grclayer',
                                               'cell_index': range(10),
                                               'visible_data_only':True,
@@ -562,8 +551,8 @@ class FrequencySimulation(object):
 #                                               'layer':'pclayer',
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
-        for i in range(8):
-            animation.add_subplot(fig_position=i+13,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
+        for i in range(9):
+            animation.add_subplot(fig_position=i+11,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'pattern_provider': self.pattern_generator,
                                               'layer':'mfgocsynapsis',
@@ -576,6 +565,15 @@ class FrequencySimulation(object):
 #                                               'target_indexes': [i],
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
+# 
+#         animation.add_subplot(fig_position=20,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'property':'Vm',
+#                                               'layer':'goclayer',
+#                                               'visible_data_only':True,
+#                                               'show_legend':False,
+#                                               'x_length': 1.})
+
   
         
         

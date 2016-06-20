@@ -1,13 +1,13 @@
 /*
- *  iaf_cond_exp_ip.h
+ *  iaf_cond_exp_at.h
  *
  *  This file is based on the iaf_cond_exp cell model distributed with NEST.
  *  
  *  Modified by: Jes�s Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
-#ifndef IAF_COND_EXP_IP_H
-#define IAF_COND_EXP_IP_H
+#ifndef IAF_COND_EXP_AT_H
+#define IAF_COND_EXP_AT_H
 
 #include "config.h"
 
@@ -26,37 +26,33 @@
 #include <gsl/gsl_odeiv.h>
 
 /* BeginDocumentation
-Name: iaf_cond_exp_ip - Conductance based leaky integrate-and-fire neuron model with intrinsic plasticity.
+Name: iaf_cond_exp_at - Conductance based leaky integrate-and-fire neuron model with intrinsic plasticity.
 
 Description:
-iaf_cond_exp is an implementation of a spiking neuron using IAF dynamics with
-conductance-based synapses and intrinsic plasticity. Incoming spike events induce a post-synaptic change 
+iaf_cond_exp_at_sym is an implementation of a spiking neuron using IAF dynamics with
+conductance-based synapses and adaptive threshold. Incoming spike events induce a post-synaptic change
 of conductance modelled by an exponential function. The exponential function 
 is normalised such that an event of weight 1.0 results in a peak conductance of 1 nS.
-The intrinsic plasticity mechanism adjust the membrane capacitance and resistance in order to keep
-constant firing rate and maximizing the sensitivity to the input conductances. This plasticity
-is based on the paper [1]. 
+The adaptive threshold mechanism adjust the firing threshold in order to keep
+stable firing rate. This plasticity is based on the paper [1].
 
 Parameters: 
 The following parameters can be set in the status dictionary.
 
 V_m        double - Membrane potential in mV 
 E_L        double - Leak reversal potential in mV.
-r_C         double - Inverse of the capacity of the membrane in pF-1
-min_r_C    double - Min of the inverse of the capacity of the membrane in pF-1 (hard bounded)
+th_C       double - Threshold constant. Increment of the threshold voltage after each spike in mV.
 t_ref      double - Duration of refractory period in ms. 
 V_th       double - Spike threshold in mV.
 V_reset    double - Reset potential of the membrane in mV.
 E_ex       double - Excitatory reversal potential in mV.
 E_in       double - Inhibitory reversal potential in mV.
-g_L        double - Leak conductance in nS (also known rR in [1]);
+C_m        double - Capacity of the membrane in pF
+g_L        double - Leak conductance in nS;
+tau_th	   double - Time constant of the threshold adaptation in ms.
 tau_syn_ex double - Time constant of the excitatory synaptic exponential function in ms.
 tau_syn_in double - Time constant of the inhibitory synaptic exponential function in ms.
 I_e        double - Constant external input current in pA.
-tau_ip	   double - Intrinsic plasticity time constant in ms
-epsilon_rC double - Effect of each postsynaptic spike in the rC state variable
-epsilon_rR double - Effect of each postsynaptic spike in the rR state variable
-beta       double - Parameter of the probability Weibull distribution.
 
 Sends: SpikeEvent
 
@@ -78,13 +74,9 @@ namespace nest
 	namespace names
 	{
     	// Neuron parameters
-    	extern const Name r_C;                 	//!< Inverse of the capacity of the membrane
-    	extern const Name min_r_C;              //!< Min of the inverse of the capacity of the membrane
-    	extern const Name tau_ip;				//!< IP time constant
-    	extern const Name epsilon_rC;			//!< IP effect of postsynaptic spike in the rC variable
-    	extern const Name epsilon_rR;			//!< IP effect of postsynaptic spike in the g_L variable
-    	extern const Name beta;					//!< IP parameter of the probability distribution
-	}
+    	extern const Name th_C;                 //!<  Threshold constant. Increment of the threshold voltage after each spike in mV.
+    	extern const Name tau_th;				//!< Adaptive threshold time constant
+    }
 }
 
 namespace mynest
@@ -100,16 +92,16 @@ namespace mynest
    * @param void* Pointer to model neuron instance.
    */
   extern "C"
-  int iaf_cond_exp_ip_dynamics (double, const double*, double*, void*);
+  int iaf_cond_exp_at_dynamics (double, const double*, double*, void*);
   
-  class iaf_cond_exp_ip : public nest::Archiving_Node
+  class iaf_cond_exp_at : public nest::Archiving_Node
   {
     
   public:        
     
-    iaf_cond_exp_ip();
-    iaf_cond_exp_ip(const iaf_cond_exp_ip&);
-    ~iaf_cond_exp_ip();
+    iaf_cond_exp_at();
+    iaf_cond_exp_at(const iaf_cond_exp_at&);
+    ~iaf_cond_exp_at();
 
     /**
      * Import sets of overloaded virtual functions.
@@ -147,40 +139,37 @@ namespace mynest
     // Friends --------------------------------------------------------
 
     // make dynamics function quasi-member
-    friend int iaf_cond_exp_ip_dynamics(double, const double*, double*, void*);
+    friend int iaf_cond_exp_at_dynamics(double, const double*, double*, void*);
 
     // The next two classes need to be friends to access the State_ class/member
-    friend class nest::RecordablesMap<iaf_cond_exp_ip>;
-    friend class nest::UniversalDataLogger<iaf_cond_exp_ip>;
+    friend class nest::RecordablesMap<iaf_cond_exp_at>;
+    friend class nest::UniversalDataLogger<iaf_cond_exp_at>;
 
   private:
 
     // ---------------------------------------------------------------- 
 
     //! Model parameters
-    struct Parameters_ {
-      nest::double_t V_th_;       //!< Threshold Potential in mV
-      nest::double_t V_reset_;    //!< Reset Potential in mV
-      nest::double_t t_ref_;      //!< Refractory period in ms
-      nest::double_t g_L;         //!< Initial leak Conductance in nS (also known as rR)
-      nest::double_t r_C;         //!< Initial inverse of the membrane Capacitance in pF
-      nest::double_t min_r_C;     //!< Min of the inverse of the membrane Capacitance in pF
-      nest::double_t E_ex;        //!< Excitatory reversal Potential in mV
-      nest::double_t E_in;        //!< Inhibitory reversal Potential in mV
-      nest::double_t E_L;         //!< Leak reversal Potential (aka resting potential) in mV
-      nest::double_t tau_synE;    //!< Synaptic Time Constant Excitatory Synapse in ms
-      nest::double_t tau_synI;    //!< Synaptic Time Constant for Inhibitory Synapse in ms
-      nest::double_t I_e;         //!< Constant Current in pA
-      nest::double_t tau_ip;      //!< Intrinsic plasticity time constant in ms
-      nest::double_t epsilon_rC;	//!< Effect of each postsynaptic spike in the rC state variable
-      nest::double_t epsilon_rR;	//!< Effect of each postsynaptic spike in the g_L state variable
-      nest::double_t beta;		//!< Parameter of the probability Weibull distribution describing the input current.
-    
-      Parameters_();  //!< Sets default parameter values
+	struct Parameters_ {
+	  nest::double_t V_th_;       //!< Threshold Potential in mV
+	  nest::double_t V_reset_;    //!< Reset Potential in mV
+	  nest::double_t t_ref_;      //!< Refractory period in ms
+	  nest::double_t g_L;      //!< Leak Conductance in nS
+	  nest::double_t C_m;      //!< Membrane Capacitance in pF
+	  nest::double_t th_C;        //!<  Threshold constant. Increment of the threshold voltage after each spike in mV.
+	  nest::double_t E_ex;        //!< Excitatory reversal Potential in mV
+	  nest::double_t E_in;        //!< Inhibitory reversal Potential in mV
+	  nest::double_t E_L;         //!< Leak reversal Potential (aka resting potential) in mV
+	  nest::double_t tau_synE;    //!< Synaptic Time Constant Excitatory Synapse in ms
+	  nest::double_t tau_synI;    //!< Synaptic Time Constant for Inhibitory Synapse in ms
+	  nest::double_t I_e;         //!< Constant Current in pA
+	  nest::double_t tau_th;      //!< Adaptive threshold time constant in ms
 
-      void get(DictionaryDatum&) const;  //!< Store current values in dictionary
-      void set(const DictionaryDatum&);  //!< Set values from dicitonary
-    };
+	  Parameters_();  //!< Sets default parameter values
+
+	  void get(DictionaryDatum&) const;  //!< Store current values in dictionary
+	  void set(const DictionaryDatum&);  //!< Set values from dicitonary
+	};
 
   public:
     // ---------------------------------------------------------------- 
@@ -192,12 +181,11 @@ namespace mynest
      */
     struct State_ {
 
-      //! Symbolic indices to the elements of the state vector y
-      enum StateVecElems { V_M = 0,           
+    	//! Symbolic indices to the elements of the state vector y
+	  enum StateVecElems { V_M = 0,
 			   G_EXC,     
 			   G_INH,
-			   G_L,
-			   R_C,
+			   V_TH,
 			   STATE_VEC_SIZE };
 
       nest::double_t y_[STATE_VEC_SIZE];  //!< neuron state, must be C-array for GSL solver
@@ -218,11 +206,11 @@ namespace mynest
      * Buffers of the model.
      */
     struct Buffers_ {
-      Buffers_(iaf_cond_exp_ip&);                   //!<Sets buffer pointers to 0
-      Buffers_(const Buffers_&, iaf_cond_exp_ip&);  //!<Sets buffer pointers to 0
+      Buffers_(iaf_cond_exp_at&);                   //!<Sets buffer pointers to 0
+      Buffers_(const Buffers_&, iaf_cond_exp_at&);  //!<Sets buffer pointers to 0
 
       //! Logger for all analog data
-      nest::UniversalDataLogger<iaf_cond_exp_ip> logger_;
+      nest::UniversalDataLogger<iaf_cond_exp_at> logger_;
 
       /** buffers and sums up incoming spikes/currents */
       nest::RingBuffer spike_exc_;
@@ -275,12 +263,12 @@ namespace mynest
     Buffers_    B_;
 
     //! Mapping of recordables names to access functions
-    static nest::RecordablesMap<iaf_cond_exp_ip> recordablesMap_;
+    static nest::RecordablesMap<iaf_cond_exp_at> recordablesMap_;
   };
 
   
   inline
-  nest::port iaf_cond_exp_ip::send_test_event(nest::Node& target, nest::rport receptor_type, nest::synindex, bool)
+  nest::port iaf_cond_exp_at::send_test_event(nest::Node& target, nest::rport receptor_type, nest::synindex, bool)
   {
 	nest::SpikeEvent e;
     e.set_sender(*this);
@@ -288,7 +276,7 @@ namespace mynest
   }
 
   inline
-  nest::port iaf_cond_exp_ip::handles_test_event(nest::SpikeEvent&, nest::rport receptor_type)
+  nest::port iaf_cond_exp_at::handles_test_event(nest::SpikeEvent&, nest::rport receptor_type)
   {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
@@ -296,7 +284,7 @@ namespace mynest
   }
  
   inline
-  nest::port iaf_cond_exp_ip::handles_test_event(nest::CurrentEvent&, nest::rport receptor_type)
+  nest::port iaf_cond_exp_at::handles_test_event(nest::CurrentEvent&, nest::rport receptor_type)
   {
     if (receptor_type != 0)
       throw nest::UnknownReceptorType(receptor_type, get_name());
@@ -304,7 +292,7 @@ namespace mynest
   }
 
   inline
-  nest::port iaf_cond_exp_ip::handles_test_event(nest::DataLoggingRequest& dlr,
+  nest::port iaf_cond_exp_at::handles_test_event(nest::DataLoggingRequest& dlr,
 		  nest::rport receptor_type)
   {
     if (receptor_type != 0)
@@ -313,7 +301,7 @@ namespace mynest
   }
  
   inline
-  void iaf_cond_exp_ip::get_status(DictionaryDatum &d) const
+  void iaf_cond_exp_at::get_status(DictionaryDatum &d) const
   {
     P_.get(d);
     S_.get(d);
@@ -323,7 +311,7 @@ namespace mynest
   }
 
   inline
-  void iaf_cond_exp_ip::set_status(const DictionaryDatum &d)
+  void iaf_cond_exp_at::set_status(const DictionaryDatum &d)
   {
     Parameters_ ptmp = P_;  // temporary copy in case of errors
     ptmp.set(d);                       // throws if BadProperty

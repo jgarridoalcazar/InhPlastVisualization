@@ -319,6 +319,9 @@ class CerebellarModel(object):
         filename = self.save_file
         
         logger.info('Saving network to hdf5 file %s', filename)
+        
+        # Update the neuron states before saving it to file
+        self.update_neuron_states()
        
        
         if self.get_my_process_id()==0:
@@ -465,6 +468,13 @@ class CerebellarModel(object):
     def update_network_weights(self):
         '''
         Update the weights of the cerebellar model according to the running implementation.
+        '''
+        return
+    
+    @abc.abstractmethod
+    def update_neuron_states(self):
+        '''
+        Update the values of the state variable indicated
         '''
         return
     

@@ -437,6 +437,32 @@ class NestCerebellarModel(NestCerebellarModelNoMPI.NestCerebellarModel):
             gweights = numpy.reshape(gweights,(gsum, time_elements), order='C')
         
         return (gtime,gconnections,gweights)
+    
+    def update_neuron_states(self):
+        '''
+        Update the values of the state variable indicated
+        '''
+#         for layer in self.neuron_layers:
+#             
+#             # Get NEST model recordable variables
+#             if (layer.save_state_vars):
+#                 
+#                 layer.neuron_states = dict()
+#                 
+#                 # If only an string has been used, embed it in an array
+#                 if isinstance(layer.save_state_vars,str):
+#                     layer.save_state_vars = [layer.save_state_vars]
+#                     
+#                 # Get recording variables in this cell model
+#                 for var in layer.save_state_vars:
+#                     if var in self.stateTranslatorDict:
+#                         layer.neuron_states[var] = numpy.array(nest.GetStatus(layer.nest_layer, self.stateTranslatorDict[var][0])).astype(numpy.float32) * self.stateTranslatorDict[var][1]
+#                     else:
+#                         logger.warning('%s state variable is included in the recordable variable map. Ignoring',var)
+
+        logger.error('Update_neuron_states function has not been implemented for distributed networks. It cannot be used yet')
+            
+        return
         
         
     def get_number_of_virtual_processes(self):

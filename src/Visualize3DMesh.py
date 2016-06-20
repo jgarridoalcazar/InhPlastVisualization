@@ -12,7 +12,7 @@ import matplotlib.pylab
 if __name__ == "__main__":
     
     config_dict = {}
-    config_dict ['MF-GoC'] = {'file_name'   : './results/search_state_mfgoc_01mm_8p_20mf_ip.txt',
+    config_dict ['MF-GoC'] = {'file_name'   : './results/search_state_all_01mm_4p_20mf_ip.txt',
                               'labels'      : ['MF-GoC Max Weight (x10^-9)','MF-GoC Ratio'],
                               'x'           : 'param1_values*1e9',
                               'y'           : 'param2_values'}

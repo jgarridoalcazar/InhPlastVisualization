@@ -26,6 +26,7 @@ class InputLayer(object):
         @param random_generator: The random number generator to use (optional).
         @param soma_size: Size of the soma for this neuron layer (optional). It should be used only for visualization purposes.
         @param load_from_file: h5py group from which the neuron layer positions have to be loaded (optional).
+        @param load_state_vars: List of neuron state variables to load from the file
         '''
         
         # Read name
@@ -96,6 +97,18 @@ class InputLayer(object):
         else:
             self.load_from_file = None
             
+        if ('load_state_vars' in kwargs):
+            self.load_state_vars = kwargs.pop('load_state_vars')
+        else:
+            self.load_state_vars = None
+        
+        if ('save_state_vars' in kwargs):
+            self.save_state_vars = kwargs.pop('save_state_vars')
+        else:
+            self.save_state_vars = None
+            
+        self.neuron_states = dict()
+            
         # Check whether additional parameters have been used.
         for param in kwargs:
             logger.warning('Unrecognized parameter %s in layer %s',param,self.__name__)
@@ -156,6 +169,10 @@ class InputLayer(object):
         # Define the relative positions of the layer
         positions_dataset = root.create_dataset('relative_positions', data = self.relative_positions)
         
+        if self.neuron_states:
+            for key, value in self.neuron_states.iteritems():
+                root.create_dataset(key, data = value)
+                        
         return
     
     def load_layer(self, root):
@@ -177,6 +194,22 @@ class InputLayer(object):
         
         # Set the number of neurons
         self.number_of_neurons = self.relative_positions.shape[0]
+        
+        # Get NEST model recordable variables
+        if (self.load_state_vars):
+                
+            self.neuron_states = dict()
+                
+            # If only an string has been used, embed it in an array
+            if isinstance(self.load_state_vars,str):
+                self.load_state_vars = [self.load_state_vars]
+                    
+            # Get recording variables in this cell model
+            for var in self.load_state_vars:
+                if var in root:
+                    self.neuron_states[var] = root[var][:]
+                else:
+                    logger.warning('%s state variable does not exist in h5 file. Ignoring',var)
         
         return
                 

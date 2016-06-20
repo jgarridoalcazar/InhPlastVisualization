@@ -356,10 +356,6 @@ void mynest::iaf_cond_exp_ip_sym::update(nest::Time const & origin, const nest::
       if ( status != GSL_SUCCESS )
         throw nest::GSLSolverFailure(get_name(), status);
 
-      if (S_.y_[State_::R_C] < P_.min_r_C){
-    	  std::cout << "RC menor after GSL" << std::endl;
-      }
-
       S_.y_[State_::R_C] = std::max(S_.y_[State_::R_C],P_.min_r_C);
     }
 
@@ -390,11 +386,7 @@ void mynest::iaf_cond_exp_ip_sym::update(nest::Time const & origin, const nest::
 	      const double I_total   = P_.I_e - I_syn_exc - I_syn_inh;
 	      const double DeltaRC 	 = - P_.epsilon_rC * (1.0 + P_.beta) * I_total / P_.tau_ip;
 	      S_.y_[State_::R_C] += DeltaRC;
-
 	      S_.y_[State_::R_C] = std::max(S_.y_[State_::R_C],P_.min_r_C);
-	      if (S_.y_[State_::R_C] < P_.min_r_C){
-	    	  std::cout << "RC menor after event" << std::endl;
-	      }
 
 	      S_.y_[State_::G_L] += P_.epsilon_rR * (1.0 + P_.beta) / P_.tau_ip;
 	      //std::cout << "Spike elicited: I_total=" << I_total << " rC=" << S_.y_[State_::R_C] << "DeltarC=" << DeltaRC << std::endl;
