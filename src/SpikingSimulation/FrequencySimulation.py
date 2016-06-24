@@ -624,7 +624,7 @@ class FrequencySimulation(object):
 #                                               'show_legend':False})
         matplotlib.pylab.show() 
             
-    def analyze_results(self):
+    def analyze_MI(self):
         '''
         Analyze the estimators that have been set in the configuration file
         '''
@@ -667,5 +667,49 @@ class FrequencySimulation(object):
                 MIAnalysis.writeToFile(file_name=filename)
                 
         return mutual_information
+    
+    def analyze_Hits(self):
+        '''
+        Analyze the estimators that have been set in the configuration file
+        '''
+        
+        if self.config_options['simulation']['use_mpi']:
+            import Analysis.HitAnalysisNoMPI as HitAnalysis
+        else:
+            import Analysis.HitAnalysisNoMPI as HitAnalysis
+        
+        # Extract every mutual information to explore
+        parameter_keys = [key for key in self.config_options.keys() if key.startswith('hit_analysis')]
+        hit_analysis = []
+        for key in parameter_keys:
+            
+            if not 'layer' in self.config_options[key]:
+                logger.error('Layer name has not been specified in the hit analysis section')
+                raise Exception('NonSpecifiedLayer')
+            
+            if not 'window_length' in self.config_options[key]:
+                logger.error('Window length has not been specified in the hit analysis section')
+                raise Exception('NonSpecifiedWindowLenght')
+            
+            if not 'time_bin' in self.config_options[key]:
+                logger.error('time bin has not been specified in the hit analysis section')
+                raise Exception('NonSpecifiedTimeBin')
+            
+            if not 'record_to_file' in self.config_options[key]:
+                self.config_options[key]['record_to_file'] = False
+            
+            
+            logger.info('Analyzing hit analysis in section %s',key)
+            Analysis = HitAnalysis.HitAnalysis(data_provider=self.cerebellum, pattern_generator=self.pattern_generator, layer=self.config_options[key]['layer'],
+                                                             window_length=self.config_options[key]['window_length'], time_bin = self.config_options[key]['time_bin'])
+            Analysis.initialize()
+            Analysis.runAtTime(self.simulation_time)
+            hit_analysis.append(Analysis.hit_index)
+            if self.config_options[key]['record_to_file']:
+                filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key 
+                logger.debug('Writing hit analysis from section %s to file %s',key,filename)
+                Analysis.writeToFile(file_name=filename)
+                
+        return hit_analysis
     
  

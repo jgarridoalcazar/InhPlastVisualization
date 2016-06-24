@@ -12,9 +12,8 @@
 #$ -pe openmpi 128
 # -hold_jid deap-all-learning
 
-export PATH=/SCRATCH/TIC117/jesusgarrido/autotools/bin:/SCRATCH/TIC117/jesusgarrido/NEST/nest24/insNoMPI/bin:/usr/local/apps/python-2.7.6/bin:$PATH
-export PYTHONPATH=/SCRATCH/TIC117/jesusgarrido/NEST/nest24/insNoMPI/lib/python2.7/site-packages/:/SCRATCH/TIC117/jesusgarrido/scipy/ins/lib/python2.7/site-packages/:$PYTHONPATH
-export LD_LIBRARY_PATH=/SCRATCH/TIC117/jesusgarrido/NEST/nest24/insNoMPI/lib/nest/:$LD_LIBRARY_PATH
+export PATH=/SCRATCH/TIC117/jesusgarrido/autotools/bin:/SCRATCH/TIC117/jesusgarrido/NEST/nest210/insNoMPI/bin:/usr/local/apps/python-2.7.6/bin:$PATH
+export PYTHONPATH=/SCRATCH/TIC117/jesusgarrido/NEST/nest210/insNoMPI/lib/python2.7/site-packages/:/SCRATCH/TIC117/jesusgarrido/scipy/ins/lib/python2.7/site-packages/:$PYTHONPATH
+export LD_LIBRARY_PATH=/SCRATCH/TIC117/jesusgarrido/NEST/nest210/insNoMPI/lib/nest/:$LD_LIBRARY_PATH
 
-#python -m scoop --prolog /SCRATCH/TIC117/jesusgarrido/SpikingGranularLayer/.env_var_ld -vvv -n 256 ./src/LaunchEvolutionaryAlgorithm.py SimulationConfigEACluster.cfg
-mpirun -np $NSLOTS python ./src/LaunchEvolutionaryAlgorithmMPI.py ./config/GoCGrC/EASearchGranularCluster.cfg
+mpirun -np $(($NSLOTS+1)) python ./src/LaunchEvolutionaryAlgorithmMPI.py ./config/GoCGrC/EASearchGranularCluster.cfg

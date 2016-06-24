@@ -834,7 +834,7 @@ def helper_simulation(local_config_options):
         if simulation.config_options['simulation']['visualize_results']:
             simulation.visualize_results()
     
-        [mutual_information] = simulation.analyze_results()
+        [mutual_information] = simulation.analyze_MI()
     except KeyboardInterrupt:
         logger.warning('Received SIGNINT signal. Ending simulation')
         import sys

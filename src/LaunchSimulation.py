@@ -35,4 +35,6 @@ if __name__ == "__main__":
     
     simulation.cerebellum.save_network()
     
-    simulation.analyze_results()    
+    simulation.analyze_MI()    
+    
+    simulation.analyze_Hits()
