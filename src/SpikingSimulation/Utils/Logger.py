@@ -11,6 +11,7 @@ handler_list = dict()
 
 formatter = None
 
+
 def InitializeLogger(name):
     
     # mpirank = MPI.COMM_WORLD.Get_rank()
@@ -24,7 +25,21 @@ def InitializeLogger(name):
         """
         def filter(self, record):
             # record.mpiid = mpirank
+            record.memuse = self.str_mem()
             return True
+        
+        def _VmB(self):
+            """Private.
+            """
+            import psutil
+            process = psutil.Process(os.getpid())
+            mem = process.memory_info()[0] / float(2**20)
+            return mem
+    
+        def str_mem(self):
+            """Return a string with the total memuse and swap size in MB
+            """
+            return "MemTotal:%.0fM"%(self._VmB())
 
 
     logger = logging.getLogger(name)
@@ -39,7 +54,7 @@ def InitializeLogger(name):
         global formatter
         if formatter is None:
             #formatter = logging.Formatter('%(asctime)s - P%(process)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
-            formatter = logging.Formatter('%(asctime)s - P%(process)s - %(name)s - %(levelname)s: %(message)s')
+            formatter = logging.Formatter('%(asctime)s - P%(process)s - %(memuse)s - %(name)s - %(levelname)s: %(message)s')
     
         # Create stdout handler
         handler = logging.StreamHandler()
@@ -70,7 +85,7 @@ def Logger2File(logger, filename):
         file_handler = [handler]
         
         if formatter is None:
-            formatter = logging.Formatter('%(asctime)s - P%(mpiid)s - %(name)s - %(levelname)s: %(message)s')
+            formatter = logging.Formatter('%(asctime)s - P%(mpiid)s - %(memuse)s -%(name)s - %(levelname)s: %(message)s')
 
         handler.setFormatter(formatter)
         
