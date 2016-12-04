@@ -202,7 +202,7 @@ namespace mynest
 	ConnTestDummyNode dummy_target;
     ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
 
-    t.register_stdp_connection( t_lastspike - get_delay() );
+    ((mynest::Archiving_Node_Sym *)(&t))->register_stdp_connection_sym( t_lastspike - get_delay() );
   }
   
  private:

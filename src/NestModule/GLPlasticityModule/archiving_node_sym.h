@@ -95,7 +95,7 @@ namespace mynest {
      *
      * t_first_read: The newly registered synapse will read the history entries with t > t_first_read.
      */
-    void register_stdp_connection(nest::double_t t_first_read);
+    void register_stdp_connection_sym(nest::double_t t_first_read);
 
     void get_status(DictionaryDatum & d) const;
     void set_status(const DictionaryDatum & d);
@@ -117,7 +117,7 @@ namespace mynest {
 
  private:
 
-  // number of incoming connections from stdp connectors.
+  // number of incoming connections from istdp connectors.
     // needed to determine, if every incoming connection has
     // read the spikehistory for a given point in time
     size_t n_incoming_sym_;
