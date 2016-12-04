@@ -70,7 +70,7 @@ class FrequencySimulation(object):
         if not isinstance(numeric_level, int):
             self.config_options['simulation']['verbosity'] = 'info'
             numeric_level = getattr(logging, self.config_options['simulation']['verbosity'].upper(), None)
-            logger.warning('Invalid simulation verbosity. Using default value %s',self.config_options['verbosity']['verbosity']) 
+            logger.warning('Invalid simulation verbosity. Using default value %s',self.config_options['simulation']['verbosity']) 
             raise ValueError('Invalid log level: %s' % self.config_options['simulation']['verbosity'])
         
         logger.setLevel(numeric_level)

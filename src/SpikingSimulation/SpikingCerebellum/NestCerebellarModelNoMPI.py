@@ -249,6 +249,12 @@ class NestCerebellarModel(CerebellarModel):
             
         if 'simulation_timeout' not in self.simulation_options:
             self.simulation_options['simulation_timeout'] = None
+            
+        if 'register_activity_only_in_test' not in self.simulation_options:
+            self.simulation_options['register_activity_only_in_test'] = False
+        
+        if 'test_length' not in self.simulation_options:
+            self.simulation_options['test_length'] = self.simulation_options['time']
         
         if self.simulation_options['record_to_file']:        
             if 'data_path' in self.simulation_options:
@@ -566,6 +572,11 @@ class NestCerebellarModel(CerebellarModel):
                 
                 # Set layer registered name
                 nest.SetStatus(layer.nest_spike_detector.tolist(),{'label':layer.__name__+'_spike'})
+                
+                if self.simulation_options['register_activity_only_in_test']:
+                    start_time = self.simulation_options['time']-self.simulation_options['test_length']
+                    nest.SetStatus(layer.nest_spike_detector.tolist(),{'start': start_time*1.0e3})
+                    logger.debug('Setting register activity start in layer %s at time %s',layer.__name__, start_time)
             else:
                 layer.nest_spike_detector = None
                 
@@ -849,16 +860,27 @@ class NestCerebellarModel(CerebellarModel):
                 # Record the weights
                 scaled_weights = numpy.array(nest.GetStatus(layer.weight_sum['con'],'weight'),dtype=numpy.float32)
                 
+                #logger.debug('Weights readed')
+                
                 # Initialize the weight sum to 0
                 weight_sum = numpy.zeros(layer.target_layer.number_of_neurons,dtype=numpy.float64)
                 
+                #logger.debug('Sum initialized')
+                
+                
                 for weight,target_cell in zip(scaled_weights,layer.weight_sum['targets']):
                     weight_sum[target_cell] = weight_sum[target_cell] + weight
+                
+                #logger.debug('Sum calculated')
                     
                 normalized_weight = scaled_weights * layer.weight_total_sum * 1.e9 / weight_sum[layer.weight_sum['targets']]
                 
+                #logger.debug('Weights normalization done')
+                
                 # Set new weights
                 nest.SetStatus(layer.weight_sum['con'], 'weight', normalized_weight)
+                
+                #logger.debug('Weights normalized in layer %s',layer.__name__) 
                                 
         self.next_normalization_step += 1
     
@@ -881,7 +903,9 @@ class NestCerebellarModel(CerebellarModel):
             # Simulate the step (in ms)
             # Round the simulation time to avoid inconsistent results in nest.
             # nest.Simulate(math.ceil(sim_time*1.e3))
+            #logger.debug('Starting NEST simulation') 
             nest.Simulate(sim_time*1.e3)
+            #logger.debug('Ending NEST simulation') 
             
             # If it is time to record the activity
             if next_stop==next_activity_recording:
