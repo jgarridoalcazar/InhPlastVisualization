@@ -224,10 +224,10 @@ class HitAnalysis(Analysis.Analysis):
         # Calculate the average of the diagonal elements
         av_selected = numpy.average(diagonal)
         av_nonselected = numpy.sum(zero_matrix[:])/(self.num_cells*self.num_patterns)
-        log.debug(str('Average hits of selected elements:')+str(av_selected))
-        log.debug(str('Average hits of non-selected elements:')+str(av_nonselected))
+        logger.debug(str('Average hits of selected elements:')+str(av_selected))
+        logger.debug(str('Average hits of non-selected elements:')+str(av_nonselected))
         hit_index = av_selected - av_nonselected
-        log.debug(str('Hit index:')+str(hit_index))
+        logger.debug(str('Hit index:')+str(hit_index))
         
         self.av_selected = av_selected
         self.av_nonselected = av_nonselected
