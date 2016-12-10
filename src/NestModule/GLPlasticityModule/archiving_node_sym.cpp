@@ -227,7 +227,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
       //std::cout << "Post-spike received at " << last_spike_sym_ << "- Kexpt1 - " << Kexpt1_ << " Kcos2t1 - " << Kcos2t1_ << " Ksin2t1 - " << Ksin2t1_
       // << " Kexpt2 - " << Kexpt2_ << " Ksin2t2 - " << Ksin2t2_ << " Kcos2t2 - " << Kcos2t2_ << std::endl;
 
-      history_sym_.push_back( histentry_sym( last_spike_sym_, 0.0, 0.0, Kexpt1_, Kcos2t1_, Ksin2t1_, Kexpt2_, Ksin2t2_, Kcos2t2_, 0) );
+      history_sym_.push_back( histentry_sym( last_spike_sym_, Kexpt1_, Kcos2t1_, Ksin2t1_, Kexpt2_, Ksin2t2_, Kcos2t2_, 0) );
     } else {
       last_spike_sym_ = t_sp.get_ms();
     }

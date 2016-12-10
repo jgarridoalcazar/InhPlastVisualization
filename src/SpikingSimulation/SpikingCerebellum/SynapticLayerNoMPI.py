@@ -196,7 +196,7 @@ class SynapticLayer(object):
                     if (param in kwargs):
                         self.learning_rule_parameters[param] = kwargs.pop(param)
                     else:
-                        logger.warning('Non-specified learning rule parameter: %s in layer %s. Using default value', param, kwargs['name'])
+                        logger.warning('Non-specified learning rule parameter: %s in layer %s. Using default value', param, self.__name__)
             else:
                 logger.error('Unknown learning rule type: %s', self.learning_rule_type)
                 raise Exception('UnknownLearningRuleType')                         
