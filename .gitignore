@@ -169,8 +169,6 @@ src/NestModule/GLPlasticityModule/libltdl/*
 
 *.prof
 
-*.pkl
-
 SimulationConfigTest2.cfg
 
 SimulationConfigTest.cfg
