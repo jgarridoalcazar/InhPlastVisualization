@@ -1,6 +1,6 @@
 #!/bin/sh
 #$ -S /bin/sh
-#$ -N deap-noinh-learning
+#$ -N deap-MFGrC-noinh-learning
 #$ -m bea
 #$ -M jesusgarrido@ugr.es
 #$ -o /SCRATCH/TIC117/jesusgarrido/SpikingGranularLayer/results
