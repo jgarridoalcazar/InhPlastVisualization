@@ -642,7 +642,7 @@ class SynapticLayer(object):
         # Store the source and target indexes and the weights of the layer
         source_dataset = root.create_dataset('source_index', data = self.source_index)
         target_dataset = root.create_dataset('target_index', data = self.target_index)
-        weight_dataset = root.create_dataset('weight', data = self.weights)
+        weight_dataset = root.create_dataset('weight', data = self.weights.astype(numpy.float32))
         
         return
     
