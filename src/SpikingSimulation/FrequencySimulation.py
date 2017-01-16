@@ -293,7 +293,7 @@ class FrequencySimulation(object):
         if self.config_options['simulation']['run_simulation']:
             frame_rate = 0.1
         else:
-            frame_rate = 0.1
+            frame_rate = 1.0
         
         animation = SimulAnimation.SimulAnimation(simulation=self,numRows=4,numColumns=5,blit=True,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
 #         animation.add_subplot(fig_position=1,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
@@ -320,12 +320,18 @@ class FrequencySimulation(object):
 #                                               'visible_data_only':True,
 #                                               'show_legend':False,
 #                                               'x_length':1.})
+#         animation.add_subplot(fig_position=1,axes_type=AxesRasterPlot.AxesRasterPlot,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'layer':'grclayer',
+#                                               'visible_data_only':True,
+#                                               'show_legend':False,
+#                                               'cell_index': range(30),
+#                                               'x_length':1.})
         animation.add_subplot(fig_position=1,axes_type=AxesRasterPlot.AxesRasterPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
-                                              'layer':'grclayer',
+                                              'layer':'pclayer',
                                               'visible_data_only':True,
                                               'show_legend':False,
-                                              'cell_index': range(100),
                                               'x_length':1.})
         animation.add_subplot(fig_position=2,axes_type=AxesRasterPlot.AxesRasterPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
@@ -363,9 +369,14 @@ class FrequencySimulation(object):
 #                                               'layer':'gocgocsynapsis',
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
+#         animation.add_subplot(fig_position=4,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'layer':'mfgrcsynapsis',
+#                                               'visible_data_only':True,
+#                                               'show_legend':False})
         animation.add_subplot(fig_position=4,axes_type=AxesWeightHistogram.AxesWeightHistogram,
                             axes_parameters= {'data_provider':self.cerebellum,
-                                              'layer':'mfgrcsynapsis',
+                                              'layer':'grcpcsynapsis',
                                               'visible_data_only':True,
                                               'show_legend':False})
         animation.add_subplot(fig_position=5,axes_type=AxesWeightHistogram.AxesWeightHistogram,
@@ -390,9 +401,14 @@ class FrequencySimulation(object):
 #                                               'layer':'grcpcsynapsis',
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
+#         animation.add_subplot(fig_position=8,axes_type=AxesWeightHistogram.AxesWeightHistogram,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'layer':'gocgocsynapsis',
+#                                               'visible_data_only':True,
+#                                               'show_legend':False})
         animation.add_subplot(fig_position=8,axes_type=AxesWeightHistogram.AxesWeightHistogram,
                             axes_parameters= {'data_provider':self.cerebellum,
-                                              'layer':'gocgocsynapsis',
+                                              'layer':'pcpcsynapsis',
                                               'visible_data_only':True,
                                               'show_legend':False})
 #         animation.add_subplot(fig_position=11,axes_type=AxesWeightHistogram.AxesWeightHistogram,
@@ -532,11 +548,18 @@ class FrequencySimulation(object):
                                               'layer':'goclayer',
                                               'visible_data_only':True,
                                               'show_legend':False})
+#         animation.add_subplot(fig_position=10,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'property':'Vth',
+#                                               'layer':'grclayer',
+#                                               'cell_index': range(30),
+#                                               'visible_data_only':True,
+#                                               'show_legend':False})
         animation.add_subplot(fig_position=10,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'property':'Vth',
-                                              'layer':'grclayer',
-                                              'cell_index': range(10),
+                                              'layer':'pclayer',
+                                              #'cell_index': range(30),
                                               'visible_data_only':True,
                                               'show_legend':False})
 #         animation.add_subplot(fig_position=17,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
@@ -712,4 +735,58 @@ class FrequencySimulation(object):
                 
         return hit_analysis
     
+    def analyze_Hits_Top(self):
+        '''
+        Analyze the estimators that have been set in the configuration file
+        '''
+        
+        if self.config_options['simulation']['use_mpi']:
+            import Analysis.HitTopAnalysisNoMPI as HitTopAnalysis
+        else:
+            import Analysis.HitTopAnalysisNoMPI as HitTopAnalysis
+        
+        # Extract every mutual information to explore
+        parameter_keys = [key for key in self.config_options.keys() if key.startswith('hit_top_analysis')]
+        hit_analysis = []
+        for key in parameter_keys:
+            
+            func_params = {'data_provider': self.cerebellum,
+                           'pattern_generator': self.pattern_generator}
+            
+            if not 'layer' in self.config_options[key]:
+                logger.error('Layer name has not been specified in the hit analysis section')
+                raise Exception('NonSpecifiedLayer')
+            else:
+                func_params['layer'] = self.config_options[key]['layer']
+                
+            
+            if not 'window_length' in self.config_options[key]:
+                logger.error('Window length has not been specified in the hit analysis section')
+                raise Exception('NonSpecifiedWindowLenght')
+            else:
+                func_params['window_length'] = self.config_options[key]['window_length']
+            
+            if not 'time_bin' in self.config_options[key]:
+                logger.error('time bin has not been specified in the hit analysis section')
+                raise Exception('NonSpecifiedTimeBin')
+            else:
+                func_params['time_bin'] = self.config_options[key]['time_bin']
+            
+            if not 'record_to_file' in self.config_options[key]:
+                self.config_options[key]['record_to_file'] = False
+                
+            if 'number_of_cells' in self.config_options[key]:
+                func_params['number_of_cells'] = self.config_options[key]['number_of_cells']
+            
+            logger.info('Analyzing hit analysis in section %s',key)
+            Analysis = HitTopAnalysis.HitTopAnalysis(**func_params)
+            Analysis.initialize()
+            Analysis.runAtTime(self.simulation_time)
+            hit_analysis.append(Analysis.top_n_average)
+            if self.config_options[key]['record_to_file']:
+                filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key 
+                logger.debug('Writing hit analysis from section %s to file %s',key,filename)
+                Analysis.writeToFile(file_name=filename)
+                
+        return hit_analysis
  

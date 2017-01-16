@@ -38,3 +38,5 @@ if __name__ == "__main__":
     simulation.analyze_MI()    
     
     simulation.analyze_Hits()
+    
+    simulation.analyze_Hits_Top()
