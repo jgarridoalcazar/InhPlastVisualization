@@ -543,7 +543,15 @@ def helper_simulation(local_config_options):
         if simulation.config_options['simulation']['visualize_results']:
             simulation.visualize_results()
     
-        [mutual_information] = simulation.analyze_results()
+        parameter_keys_MI = [key for key in simulation.config_options.keys() if key.startswith('mutual_information')]
+        parameter_keys_hit = [key for key in simulation.config_options.keys() if key.startswith('hit_analysis')]
+        parameter_keys_hit_top = [key for key in simulation.config_options.keys() if key.startswith('hit_top_analysis')]
+        if parameter_keys_MI:
+            [mutual_information] = simulation.analyze_MI()
+        elif parameter_keys_hit:
+            [mutual_information] = simulation.analyze_Hits()
+        elif parameter_keys_hit_top:
+            [mutual_information] = simulation.analyze_Hits_Top()
     except KeyboardInterrupt:
         logger.warning('Received SIGNINT signal. Ending simulation')
         import sys
