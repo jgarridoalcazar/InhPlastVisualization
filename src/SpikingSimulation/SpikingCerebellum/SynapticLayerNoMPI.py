@@ -46,7 +46,8 @@ class SynapticLayer(object):
                          'STDP': ['tau_plus','learning_step','minus_plus_ratio','max_weight'],
                          'STDPSym': ['tau_sym','learning_step','minus_plus_ratio','max_weight'],
                          'eSTDP': ['tau_plus','learning_step','minus_plus_ratio','max_weight'],
-                         'iSTDP': ['tau_plus','learning_step','minus_plus_ratio','max_weight']
+                         'iSTDP': ['tau_plus','learning_step','minus_plus_ratio','max_weight'],
+                         'STDPTriplet': ['tau_plus','tau_plus_triplet','learning_step','learning_step_triplet','minus_plus_ratio','minus_plus_ratio_triplet','max_weight']
                          }
     
         # Specific parameters of the connectivity algorithm (and function implementing each one)

@@ -16,13 +16,13 @@ class NeuronLayer(InputLayer.InputLayer):
     
     template_model_parameters = {
                          'ConductanceLIF': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus', 'tau_istdp'],
-                         'ConductanceLIFSym': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus','tau_sym'],
+                         'ConductanceLIFSym': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus', 'tau_istdp','tau_sym'],
                          'ConductanceLIFwIP': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_ip','beta_ip','epsilon_rc_ip','epsilon_rr_ip','tau_minus', 'tau_istdp', 'max_cm'],
                          'ConductanceLIFwIPSym': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_ip','beta_ip','epsilon_rc_ip','epsilon_rr_ip','tau_istdp','tau_minus', 'max_cm'],
                          'ConductanceLIFwAT': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_th','th_cons','tau_minus', 'tau_istdp'],
                          'ConductanceLIFwATSym': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_th','th_cons','tau_istdp','tau_minus'],
-                         'ConductanceLIFStowIP': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tref_abs', 'tau_sym','ip_rate','target_freq','tau_minus'],
-                         'CurrentLIF': ['cm','grest','erest','eth','tref','tau_minus']
+                         'ConductanceLIFStowIP': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tref_abs', 'tau_sym', 'tau_istdp','ip_rate','target_freq','tau_minus'],
+                         'CurrentLIF': ['cm','grest','erest','eth','tref','tau_minus', 'tau_istdp']
                         }
     
     def __init__(self,**kwargs):

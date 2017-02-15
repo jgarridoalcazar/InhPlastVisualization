@@ -84,44 +84,47 @@ class CerebellarModel(object):
             file = None
         
         # Create cerebellar inputs (mossy fibers and inferior olive)
-        mf_options = self.config_dict['mflayer']
-        mf_options['random_generator'] = self.get_local_py_rng()
-        if (self.network_size is not None):
-            mf_options['size'] = self.network_size
-        node = _search_hdf5_group(file, 'mflayer')
-        if node is not None:
-            mf_options['load_from_file'] = node
-        self.mflayer = NeuronLayer.NeuronLayer(**mf_options)
-        self.neuron_layers.append(self.mflayer)
-        self.layer_map[self.mflayer.__name__] = self.mflayer
+        if 'mflayer' in self.config_dict:
+            mf_options = self.config_dict['mflayer']
+            mf_options['random_generator'] = self.get_local_py_rng()
+            if (self.network_size is not None):
+                mf_options['size'] = self.network_size
+            node = _search_hdf5_group(file, 'mflayer')
+            if node is not None:
+                mf_options['load_from_file'] = node
+            self.mflayer = NeuronLayer.NeuronLayer(**mf_options)
+            self.neuron_layers.append(self.mflayer)
+            self.layer_map[self.mflayer.__name__] = self.mflayer
         
 #         io_options = self.config_dict['iolayer']
 #         self.iolayer = InputLayer.InputLayer(**io_options)
 #         self.neuron_layers.append(self.iolayer)
         
         # Create granule cell layer
-        grc_options = self.config_dict['grclayer']
-        grc_options['random_generator'] = self.get_local_py_rng()
-        if (self.network_size is not None):
-            grc_options['size'] = self.network_size
-        node = _search_hdf5_group(file, 'grclayer')
-        if node is not None:
-            grc_options['load_from_file'] = node
-        self.grclayer = NeuronLayer.NeuronLayer(**grc_options)
-        self.neuron_layers.append(self.grclayer)
-        self.layer_map[self.grclayer.__name__] = self.grclayer
+        if 'grclayer' in self.config_dict:
+            grc_options = self.config_dict['grclayer']
+            grc_options['random_generator'] = self.get_local_py_rng()
+            if (self.network_size is not None):
+                grc_options['size'] = self.network_size
+            node = _search_hdf5_group(file, 'grclayer')
+            if node is not None:
+                grc_options['load_from_file'] = node
+            self.grclayer = NeuronLayer.NeuronLayer(**grc_options)
+            self.neuron_layers.append(self.grclayer)
+            self.layer_map[self.grclayer.__name__] = self.grclayer
         
         # Create Golgi cell layer
-        goc_options = self.config_dict['goclayer']
-        goc_options['random_generator'] = self.get_local_py_rng()
-        if (self.network_size is not None):
-            goc_options['size'] = self.network_size
-        node = _search_hdf5_group(file, 'goclayer')
-        if node is not None:
-            goc_options['load_from_file'] = node
-        self.goclayer = NeuronLayer.NeuronLayer(**goc_options)
-        self.neuron_layers.append(self.goclayer)
-        self.layer_map[self.goclayer.__name__] = self.goclayer
+        if 'goclayer' in self.config_dict:
+            goc_options = self.config_dict['goclayer']
+            goc_options['random_generator'] = self.get_local_py_rng()
+            if (self.network_size is not None):
+                goc_options['size'] = self.network_size
+            node = _search_hdf5_group(file, 'goclayer')
+            if node is not None:
+                goc_options['load_from_file'] = node
+            self.goclayer = NeuronLayer.NeuronLayer(**goc_options)
+            self.neuron_layers.append(self.goclayer)
+            self.layer_map[self.goclayer.__name__] = self.goclayer
                 
         # Create Purkinje cell layer (not compulsory yet)
         if 'pclayer' in self.config_dict:
@@ -170,66 +173,71 @@ class CerebellarModel(object):
             file = None
         
         # Create MF-GrC synaptic layer
-        mfgrc_options = self.config_dict['mfgrcsynapsis']
-        mfgrc_options['source_layer'] = self.mflayer
-        mfgrc_options['target_layer'] = self.grclayer
-        mfgrc_options['random_generator'] = self.get_local_py_rng()
-        node = _search_hdf5_group(file, 'mfgrcsynapsis')
-        if node is not None:
-            mfgrc_options['load_from_file'] = node
-        self.mfgrclayer = SynapticLayer.SynapticLayer(**mfgrc_options)
-        self.synaptic_layers.append(self.mfgrclayer)
-        self.layer_map[self.mfgrclayer.__name__] = self.mfgrclayer
+        if 'mfgrcsynapsis' in self.config_dict:
+            mfgrc_options = self.config_dict['mfgrcsynapsis']
+            mfgrc_options['source_layer'] = self.mflayer
+            mfgrc_options['target_layer'] = self.grclayer
+            mfgrc_options['random_generator'] = self.get_local_py_rng()
+            node = _search_hdf5_group(file, 'mfgrcsynapsis')
+            if node is not None:
+                mfgrc_options['load_from_file'] = node
+            self.mfgrclayer = SynapticLayer.SynapticLayer(**mfgrc_options)
+            self.synaptic_layers.append(self.mfgrclayer)
+            self.layer_map[self.mfgrclayer.__name__] = self.mfgrclayer
         
         # Create MF-GoC synaptic layer
-        mfgoc_options = self.config_dict['mfgocsynapsis']
-        mfgoc_options['source_layer'] = self.mflayer
-        mfgoc_options['target_layer'] = self.goclayer
-        mfgoc_options['random_generator'] = self.get_local_py_rng()
-        node = _search_hdf5_group(file, 'mfgocsynapsis')
-        if node is not None:
-            mfgoc_options['load_from_file'] = node
-        self.mfgoclayer = SynapticLayer.SynapticLayer(**mfgoc_options)
-        self.synaptic_layers.append(self.mfgoclayer)
-        self.layer_map[self.mfgoclayer.__name__] = self.mfgoclayer
+        if 'mfgocsynapsis' in self.config_dict:
+            mfgoc_options = self.config_dict['mfgocsynapsis']
+            mfgoc_options['source_layer'] = self.mflayer
+            mfgoc_options['target_layer'] = self.goclayer
+            mfgoc_options['random_generator'] = self.get_local_py_rng()
+            node = _search_hdf5_group(file, 'mfgocsynapsis')
+            if node is not None:
+                mfgoc_options['load_from_file'] = node
+            self.mfgoclayer = SynapticLayer.SynapticLayer(**mfgoc_options)
+            self.synaptic_layers.append(self.mfgoclayer)
+            self.layer_map[self.mfgoclayer.__name__] = self.mfgoclayer
         
         # Create GrC-GoC synaptic layer
-        grcgoc_options = self.config_dict['grcgocsynapsis']
-        grcgoc_options['source_layer'] = self.grclayer
-        grcgoc_options['target_layer'] = self.goclayer
-        grcgoc_options['random_generator'] = self.get_local_py_rng()
-        node = _search_hdf5_group(file, 'grcgocsynapsis')
-        if node is not None:
-            grcgoc_options['load_from_file'] = node
-        self.grcgoclayer = SynapticLayer.SynapticLayer(**grcgoc_options)
-        self.synaptic_layers.append(self.grcgoclayer)
-        self.layer_map[self.grcgoclayer.__name__] = self.grcgoclayer
+        if 'grcgocsynapsis' in self.config_dict:
+            grcgoc_options = self.config_dict['grcgocsynapsis']
+            grcgoc_options['source_layer'] = self.grclayer
+            grcgoc_options['target_layer'] = self.goclayer
+            grcgoc_options['random_generator'] = self.get_local_py_rng()
+            node = _search_hdf5_group(file, 'grcgocsynapsis')
+            if node is not None:
+                grcgoc_options['load_from_file'] = node
+            self.grcgoclayer = SynapticLayer.SynapticLayer(**grcgoc_options)
+            self.synaptic_layers.append(self.grcgoclayer)
+            self.layer_map[self.grcgoclayer.__name__] = self.grcgoclayer
         
         # Create GoC-GrC synaptic layer
-        gocgrc_options = self.config_dict['gocgrcsynapsis']
-        gocgrc_options['source_layer'] = self.goclayer
-        gocgrc_options['target_layer'] = self.grclayer
-        gocgrc_options['intermediate_layer'] = self.mflayer
-        gocgrc_options['intermediate_to_target_synaptic_layer'] = self.mfgrclayer
-        gocgrc_options['random_generator'] = self.get_local_py_rng()
-        node = _search_hdf5_group(file, 'gocgrcsynapsis')
-        if node is not None:
-            gocgrc_options['load_from_file'] = node
-        self.gocgrclayer = SynapticLayer.SynapticLayer(**gocgrc_options)
-        self.synaptic_layers.append(self.gocgrclayer)
-        self.layer_map[self.gocgrclayer.__name__] = self.gocgrclayer
+        if 'gocgrcsynapsis' in self.config_dict:
+            gocgrc_options = self.config_dict['gocgrcsynapsis']
+            gocgrc_options['source_layer'] = self.goclayer
+            gocgrc_options['target_layer'] = self.grclayer
+            gocgrc_options['intermediate_layer'] = self.mflayer
+            gocgrc_options['intermediate_to_target_synaptic_layer'] = self.mfgrclayer
+            gocgrc_options['random_generator'] = self.get_local_py_rng()
+            node = _search_hdf5_group(file, 'gocgrcsynapsis')
+            if node is not None:
+                gocgrc_options['load_from_file'] = node
+            self.gocgrclayer = SynapticLayer.SynapticLayer(**gocgrc_options)
+            self.synaptic_layers.append(self.gocgrclayer)
+            self.layer_map[self.gocgrclayer.__name__] = self.gocgrclayer
         
         # Create GoC-GoC synaptic layer
-        gocgoc_options = self.config_dict['gocgocsynapsis']
-        gocgoc_options['source_layer'] = self.goclayer
-        gocgoc_options['target_layer'] = self.goclayer
-        gocgoc_options['random_generator'] = self.get_local_py_rng()
-        node = _search_hdf5_group(file, 'gocgocsynapsis')
-        if node is not None:
-            gocgoc_options['load_from_file'] = node
-        self.gocgoclayer = SynapticLayer.SynapticLayer(**gocgoc_options)
-        self.synaptic_layers.append(self.gocgoclayer)
-        self.layer_map[self.gocgoclayer.__name__] = self.gocgoclayer
+        if 'gocgocsynapsis' in self.config_dict:
+            gocgoc_options = self.config_dict['gocgocsynapsis']
+            gocgoc_options['source_layer'] = self.goclayer
+            gocgoc_options['target_layer'] = self.goclayer
+            gocgoc_options['random_generator'] = self.get_local_py_rng()
+            node = _search_hdf5_group(file, 'gocgocsynapsis')
+            if node is not None:
+                gocgoc_options['load_from_file'] = node
+            self.gocgoclayer = SynapticLayer.SynapticLayer(**gocgoc_options)
+            self.synaptic_layers.append(self.gocgoclayer)
+            self.layer_map[self.gocgoclayer.__name__] = self.gocgoclayer
         
         # Create GrC-PC synaptic layer (optional)
         if 'grcpcsynapsis' in self.config_dict:
