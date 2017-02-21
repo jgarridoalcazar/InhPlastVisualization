@@ -1,0 +1,28 @@
+#!/bin/bash
+#PBS -l walltime=1:00:00
+#PBS -l select=1:ncpus=1:mpiprocs=1:mcdram=cache:numa=snc2
+#PBS -o job.out
+#PBS -e job.err
+#PBS -o $CINECA_SCRATCH/output.log         --> redirects output file
+#PBS -e $CINECA_SCRATCH/output.log         --> redirects error file
+#PBS -j eo           --> merge std-err and std-out
+#PBS -A Ppp27_3722
+#PBS -N 100um-1th
+#PBS -m bea
+#PBS -M jesusgarrido@ugr.es
+
+export PATH=/marconi/home/userexternal/jgarrido/autotools/bin:$PATH
+
+cd $CINECA_SCRATCH
+source ./nest/nest210/ins_nompi/bin/nest_vars.sh
+
+module load intel
+module load python/2.7.12
+module load intelmpi/2017--binary
+module load mkl/2017--binary
+module load numpy/1.11.2--python--2.7.12
+module load mpi4py/2.0.0--python--2.7.12
+module load gsl/2.2.1--intel--pe-xe-2017--binary
+module load scipy/0.18.1--python--2.7.12
+
+python ./src/LaunchSimulation.py -c ./config/TestMarconi/AllPlast4Hit1Th100um.cfg
