@@ -20,4 +20,5 @@ module load mpi4py/2.0.0--python--2.7.12
 module load gsl/2.2.1--intel--pe-xe-2017--binary
 module load scipy/0.18.1--python--2.7.12
 
+cd SpikingGranularLayer
 python ./src/LaunchSimulation.py -c ./config/TestMarconi/AllPlast4Hit1Th100um.cfg
