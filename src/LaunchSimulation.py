@@ -2,7 +2,11 @@
 
 import SpikingSimulation.FrequencySimulation as FrequencySimulation
 import sys
+import time
+import logging
 from SpikingSimulation.Utils.Utils import ReadConfigParameters
+
+logger = logging.getLogger('Simulation')
 
 if __name__ == "__main__":
     
@@ -20,8 +24,14 @@ if __name__ == "__main__":
     for section in arguments.keys():
         for param in arguments[section].keys():
             simulation.config_options[section][param] = arguments[section][param]
+
+    start = time.time()
     
     simulation.initialize()
+    
+    end_init = time.time()
+
+    logger.info('Simulation init finished: %ss', end_init - start)
 
     if simulation.new_config_options['simulation']['visualize_animation']:
         simulation.visualize_animation()
@@ -30,13 +40,26 @@ if __name__ == "__main__":
                 
     if simulation.new_config_options['simulation']['visualize_results']:
         simulation.visualize_results()
+
+    end_simulation = time.time()
+
+    logger.info('Simulation finished: %ss', end_simulation - end_init)    
     
     simulation.cerebellum.update_network_weights()
     
     simulation.cerebellum.save_network()
+
+    end_saving = time.time()
+
+    logger.info('Saving network finished: %ss', end_saving - end_simulation)    
     
     simulation.analyze_MI()    
     
     simulation.analyze_Hits()
     
     simulation.analyze_Hits_Top()
+
+    end_analysis = time.time()
+
+    logger.info('Analysis finished: %ss', end_analysis - end_saving)    
+    
