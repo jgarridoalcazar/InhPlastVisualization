@@ -1,15 +1,10 @@
 #!/bin/bash
 #PBS -l walltime=1:00:00
-#PBS -l select=1:ncpus=1:mpiprocs=1:mcdram=cache:numa=snc2
+#PBS -l select=1:ncpus=1:mpiprocs=1:mcdram=cache:numa=snc2:mem=1GB
 #PBS -o job.out
-#PBS -e job.err
-#PBS -o $CINECA_SCRATCH/output.log 
-#PBS -e $CINECA_SCRATCH/output.log
 #PBS -j eo
 #PBS -A Ppp27_3722
 #PBS -N 100um-1th
-#PBS -m bea
-#PBS -M jesusgarrido@ugr.es
 
 export PATH=/marconi/home/userexternal/jgarrido/autotools/bin:$PATH
 
