@@ -1,7 +1,7 @@
 #!/bin/bash
 #PBS -l walltime=0:30:00
 #PBS -l select=1:ncpus=1:mpiprocs=1:mcdram=cache:numa=snc2:mem=1GB
-#PBS -o $CINECA_SCRATCH/results/$PBS_JOBNAME-$PBS_JOBID
+#PBS -o /marconi_scratch/userexternal/jgarrido/SpikingGranularLayer/results
 #PBS -j eo
 #PBS -A Ppp27_3722
 #PBS -N 100um-1th
