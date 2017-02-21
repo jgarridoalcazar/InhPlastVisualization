@@ -1,5 +1,5 @@
 #!/bin/bash
-#PBS -l walltime=1:00:00
+#PBS -l walltime=0:30:00
 #PBS -l select=1:ncpus=1:mpiprocs=1:mcdram=cache:numa=snc2:mem=1GB
 #PBS -o job.out
 #PBS -j eo
@@ -21,4 +21,4 @@ module load gsl/2.2.1--intel--pe-xe-2017--binary
 module load scipy/0.18.1--python--2.7.12
 
 cd SpikingGranularLayer
-python ./src/LaunchSimulation.py -c ./config/TestMarconi/AllPlast4Hit1Th100um.cfg
+python ./src/LaunchSimulation.py -c ./config/TestMarconi/AllPlast4Hit1Th100um.cfg > ./results/$PBS_JOBNAME-$PBS_JOBID
