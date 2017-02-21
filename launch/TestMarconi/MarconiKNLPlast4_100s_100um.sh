@@ -3,9 +3,9 @@
 #PBS -l select=1:ncpus=1:mpiprocs=1:mcdram=cache:numa=snc2
 #PBS -o job.out
 #PBS -e job.err
-#PBS -o $CINECA_SCRATCH/output.log         --> redirects output file
-#PBS -e $CINECA_SCRATCH/output.log         --> redirects error file
-#PBS -j eo           --> merge std-err and std-out
+#PBS -o $CINECA_SCRATCH/output.log 
+#PBS -e $CINECA_SCRATCH/output.log
+#PBS -j eo
 #PBS -A Ppp27_3722
 #PBS -N 100um-1th
 #PBS -m bea
