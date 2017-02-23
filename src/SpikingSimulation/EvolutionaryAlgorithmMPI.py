@@ -655,11 +655,27 @@ class EvolutionaryAlgorithm(object):
             self.population = self._evaluate_population(self.population)
             
             halloffame.update(self.population)
+            record = stats.compile(self.population)
+            logbook.record(gen=0, evals=len(self.population), **record)
+
+            # Saving evolution state
+            if self.config_options['algorithm']['saving_file']:
+                # Fill the dictionary using the dict(key=value[, ...]) constructor
+                cp = dict(population=self.population, generation=0, halloffame=halloffame,
+                      logbook=logbook, rndstate=self.num_generator.get_state())
+
+                with open(self.config_options['algorithm']['saving_file'], "wb") as cp_file:
+                    pickle.dump(cp, cp_file)
+                    
+                logger.info('Evolution state saved in file %s', self.config_options['algorithm']['saving_file'])
             
             logger.info('Parameter sequence: %s', param_names)
             logger.info('Hall of Fame:')
             for ind in halloffame:
                 logger.info('Individual: %s. Fitness: %s', self._get_unnormalized_values(ind), ind.fitness.values)
+
+            start_gen += 1;
+
 
         # Begin the evolution
         for gen in range(start_gen, self.config_options['algorithm']['number_of_generations']):
@@ -826,6 +842,7 @@ def helper_subprocess_simulation(pipe, local_config_options):
 
 # Function creating a subprocess to launch nest simulation (it avoids NEST getting frozen after raising an exception in the previous simulation)
 def helper_simulation(local_config_options):
+
     import SpikingSimulation.FrequencySimulation as FrequencySimulation
     
     # logger.debug('Simulation parameter dictionary: %s', local_config_options)

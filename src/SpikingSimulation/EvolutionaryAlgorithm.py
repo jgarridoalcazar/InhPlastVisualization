@@ -437,14 +437,14 @@ class EvolutionaryAlgorithm(object):
         if self.config_options['algorithm']['load_from_file']:
             with open(self.config_options['algorithm']['load_from_file'], "r") as cp_file:
                 cp = pickle.load(cp_file)
-            population = cp["population"]
+            self.population = cp["population"]
             start_gen = cp["generation"]+1
             halloffame = cp["halloffame"]
             logbook = cp["logbook"]
             self.num_generator.set_state(cp["rndstate"])
         else:
             self.num_generator.seed()
-            population = toolbox.population(n=self.config_options['algorithm']['number_of_individual'])
+            self.population = toolbox.population(n=self.config_options['algorithm']['number_of_individual'])
             start_gen = 0
             halloffame = tools.HallOfFame(maxsize=self.config_options['algorithm']['hall_of_fame_size'])
             logbook = tools.Logbook()
@@ -457,14 +457,29 @@ class EvolutionaryAlgorithm(object):
         
             logger.debug("Start of evolution")
         
-            self._evaluate_population(population)
+            self.population = self._evaluate_population(self.population)
         
-            halloffame.update(population)
+            halloffame.update(self.population)
+            record = stats.compile(self.population)
+            logbook.record(gen=0, evals=len(self.population), **record)
+
+            # Saving evolution state
+            if self.config_options['algorithm']['saving_file']:
+                # Fill the dictionary using the dict(key=value[, ...]) constructor
+                cp = dict(population=self.population, generation=0, halloffame=halloffame,
+                      logbook=logbook, rndstate=self.num_generator.get_state())
+
+                with open(self.config_options['algorithm']['saving_file'], "wb") as cp_file:
+                    pickle.dump(cp, cp_file)
+                    
+                logger.info('Evolution state saved in file %s', self.config_options['algorithm']['saving_file'])
             
             logger.info('Parameter sequence: %s', param_names)
             logger.info('Hall of Fame:')
             for ind in halloffame:
                 logger.info('Individual: %s. Fitness: %s', self._get_unnormalized_values(ind), ind.fitness.values)
+
+            start_gen += 1;
 
         # Begin the evolution
         for gen in range(start_gen, self.config_options['algorithm']['number_of_generations']):
