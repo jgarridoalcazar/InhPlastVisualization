@@ -5,7 +5,7 @@
 #PBS -j eo
 #PBS -A Ppp27_3722
 #PBS -N 100um-1th
-#PBS -q route
+#PBS -q serial
 
 export PATH=/marconi/home/userexternal/jgarrido/autotools/bin:$PATH
 
