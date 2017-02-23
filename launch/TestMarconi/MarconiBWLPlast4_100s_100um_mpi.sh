@@ -10,7 +10,7 @@
 export PATH=/marconi/home/userexternal/jgarrido/autotools/bin:$PATH
 
 cd $CINECA_SCRATCH
-source ./nest/nest210/ins_nompi/bin/nest_vars.sh
+source ./nest/nest210/ins_mpi/bin/nest_vars.sh
 
 module load intel
 module load python/2.7.12

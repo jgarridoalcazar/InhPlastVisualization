@@ -58,7 +58,7 @@ class SynapticLayer(SynapticLayerNoMPI.SynapticLayer):
         
         nprocs = comm.Get_size()
         rank = comm.Get_rank()
-        
+
         # Send the number of elements
         lsyn = numpy.array([self.intermediate_to_target_synaptic_layer.number_of_synapses], dtype=numpy.uint64)
         num_synapses = numpy.empty(comm.Get_size(), dtype=numpy.uint64)

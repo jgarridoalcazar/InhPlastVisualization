@@ -428,8 +428,8 @@ class SynapticLayer(object):
                 source_block_list.extend(source_list)
                 target_block_list.extend([target_cell]*len(source_list))
                 
-            self.source_index = numpy.append(self.source_index,source_block_list)
-            self.target_index = numpy.append(self.target_index,target_block_list)
+            self.source_index = numpy.append(self.source_index,source_block_list).astype(numpy.uint32)
+            self.target_index = numpy.append(self.target_index,target_block_list).astype(numpy.uint32)
             
             logger.debug('Generated connections in layer %s (%s of %s). Local: %s', self.__name__,i+1,len(local_target_indexes),len(target_block_list))
         
