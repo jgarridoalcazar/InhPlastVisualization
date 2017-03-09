@@ -138,6 +138,8 @@ class InputLayer(object):
         
         self._share_positions_() 
         
+        self.is_local_node = numpy.empty((self.number_of_neurons),dtype=numpy.bool)
+        self.is_local_node[:] = True
         return
     
     def _share_positions_(self):
@@ -153,7 +155,7 @@ class InputLayer(object):
     def get_absolute_coordinates(self):
         return self.relative_positions * self.size
     
-    def save_layer(self, root):
+    def save_layer(self, root, time):
         '''
         This function stores the relative positions of the neurons and other attributes in the hdf5 group passed as an argument.
         '''
@@ -170,8 +172,25 @@ class InputLayer(object):
         positions_dataset = root.create_dataset('relative_positions', data = self.relative_positions)
         
         if self.neuron_states:
+            self.dataset = dict()
+            
             for key, value in self.neuron_states.iteritems():
-                root.create_dataset(key, data = value)
+                n_neurons = value.shape[0]
+                self.dataset[key] = root.create_dataset(key, (n_neurons+1,1), data = numpy.append([time],value).astype(numpy.float32),maxshape=(n_neurons+1,None))
+        
+        
+        return
+    
+    def add_state_to_record(self, time):
+        '''
+        This function stores the relative positions of the neurons and other attributes in the hdf5 group passed as an argument.
+        '''
+        if self.neuron_states:
+            for key, value in self.neuron_states.iteritems():
+                state_row = numpy.append([time],value).astype(numpy.float32)
+                dset_shape = self.dataset[key].shape
+                self.dataset[key].resize((dset_shape[0],dset_shape[1]+1))
+                self.dataset[key][:,-1] = state_row
                         
         return
     
@@ -207,7 +226,7 @@ class InputLayer(object):
             # Get recording variables in this cell model
             for var in self.load_state_vars:
                 if var in root:
-                    self.neuron_states[var] = root[var][:]
+                    self.neuron_states[var] = root[var][-1,1:]
                 else:
                     logger.warning('%s state variable does not exist in h5 file. Ignoring',var)
         

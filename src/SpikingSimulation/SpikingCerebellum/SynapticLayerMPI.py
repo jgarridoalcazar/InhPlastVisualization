@@ -245,17 +245,65 @@ class SynapticLayer(SynapticLayerNoMPI.SynapticLayer):
         self.number_of_synapses = self.target_index.shape[0]
         return 
     
-    def save_layer(self, root):
+    def save_layer(self, root, time):
         '''
         This function stores the connectivity data and the synaptic weights in the hdf5 group passed as an argument.
         '''
+        from mpi4py import MPI
+        
+        comm = MPI.COMM_WORLD
+        
+        self._collect_synapses()
+        
+        rank = comm.Get_rank()
+        
+        if (rank==0):
+            
+            import h5py
+            
+            # Store the hdf5 group object for future links
+            self.hdf5_group = root
+            
+            # Define the attributes of the layer
+            root.attrs['name'] = self.__name__
+            root.attrs['source_layer'] = self.source_layer.__name__
+            root.attrs['target_layer'] = self.target_layer.__name__
+            
+            # Store the source and target indexes and the weights of the layer
+            self.connections_dataset = root.create_dataset('connections', data = numpy.array([self.source_index,self.target_index]))
+            self.weights_dataset = root.create_dataset('weights', data = numpy.append([time],self.weights).astype(numpy.float32))
+        
+        return
+    
+    def add_weights_to_record(self, time):
+        '''
+        This function stores the connectivity data and the synaptic weights in the hdf5 group passed as an argument.
+        '''
+        from mpi4py import MPI
+        
+        comm = MPI.COMM_WORLD
+        
+        self._collect_synapses()
+        
+        rank = comm.Get_rank()
+        
+        if (rank==0):
+            
+            # Store the source and target indexes and the weights of the layer
+            weight_row = numpy.append([time],self.weights).astype(numpy.float32)
+            self.weights_dataset.resize(self.weights_dataset.shape[0],axis=0)
+            self.weights_dataset[-1,:] = weight_row
+            
+        return
+    
+    def _collect_synapses(self):
+        
         # ------------------------------------------------------------------------------------------------------------------
         # Collect all the synapses (source_index and target_index in the first MPI process)
         from mpi4py import MPI
         
         comm = MPI.COMM_WORLD
         
-        nprocs = comm.Get_size()
         rank = comm.Get_rank()
         
         # Send the number of elements
@@ -290,23 +338,6 @@ class SynapticLayer(SynapticLayerNoMPI.SynapticLayer):
         #print 'Process', rank,':','Sent number:',self.intermediate_to_target_synaptic_layer.target_index,'Collected numbers ->',intermediate_to_target_target_index
         
         comm.Gatherv(self.weights, [total_weights, num_synapses, offset, MPI.DOUBLE], root=0)
-        
-        if (rank==0):
-            
-            import h5py
-            
-            # Store the hdf5 group object for future links
-            self.hdf5_group = root
-            
-            # Define the attributes of the layer
-            root.attrs['name'] = self.__name__
-            root.attrs['source_layer'] = self.source_layer.__name__
-            root.attrs['target_layer'] = self.target_layer.__name__
-            
-            # Store the source and target indexes and the weights of the layer
-            source_dataset = root.create_dataset('source_index', data = total_source_index)
-            target_dataset = root.create_dataset('target_index', data = total_target_index)
-            weight_dataset = root.create_dataset('weight', data = total_weights)
         
         return
 

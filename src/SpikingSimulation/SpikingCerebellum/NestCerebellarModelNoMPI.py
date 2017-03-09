@@ -6,13 +6,10 @@ Created on May 12, 2014
 
 import abc
 from CerebellarModel import CerebellarModel
-import shutil
 import sys
 import numpy
-import os
 import time
 import logging
-from SpikingSimulation.Utils.Utils import WriteConfigFile
 
 logger = logging.getLogger('Simulation')
 
@@ -103,14 +100,20 @@ class NestCerebellarModel(CerebellarModel):
     # Learning rule translation
     ruleNameTranslatorDict = {
         'STDP' : 'stdp_synapse_hom',
-        'STDPSym'   :   'stdp_sym_synapse_hom',
+        'STDPSym'  :   'stdp_sym_synapse_hom',
         'eSTDP'    :   'estdp_synapse_hom',
-        'iSTDP'    :   'istdp_synapse_hom'
+        'iSTDP'    :   'istdp_synapse_hom',
+        'STDPTriplet'   : 'stdp_triplet_synapse'
     }
     
     # This dictionary maps the learning rule configuration parameters into the NEST learning rule model parameters (used in the keys).
     ruleTranslatorDict = { 
         'tau_plus':'tau_plus*1.e3', # Time constant of the pre-post part in ms
+        'tau_plus_triplet':'tau_plus_triplet*1.e3', # Time constant of the pre-post part in ms
+        'Aplus':'learning_step', # Doublet part (pre-post) of the STDP triplet.
+        'Aminus':'learning_step*minus_plus_ratio', # Doublet part (post-pre) of the STDP triplet.
+        'Aplus_triplet':'learning_step_triplet', # Doublet part (pre-post) of the STDP triplet.
+        'Aminus_triplet':'learning_step_triplet*minus_plus_ratio_triplet', # Doublet part (post-pre) of the STDP triplet.
         'lambda': 'learning_step', # pre-post amplitude (normalized?)
         'alpha': 'minus_plus_ratio', # post-pre/pre-post ratio (normalized?)
         'Wmax': 'max_weight*1e9', # Maximum weight in nS
@@ -244,50 +247,10 @@ class NestCerebellarModel(CerebellarModel):
         nest_options_dict['overwrite_files'] = True # set to True to permit overwriting
         nest_options_dict['print_time'] = False # set to True to print the simulation completed
         
-        if not 'record_to_file' in self.simulation_options:
-            self.simulation_options['record_to_file'] = False
-            
-        if 'simulation_timeout' not in self.simulation_options:
-            self.simulation_options['simulation_timeout'] = None
-            
-        if 'register_activity_only_in_test' not in self.simulation_options:
-            self.simulation_options['register_activity_only_in_test'] = False
-        
-        if 'test_length' not in self.simulation_options:
-            self.simulation_options['test_length'] = self.simulation_options['time']
-        
         if self.simulation_options['record_to_file']:        
-            if 'data_path' in self.simulation_options:
-                nest_options_dict['data_path'] = self.simulation_options['data_path']
-            else:
-                nest_options_dict['data_path'] = './results'
-                
-            if 'simulation_name' in self.simulation_options:
-                nest_options_dict['data_path'] = nest_options_dict['data_path'] + '/' + self.simulation_options['simulation_name']
-                
-            data_path = nest_options_dict['data_path']
-            
-            if self.get_my_process_id()==0 and self.simulation_options['record_to_file']:
-                if not os.path.exists(nest_options_dict['data_path']):
-                    os.makedirs(nest_options_dict['data_path'])
-                else:
-                    logger.debug('Removing results folder %s', data_path)
-                    try:
-                        shutil.rmtree(data_path)
-                        os.makedirs(data_path)
-                    except OSError:
-                        pass
+            nest_options_dict['data_path'] = self.simulation_options['data_path']
 
-        # Synchronize all the processes to avoid start writting before deleting the folder
-        self._synchronize_processes()   
-            
         nest.SetKernelStatus(nest_options_dict)
-        
-        # Create the random number generators for each virtual process
-        self.simulation_options['py_seeds'] = range(self.simulation_options['seed'],self.simulation_options['seed'] + self.get_number_of_virtual_processes())
-        self.simulation_options['py_rng'] = [numpy.random.RandomState(s) for s in self.simulation_options['py_seeds']]
-        # Create a random number generator to be used for serial operations (such as pattern generation) -> The same for all the virtual processes
-        self.simulation_options['py_serial_rng'] = numpy.random.RandomState(self.simulation_options['seed'] + self.get_number_of_virtual_processes())
         
         # Set random seeds
         nest_options_dict = dict()
@@ -300,8 +263,8 @@ class NestCerebellarModel(CerebellarModel):
         nest.SetKernelStatus(nest_options_dict)
         
         # Set record_to_file in spike_detectors to the value    
-        nest.SetDefaults('spike_detector', 'to_file', self.simulation_options['record_to_file'])
-        nest.SetDefaults('multimeter', 'to_file', self.simulation_options['record_to_file'])
+        #nest.SetDefaults('spike_detector', 'to_file', self.simulation_options['record_to_file'])
+        #nest.SetDefaults('multimeter', 'to_file', self.simulation_options['record_to_file'])
         
         # Initialize ac_current and dc_current stimulation
         self.ac_generator = []
@@ -309,13 +272,14 @@ class NestCerebellarModel(CerebellarModel):
         
         # Build the network
         self._build_network()
+        
+        self.initialize_activity_recording()
+        self.initialize_network_recording()
+        
+        self.next_state_recording_step = 1
                 
         self.simulation_time = 0
         
-        if self.simulation_options['record_to_file']:
-            # Copy configuration file of this simulation
-            WriteConfigFile(self.config_dict, data_path+'/'+'SimulationConfig.cfg')
-            
         if self.simulation_options['simulation_timeout']:
             self.init_time = time.time()
         
@@ -346,21 +310,6 @@ class NestCerebellarModel(CerebellarModel):
     
     def _initialize_weight_recording_buffer(self):
         
-        self.next_weight_step = 1
-        
-        # Check if recording_time_step is above 0
-        if self.simulation_options['weight_recording_step'] >= float("inf"):
-            return
-        
-        if 'data_path' in self.simulation_options:
-            data_path = self.simulation_options['data_path']
-        else:
-            data_path = './results'
-            
-        if 'simulation_name' in self.simulation_options:
-            data_path = data_path + '/' + self.simulation_options['simulation_name']
-
-        
         for layer in self.synaptic_layers:
             if layer.weight_recording:
                 layer.weight_record = dict()
@@ -379,80 +328,11 @@ class NestCerebellarModel(CerebellarModel):
                 layer.weight_record['connections'][:,1] = layer.weight_record['connections'][:,1]-min_target
                 layer.weight_record['weights'] = numpy.array([global_connections[:,2] * 1.e-9],dtype=numpy.float32)
                 layer.weight_record['time'] = numpy.array([0],dtype=numpy.float32)
-                
-                # Open the file when the weights are going to be stored
-                if self.simulation_options['record_to_file']:
-                    file_name = data_path + '/' + layer.__name__ + '_weights_' + str(self.get_my_process_id()) + '.h5'
-                    
-                    import h5py
-                    
-                    layer.weight_record['f_handle'] =  h5py.File(file_name,'w')
-                    
-                    # Write the connections in the first line
-                    layer.weight_record['connections_dset'] = layer.weight_record['f_handle'].create_dataset('connections', data=layer.weight_record['connections']) 
-                    #numpy.savetxt(layer.weight_record['f_handle'], layer.weight_record['connections'], fmt='%1.1u', delimiter=' ', newline=' ')
-                    #layer.weight_record['f_handle'].write('\n')
-                    
-                    # Write the initial weights and time
-                    weight_row = numpy.array([numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:])])
-                    layer.weight_record['weights_dset'] = layer.weight_record['f_handle'].create_dataset('weights', data=weight_row, maxshape=(None,weight_row.shape[1]))
-                    #numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
-                    #layer.weight_record['f_handle'].write('\n')
-                    
-                    
-                    # Store the IO buffer
-                    layer.weight_record['f_handle'].flush()
-                    #layer.weight_record['f_handle'].flush()
-                    
-                
-                # print 'Process',self.get_my_process_id(),':','Weight record:',layer.weight_record
             else:
-                layer.weight_recording = None
+                layer.weight_record = None
 
         return
-    
-    def _initialize_activity_recording(self):
         
-        self.next_activity_step = 1
-        
-        # Check if recording_time_step is above 0
-        if self.simulation_options['activity_recording_step'] >= float("inf"):
-            return
-        
-        if 'activity_recording_file' in self.simulation_options: 
-            
-            if self.get_my_process_id()==0:
-                file_name = self.simulation_options['activity_recording_file']
-                        
-                import h5py
-                    
-                logger.debug('Creating hdf5 activity file %s',file_name)    
-                f_handle = h5py.File(file_name,'w')
-                
-                for ind, layer in enumerate(self.neuron_layers):
-                    if layer.register_activity:
-                        layer.activity_record = dict()
-                        
-                        layer.activity_record['f_handle'] = f_handle
-                        
-                        # Show info
-                        logger.debug('Creating group layer %s',layer.__name__)
-                        # Create a subgroup for this neuron layer
-                        subgroup = f_handle.create_group('neuron_layer_'+str(ind))
-                        
-                        # Define the attributes of the layer
-                        subgroup.attrs['name'] = layer.__name__
-                        
-                        # Create the dataset where the activity will be stored
-                        logger.debug('Creating activity dataset %s',layer.__name__)    
-                        layer.activity_record['neuronid_dset'] = subgroup.create_dataset('neuron_id',(0,), maxshape=(None,), dtype='uint16') 
-                        layer.activity_record['time_dset'] = subgroup.create_dataset('spike_time',(0,), maxshape=(None,), dtype='float32')
-                        
-                        # Store the IO buffer
-                        f_handle.flush()
-
-        return
-    
     def update_network_weights(self):
         '''
         Update the weights of the cerebellar model according to the running implementation.
@@ -515,9 +395,6 @@ class NestCerebellarModel(CerebellarModel):
         # Create the synapses
         super(NestCerebellarModel, self)._create_synapses();
         
-        # Save the network structure to the file
-        self.save_network()
-        
         # Create the connections in the network
         self._create_connections()
         
@@ -527,12 +404,6 @@ class NestCerebellarModel(CerebellarModel):
         
         # Initialize weight normalization
         self._initialize_weight_normalization()
-        
-        # Initialize weight recording buffer
-        self._initialize_weight_recording_buffer()
-        
-        # Initialize activity recording
-        self._initialize_activity_recording()
         
         return
     
@@ -791,65 +662,7 @@ class NestCerebellarModel(CerebellarModel):
             raise Exception('Non-SpecifiedDCCurrent')
         
         return
-        
-    def _save_weights(self):
-        
-        # Check if recording_time_step is above 0
-        for layer in self.synaptic_layers:
-            if layer.weight_recording:
-                # Record the weights
-                scaled_weights = (numpy.array(nest.GetStatus(layer.weight_record['con'],'weight'))*1.e-9).astype(numpy.float32)
-                layer.weight_record['weights'] = numpy.append(layer.weight_record['weights'],[scaled_weights], axis=0)
-                layer.weight_record['time'] = numpy.append(layer.weight_record['time'],numpy.float32(self.next_weight_step * self.simulation_options['weight_recording_step']))
-                
-                # Open the file when the weights are going to be stored
-                if self.simulation_options['record_to_file']:
-                    weight_row = numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:])
-                    # Resize the dataset
-                    layer.weight_record['weights_dset'].resize(layer.weight_record['weights_dset'].shape[0],axis=0)
-                    # Add the time/weights at the end (last row) of the dataset
-                    layer.weight_record['weights_dset'][-1,:] = weight_row
-                    
-                    #numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
-                    #layer.weight_record['f_handle'].write('\n')
-                    # Store the IO buffer
-                    layer.weight_record['f_handle'].flush()
-                    #layer.weight_record['f_handle'].flush()
-                    
-        self.next_weight_step += 1
-        return
-    
-    def _save_activity(self):
-        
-        last_activity_recording = (self.next_activity_step-1)*self.simulation_options['activity_recording_step']
-        current_activity_recording = self.next_activity_step*self.simulation_options['activity_recording_step']
-        
-        # Check if each neuron layer has to be recorded
-        for layer in self.neuron_layers:
-            if layer.register_activity:
-                # Get the activity in this layer since the last recording
-                
-                gtime,gneuron_id=self.get_spike_activity(neuron_layer=layer.__name__, init_time=last_activity_recording, end_time=current_activity_recording)
-                
-                # Only process_id 0 records to the file
-                if self.get_my_process_id()==0:
-                    num_events = gtime.size
-                    # Resize the dataset
-                    logger.debug('Resizing activity dataset of layer %s',layer.__name__)    
-                    layer.activity_record['neuronid_dset'].resize((layer.activity_record['neuronid_dset'].shape[0]+num_events,)) 
-                    layer.activity_record['time_dset'].resize((layer.activity_record['time_dset'].shape[0]+num_events,))
-                    # Add the time/weights at the end (last row) of the dataset
-                    layer.activity_record['neuronid_dset'][-num_events:] = gneuron_id
-                    layer.activity_record['time_dset'][-num_events:] = gtime
-                    
-                    #numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
-                    #layer.weight_record['f_handle'].write('\n')
-                    # Store the IO buffer
-                    layer.activity_record['f_handle'].flush()
-                    #layer.weight_record['f_handle'].flush()
 
-        self.next_activity_step += 1
-        return
 
         
     def _normalize_weights(self):
@@ -891,31 +704,33 @@ class NestCerebellarModel(CerebellarModel):
         '''
         
         end_time = self.simulation_time + time_to_evolve
-        next_weight_recording = self.next_weight_step * self.simulation_options['weight_recording_step']
+        next_state_recording = self.next_state_recording_step * self.simulation_options['state_recording_step']
         next_normalization = self.next_normalization_step * self.simulation_options['weight_normalization_step']
-        next_activity_recording = self.next_activity_step * self.simulation_options['activity_recording_step'] 
         
         # Simulate until recording weight
         while (end_time-self.simulation_time>=self.nest_options['resolution']):
-            next_stop = min(next_activity_recording,next_weight_recording,next_normalization,end_time)
+            next_stop = min(next_state_recording,next_normalization,end_time)
             sim_time = next_stop-self.simulation_time
             
             # Simulate the step (in ms)
             # Round the simulation time to avoid inconsistent results in nest.
             # nest.Simulate(math.ceil(sim_time*1.e3))
             #logger.debug('Starting NEST simulation') 
+            init_clock_time = time.time()
             nest.Simulate(sim_time*1.e3)
-            #logger.debug('Ending NEST simulation') 
+            end_clock_time = time.time()
+            
+            #sp_time,_=self.get_spike_activity(neuron_layer = 'grclayer', init_time=self.simulation_time, end_time=end_time)
+            #sp_number = len(sp_time)
+            
+            logger.debug('Simulation time is %s seconds. Real-time rate: %s',(end_clock_time-init_clock_time), (sim_time/(end_clock_time-init_clock_time))) 
             
             # If it is time to record the activity
-            if next_stop==next_activity_recording:
-                self._save_activity()
-                next_activity_recording = self.next_activity_step * self.simulation_options['activity_recording_step']
-            
-            # If it is time to record the weights
-            if next_stop==next_weight_recording:
-                self._save_weights()
-                next_weight_recording = self.next_weight_step * self.simulation_options['weight_recording_step'] 
+            if next_stop==next_state_recording:
+                self.save_activity()
+                self.save_network_state()
+                self.next_state_recording_step += 1
+                next_state_recording = self.next_state_recording_step * self.simulation_options['state_recording_step']
             
             # If it is time to normalize the weights
             if next_stop==next_normalization:
@@ -934,8 +749,7 @@ class NestCerebellarModel(CerebellarModel):
                 if (elapsed_time > self.simulation_options['simulation_timeout']):
                     logger.error('Timeout Error in simulation. Elapsed time: %s',elapsed_time)
                     raise TimeoutError(elapsed_time)
-        
-            
+
         return
     
             
@@ -1265,14 +1079,3 @@ class NestCerebellarModel(CerebellarModel):
         '''
         return 0
     
-    def get_local_py_rng(self):
-        '''
-        Return the random number generator of this proccess
-        '''
-        return self.simulation_options['py_rng'][self.get_my_process_id()]
-    
-    def get_global_py_rng(self):
-        '''
-        Return the random number generator for the global operations
-        '''
-        return self.simulation_options['py_serial_rng']

@@ -9,6 +9,10 @@ import InputLayer
 import time
 import numpy
 import logging
+from SpikingSimulation.Utils.Utils import WriteConfigFile
+import shutil
+import os
+
  
  
 logger = logging.getLogger('Simulation')
@@ -303,70 +307,217 @@ class CerebellarModel(object):
         
         
         # Check weight recording time step
-        if not 'weight_recording_step' in self.simulation_options:
-            self.simulation_options['weight_recording_step'] = float("inf")
+        if not 'state_recording_step' in self.simulation_options:
+            self.simulation_options['state_recording_step'] = float("inf")
     
-        # Check activity recording time step
-        if not 'activity_recording_step' in self.simulation_options:
-            self.simulation_options['activity_recording_step'] = float("inf")
-    
-    
+        # Check if record activity and weights to file
+        if not 'record_to_file' in self.simulation_options:
+            self.simulation_options['record_to_file'] = False
+        
+        # Check if a timeout is set
+        if 'simulation_timeout' not in self.simulation_options:
+            self.simulation_options['simulation_timeout'] = None
+            
+        # Check if activity is recorded only in test
+        if 'register_activity_only_in_test' not in self.simulation_options:
+            self.simulation_options['register_activity_only_in_test'] = False
+        
+        # Check length time
+        if 'test_length' not in self.simulation_options:
+            self.simulation_options['test_length'] = self.simulation_options['time']
+        
+        # Create recording path
+        if self.simulation_options['record_to_file']:        
+            if 'data_path' not in self.simulation_options:
+                self.simulation_options['data_path'] = './results'
+                
+            if 'simulation_name' in self.simulation_options:
+                self.simulation_options['data_path'] += '/' + self.simulation_options['simulation_name']
+                
+            data_path = self.simulation_options['data_path']
+            
+            if self.get_my_process_id()==0:
+                if not os.path.exists(data_path):
+                    os.makedirs(data_path)
+                else:
+                    logger.debug('Removing results folder %s', data_path)
+                    try:
+                        shutil.rmtree(data_path)
+                        os.makedirs(data_path)
+                    except OSError:
+                        pass
+        
+        # Synchronize all the processes to avoid start writting before deleting the folder
+        self._synchronize_processes()   
+        
+        # Create the random number generators for each virtual process
+        self.simulation_options['py_seeds'] = range(self.simulation_options['seed'],self.simulation_options['seed'] + self.get_number_of_virtual_processes())
+        self.simulation_options['py_rng'] = [numpy.random.RandomState(s) for s in self.simulation_options['py_seeds']]
+        # Create a random number generator to be used for serial operations (such as pattern generation) -> The same for all the virtual processes
+        self.simulation_options['py_serial_rng'] = numpy.random.RandomState(self.simulation_options['seed'] + self.get_number_of_virtual_processes())
+        
+        if self.simulation_options['record_to_file']:
+            # Copy configuration file of this simulation
+            WriteConfigFile(self.config_dict, data_path+'/'+'SimulationConfig.cfg')
+            
         logger.debug('Cerebellar simulation initialized')
         
         return
     
-    def save_network(self):
+    def initialize_activity_recording(self):
+        
+        # Check if recording_time_step is above 0
+        if not self.simulation_options['record_to_file'] or self.simulation_options['state_recording_step'] >= float("inf"):
+            return
+        
+        if self.get_my_process_id()==0:
+            file_name = self.simulation_options['data_path'] + '/activity.h5'
+                    
+            import h5py
+                
+            logger.debug('Creating hdf5 activity file %s',file_name)    
+            f_handle = h5py.File(file_name,'w')
+            
+            for ind, layer in enumerate(self.neuron_layers):
+                if layer.register_activity:
+                    layer.activity_record = dict()
+                    
+                    layer.activity_record['f_handle'] = f_handle
+                    
+                    # Show info
+                    logger.debug('Creating group layer %s',layer.__name__)
+                    # Create a subgroup for this neuron layer
+                    subgroup = f_handle.create_group('neuron_layer_'+str(ind))
+                    
+                    # Define the attributes of the layer
+                    subgroup.attrs['name'] = layer.__name__
+                    
+                    # Create the dataset where the activity will be stored
+                    logger.debug('Creating activity dataset %s',layer.__name__)    
+                    layer.activity_record['neuronid_dset'] = subgroup.create_dataset('neuron_id',(0,), maxshape=(None,), dtype='uint16') 
+                    layer.activity_record['time_dset'] = subgroup.create_dataset('spike_time',(0,), maxshape=(None,), dtype='float32')
+                    
+                    # Store the IO buffer
+                    f_handle.flush()
+
+        return
+    
+    def save_activity(self):
+        
+        if not self.simulation_options['record_to_file']:
+            return
+        
+        last_activity_recording = (self.next_state_recording_step-1)*self.simulation_options['state_recording_step']
+        current_activity_recording = self.next_state_recording_step*self.simulation_options['state_recording_step']
+        
+        # Check if each neuron layer has to be recorded
+        for layer in self.neuron_layers:
+            if layer.register_activity:
+                # Get the activity in this layer since the last recording
+                
+                gtime,gneuron_id=self.get_spike_activity(neuron_layer=layer.__name__, init_time=last_activity_recording, end_time=current_activity_recording)
+                
+                # Only process_id 0 records to the file
+                if self.get_my_process_id()==0:
+                    num_events = gtime.size
+                    if num_events>0:
+                        # Resize the dataset
+                        logger.debug('Resizing activity dataset of layer %s',layer.__name__)    
+                        layer.activity_record['neuronid_dset'].resize((layer.activity_record['neuronid_dset'].shape[0]+num_events,)) 
+                        layer.activity_record['time_dset'].resize((layer.activity_record['time_dset'].shape[0]+num_events,))
+                        # Add the time/weights at the end (last row) of the dataset
+                        layer.activity_record['neuronid_dset'][-num_events:] = gneuron_id
+                        layer.activity_record['time_dset'][-num_events:] = gtime
+                        
+                        #numpy.savetxt(layer.weight_record['f_handle'], numpy.append(layer.weight_record['time'][-1:],layer.weight_record['weights'][-1:]), fmt='%1.3e', delimiter=' ', newline=' ')
+                        #layer.weight_record['f_handle'].write('\n')
+                        # Store the IO buffer
+                        layer.activity_record['f_handle'].flush()
+                        #layer.weight_record['f_handle'].flush()
+
+        return
+
+    
+    def initialize_network_recording(self):
         '''
         Save the network to the specified hdf5 file.
         @param filename: Name of the file to store the network.
         '''
         
-        if self.save_file is None:
+        if not self.simulation_options['record_to_file']:
             return
         
-        filename = self.save_file
+        self.save_file = self.simulation_options['data_path'] + '/network.h5'
         
-        logger.info('Saving network to hdf5 file %s', filename)
+        logger.info('Saving network to hdf5 file %s', self.save_file)
         
         # Update the neuron states before saving it to file
         self.update_neuron_states()
+        self.update_network_weights()
        
        
         if self.get_my_process_id()==0:
             import h5py
             
-            with h5py.File(filename, 'w') as file:
-                
-                # Saving neuron layers
-                for ind, layer in enumerate(self.neuron_layers):
-                    # Show info
-                    logger.debug('Writing neuron layer %s',layer.__name__)
-                    # Create a subgroup for this neuron layer
-                    subgroup = file.create_group('neuron_layer_'+str(ind))
-                    # Save the neuron layer in it
-                    layer.save_layer(subgroup)
-                    
-                # Saving synaptic layers
-                for ind, layer in enumerate(self.synaptic_layers):
-                    # Show info
-                    logger.debug('Writing neuron layer %s',layer.__name__)
-                    # Create a subgroup for this synaptic layer
-                    subgroup = file.create_group('synaptic_layer_'+str(ind))
-                    # Save the synaptic layer in it
-                    layer.save_layer(subgroup)
-                
-                file.flush()
-        else:
-            # This is just in case other processes have to communicate something (neurons or connections)
+            logger.debug('Creating hdf5 activity file %s',self.save_file)    
+            self.network_fhandle = h5py.File(self.save_file,'w')
+            
+            # Saving neuron layers
             for ind, layer in enumerate(self.neuron_layers):
-                # Save the neuron layer in it
-                layer.save_layer(None)
+                layer.network_record = dict()
                     
+                layer.network_record['f_handle'] = self.network_fhandle
+            
+                # Show info
+                logger.debug('Writing neuron layer %s',layer.__name__)
+                # Create a subgroup for this neuron layer
+                subgroup = self.network_fhandle.create_group('neuron_layer_'+str(ind))
+                # Save the neuron layer in it
+                layer.save_layer(subgroup, time=0.0)
+                
+            # Saving synaptic layers
             for ind, layer in enumerate(self.synaptic_layers):
+                layer.network_record = dict()
+                    
+                layer.network_record['f_handle'] = self.network_fhandle
+                # Show info
+                logger.debug('Writing neuron layer %s',layer.__name__)
+                # Create a subgroup for this synaptic layer
+                subgroup = self.network_fhandle.create_group('synaptic_layer_'+str(ind))
                 # Save the synaptic layer in it
-                layer.save_layer(None)
+                layer.save_layer(subgroup, 0.0)
+            
+            self.network_fhandle.flush()
+    
         
         logger.debug('File writing ended')
+
+        return
+        
+    def save_network_state(self):
+        
+        if not self.simulation_options['record_to_file']:
+            return
+        
+        time = self.next_state_recording_step*self.simulation_options['state_recording_step']
+        
+        logger.debug('Saving network state to file %s',self.save_file)
+        
+        self.update_neuron_states()
+        self.update_network_weights()
+        
+        if self.get_my_process_id()==0:
+            # Saving neuron layers
+            for layer in self.neuron_layers:
+                layer.add_state_to_record(time)
+                
+            # Saving synaptic layers
+            for layer in self.synaptic_layers:
+                layer.add_weights_to_record(time)
+            
+            self.network_fhandle.flush()
+                
+        return
             
     def visualize_network(self):
         '''
@@ -473,6 +624,13 @@ class CerebellarModel(object):
             raise Exception('InvalidLayerName')
     
     @abc.abstractmethod
+    def _initialize_weight_recording_buffer(self):
+        '''
+        Initialize the variables required in order to record weights efficiently.
+        '''
+        return
+    
+    @abc.abstractmethod
     def update_network_weights(self):
         '''
         Update the weights of the cerebellar model according to the running implementation.
@@ -550,19 +708,17 @@ class CerebellarModel(object):
         '''
         return 
 
-    @abc.abstractmethod
     def get_local_py_rng(self):
         '''
         Return the random number generator of this proccess
         '''
-        return
+        return self.simulation_options['py_rng'][self.get_my_process_id()]
     
-    @abc.abstractmethod
     def get_global_py_rng(self):
         '''
-        Return the random number generator for serial operations
+        Return the random number generator for the global operations
         '''
-        return
+        return self.simulation_options['py_serial_rng']
         
 def _search_hdf5_group(file, name):
     '''

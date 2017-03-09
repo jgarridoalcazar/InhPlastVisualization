@@ -626,7 +626,7 @@ class SynapticLayer(object):
         self.weights = numpy.array([initial_weight] * self.number_of_synapses)
         return
     
-    def save_layer(self, root):
+    def save_layer(self, root, time):
         '''
         This function stores the connectivity data and the synaptic weights in the hdf5 group passed as an argument.
         '''
@@ -641,10 +641,22 @@ class SynapticLayer(object):
         root.attrs['target_layer'] = self.target_layer.__name__
         
         # Store the source and target indexes and the weights of the layer
-        source_dataset = root.create_dataset('source_index', data = self.source_index)
-        target_dataset = root.create_dataset('target_index', data = self.target_index)
-        weight_dataset = root.create_dataset('weight', data = self.weights.astype(numpy.float32))
+        n_connections = self.source_index.shape[0]
+        self.network_record['connections_dset'] = root.create_dataset('connections', data = numpy.array([self.source_index,self.target_index]))
+        self.network_record['weights_dset'] = root.create_dataset('weights', (n_connections+1,1), data = numpy.append([time],self.weights).astype(numpy.float32),maxshape=(n_connections+1,None))
         
+        return
+    
+    def add_weights_to_record(self, time):
+        '''
+        This function stores the connectivity data and the synaptic weights in the hdf5 group passed as an argument.
+        '''
+        if (self.weight_recording):
+            weight_row = numpy.append([time],self.weights).astype(numpy.float32)
+            dset_shape = self.network_record['weights_dset'].shape
+            self.network_record['weights_dset'].resize((dset_shape[0],dset_shape[1]+1))
+            self.network_record['weights_dset'][:,-1] = weight_row
+            
         return
     
     def load_layer(self, root):
@@ -661,13 +673,14 @@ class SynapticLayer(object):
         #self.__name__ = root.attrs['name']
         
         # Load the source and target indexes and the weights of the layer
-        target_index = root['target_index'][:]
+        target_index = root['connections'][1,:]
+        source_index = root['connections'][0,:]
         
         # Select only those synapses targetting local neurons
-        selected_target = self.target_layer.is_local_node[target_index] 
+        selected_target = numpy.where(self.target_layer.is_local_node[target_index]) [0]
         self.target_index = target_index[selected_target]
-        self.source_index = root['source_index'][selected_target]
-        self.weights = root['weight'][selected_target]
+        self.source_index = source_index[selected_target]
+        self.weights = root['weights'][selected_target+1,-1]
         
         # Set the number of synapses
         self.number_of_synapses = self.target_index.shape[0]

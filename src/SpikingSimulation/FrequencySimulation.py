@@ -106,13 +106,20 @@ class FrequencySimulation(object):
              
             self.cerebellum = NestGenerator.NestCerebellarModel(config_dict=self.config_options)
         else:
-            self.config_options['simulation']['run_simulation'] = False
             # Get the path of the config_file
             import SpikingCerebellum.SavedCerebellarModel as SavedGenerator
-            path = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name']
+            data_path = self.config_options['simulation']['data_path']
+            simulation_name = self.config_options['simulation']['simulation_name']
             # Read the old configuration file being saved with the simulation and containing specific network information
-            self.config_options = ReadConfigFile(path+'/'+'SimulationConfig.cfg')
-            self.cerebellum = SavedGenerator.SavedCerebellarModel(config_dict=self.config_options, simulation_folder=path)
+            self.config_options = ReadConfigFile(data_path+'/'+'SimulationConfig.cfg')
+            self.config_options['simulation']['run_simulation'] = False
+            # Ignore original paths and names
+            self.config_options['simulation']['data_path'] = data_path
+            self.config_options['simulation']['simulation_name'] = simulation_name
+            self.config_options['simulation']['record_to_file'] = False
+            self.config_options['network']['load_file'] = data_path + '/network.h5'
+            self.cerebellum = SavedGenerator.SavedCerebellarModel(config_dict=self.config_options, simulation_folder=data_path)
+            
     
         logger.debug('Initializing cerebellum generator')
         self.cerebellum.initialize_simulation()
@@ -130,7 +137,12 @@ class FrequencySimulation(object):
             self.config_options['stimulation']['simulation_time'] = self.simulation_time
             self.config_options['stimulation']['number_of_fibers'] = self.cerebellum.mflayer.number_of_neurons
             self.config_options['stimulation']['rng'] = self.cerebellum.get_global_py_rng()
-                        
+            
+            if (self.config_options['simulation']['record_to_file']):
+                self.config_options['stimulation']['save_pattern_file'] = self.config_options['simulation']['data_path'] + '/stimulation_pattern.h5'
+            else:
+                self.config_options['stimulation']['save_pattern_file'] = None
+                            
             import Stimulation.PatternGenerator as PatternGenerator
             self.pattern_generator = PatternGenerator.PatternGenerator(**self.config_options['stimulation'])
             self.pattern_generator.initialize()
@@ -178,6 +190,8 @@ class FrequencySimulation(object):
             logger.debug('Running the simulation %ss until %ss', sim_time, self.cerebellum.simulation_time+sim_time) 
             self.cerebellum.simulate_network(sim_time)
             self.current_time = self.cerebellum.simulation_time
+                    
+        return
             
     def visualize_results(self):
         '''

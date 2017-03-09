@@ -393,12 +393,6 @@ class PatternGenerator(object):
         logger.debug('File reading ended')
         
         return
-            
-                
-        
-        
-    
-    
         
     def initialize(self):
         '''

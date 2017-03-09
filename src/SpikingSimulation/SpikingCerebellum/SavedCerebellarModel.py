@@ -5,7 +5,7 @@ Created on May 12, 2014
 '''
 
 import abc
-from CerebellarModel import CerebellarModel
+import CerebellarModel
 import InputLayer
 import SynapticLayerNoMPI as SynapticLayer
 import numpy
@@ -16,7 +16,7 @@ import logging
 
 logger = logging.getLogger('Simulation')
 
-class SavedCerebellarModel(CerebellarModel):
+class SavedCerebellarModel(CerebellarModel.CerebellarModel):
     '''
     This class defines an inherited class including all the methods
     needed in order to generate a cerebellum-like network with the activity
@@ -123,59 +123,22 @@ class SavedCerebellarModel(CerebellarModel):
         Initialize and load the weight recording buffer from the files.
         '''
         
-        # Check if recording_time_step is above 0
-        if self.simulation_options['weight_recording_step'] >= float("inf"):
-            return
+        import h5py
+        file = h5py.File(self.load_file)
         
-        if not self.simulation_options['record_to_file']:
-            return
-            
         for layer in self.synaptic_layers:
             if layer.weight_recording:
                 layer.weight_record = dict()
+                
+                node = CerebellarModel._search_hdf5_group(file, layer.__name__)
             
                 # print 'Process',self.get_my_process_id(),':','Source layer:',layer.source_layer.nest_layer,'Target layer:', layer.target_layer.nest_layer
-                layer.weight_record['connections'] = None
-                layer.weight_record['weights'] = None
-                layer.weight_record['time'] = None
+                layer.weight_record['connections'] = node['connections'][:,:]
+                layer.weight_record['weights'] = numpy.transpose(node['weights'][1:,:])
+                layer.weight_record['time'] = node['weights'][0,:]
                 
-                
-                # Get the weight file list of the layer
-                file_iterator = self._file_name_iterator(layer=layer, type_layer='weight')
-                for file_name in file_iterator:
-                    
-                    logger.debug('Reading weight register file %s', file_name)
-                    
-                    import h5py
-                    
-                    with h5py.File(file_name, 'r') as f:
-                        # Get the connections array and transform into an array of tuples
-                        #connections_array = numpy.array(f.readline().split(' ')[:-1], int)
-                        #connections_matrix = numpy.reshape(connections_array,(-1,2))
-                        connections_matrix = f['connections'][:,:]
-                        
-                        if layer.weight_record['connections'] is None:
-                            layer.weight_record['connections'] = connections_matrix
-                        else:
-                            layer.weight_record['connections'] = numpy.append(layer.weight_record['connections'],connections_matrix,axis=0)
-                        
-                        # Check the number of connections in the file
-                        if len(connections_matrix):
-                            # Get the rest of the weight file
-                            #data = numpy.genfromtxt(f, delimiter=' ')
-                            data = f['weights']
-                        
-                            # Extract the time and the wiehgts
-                            if layer.weight_record['time'] is None:
-                                layer.weight_record['time'] = data[:,0]
-                        
-                            if layer.weight_record['weights'] is None:
-                                layer.weight_record['weights'] = data[:,1:]
-                            else:
-                                layer.weight_record['weights'] = numpy.append(layer.weight_record['weights'],data[:,1:],axis=0)
             else:
                 layer.weight_record = None
-
         return
     
     def _initialize_layer_buffer(self):
@@ -184,8 +147,12 @@ class SavedCerebellarModel(CerebellarModel):
         '''
         
         # Check if record_to_file has been enabled
-        if not self.simulation_options['record_to_file']:
-            return
+        file_name_activity = self.simulation_folder + '/activity.h5'
+        file_name_network = self.simulation_folder + '/network.h5'
+        
+        import h5py
+        file_activity = h5py.File(file_name_activity,'r')
+        file_network = h5py.File(file_name_network,'r')
             
         for layer in self.neuron_layers:
             # Load registered spike activity
@@ -195,33 +162,12 @@ class SavedCerebellarModel(CerebellarModel):
                 # print 'Process',self.get_my_process_id(),':','Source layer:',layer.source_layer.nest_layer,'Target layer:', layer.target_layer.nest_layer
                 layer.activity_record['cell'] = None
                 layer.activity_record['time'] = None
-                
-                # Get the layer min index
-                layer.MinIndex = self.config_dict[layer.__name__]['minindex']
-                
-                # Get the weight file list of the layer
-                file_iterator = self._file_name_iterator(layer=layer, type_layer='spike')
-                for file_name in file_iterator:
-                    
-                    logger.debug('Reading activity register file %s', file_name)
-                    
-                    # Get the activity file
-                    data = numpy.loadtxt(file_name)
-                    
-                    if len(data):    
-                        # Get the connections array and transform into an array of tuples
-                        cell_array = (data[:,0] - layer.MinIndex).astype(int)
-                        time_array = data[:,1]/1.e3
+            
+                node = CerebellarModel._search_hdf5_group(file_activity, layer.__name__)
+            
+                layer.activity_record['cell'] = node['neuron_id'][:]
+                layer.activity_record['time'] = node['spike_time'][:]
                             
-                        if layer.activity_record['cell'] is None:
-                            layer.activity_record['cell'] = cell_array
-                        else:
-                            layer.activity_record['cell'] = numpy.append(layer.activity_record['cell'],cell_array)
-                        
-                        if layer.activity_record['time'] is None:
-                            layer.activity_record['time'] = time_array
-                        else:
-                            layer.activity_record['time'] = numpy.append(layer.activity_record['time'],time_array)
             else:
                 layer.activity_record = None
                 
@@ -243,41 +189,15 @@ class SavedCerebellarModel(CerebellarModel):
                 for var in layer.record_vars:
                     layer.state_record[var] = None
                 
-                # Get the layer min index
-                layer.MinIndex = self.config_dict[layer.__name__]['minindex']
+                node = CerebellarModel._search_hdf5_group(file_network, layer.__name__)
                 
-                # Get the weight file list of the layer
-                file_iterator = self._file_name_iterator(layer=layer, type_layer='state')
-                for file_name in file_iterator:
-                    
-                    logger.debug('Reading state recorded file %s', file_name)
-                    
-                    # Get the activity file
-                    data = numpy.loadtxt(file_name)
-                        
-                    if len(data):
-                        # Get the connections array and transform into an array of tuples
-                        cell_array = (data[:,0] - layer.MinIndex).astype(int)
-                        time_array = data[:,1]/1.e3
-                            
-                        if layer.state_record['cell'] is None:
-                            layer.state_record['cell'] = cell_array
-                        else:
-                            layer.state_record['cell'] = numpy.append(layer.state_record['cell'],cell_array)
-                        
-                        if layer.state_record['time'] is None:
-                            layer.state_record['time'] = time_array
-                        else:
-                            layer.state_record['time'] = numpy.append(layer.state_record['time'],time_array)
-                            
-                        for index in range(len(layer.record_vars)):
-                            var = layer.record_vars[index]
-                            array = data[:,index+2]
-                            if layer.state_record[var] is None:
-                                layer.state_record[var] = array
-                            else:
-                                layer.state_record[var] = numpy.append(layer.state_record[var],array)
-                     
+                layer.state_record['cell'] = numpy.arange(layer.number_of_neurons)
+                
+                for var in layer.record_vars:
+                    logger.debug('Reading variable %s in layer %s',var,layer.__name__)
+                    layer.state_record['time'] = node[var][0,:]
+                    layer.state_record[var] = node[var][1:,:]
+                                     
             else:
                 layer.state_record = None
 
@@ -288,7 +208,11 @@ class SavedCerebellarModel(CerebellarModel):
         Generate a NEST model based on the inherited cerebellar model.
         '''
         
-        super(SavedCerebellarModel, self)._build_network()
+        # Load the network elements
+        super(SavedCerebellarModel, self)._create_neurons();
+        
+        # Load the synapses
+        super(SavedCerebellarModel, self)._create_synapses();
         
         # Initialize weight recording buffer
         self._initialize_weight_recording_buffer()
@@ -552,3 +476,7 @@ class SavedCerebellarModel(CerebellarModel):
         '''
         comm = MPI.COMM_WORLD
         return comm.Get_rank()
+    
+    def _synchronize_processes(self):
+        
+        pass

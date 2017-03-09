@@ -45,9 +45,9 @@ if __name__ == "__main__":
 
     logger.info('Simulation finished: %ss', end_simulation - end_init)    
     
-    simulation.cerebellum.update_network_weights()
-    
-    simulation.cerebellum.save_network()
+    # Save network state and activity at the end of the simulation
+    simulation.cerebellum.save_activity()
+    simulation.cerebellum.save_network_state()
 
     end_saving = time.time()
 
