@@ -106,6 +106,8 @@ class SynapticLayer(object):
             self.weight_recording = kwargs.pop('weight_recording')
         else:
             self.weight_recording = False
+            
+        self.weight_record = dict()
         
         # Read synaptic type
         if ('weight_normalization' in kwargs):

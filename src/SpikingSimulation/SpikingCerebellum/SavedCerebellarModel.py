@@ -126,6 +126,8 @@ class SavedCerebellarModel(CerebellarModel.CerebellarModel):
         import h5py
         file = h5py.File(self.load_file)
         
+        logger.debug('Loading weight evolution from file %s', self.load_file)
+        
         for layer in self.synaptic_layers:
             if layer.weight_recording:
                 layer.weight_record = dict()
@@ -153,10 +155,15 @@ class SavedCerebellarModel(CerebellarModel.CerebellarModel):
         import h5py
         file_activity = h5py.File(file_name_activity,'r')
         file_network = h5py.File(file_name_network,'r')
+        
+        logger.debug('Loading state variable evolution from file %s', file_name_network)
+        logger.debug('Loading simulation activity from file %s', file_name_activity)
             
         for layer in self.neuron_layers:
             # Load registered spike activity
             if layer.register_activity:
+                
+                logger.debug('Reading activity from layer %s', layer.__name__)
                 layer.activity_record = dict()
             
                 # print 'Process',self.get_my_process_id(),':','Source layer:',layer.source_layer.nest_layer,'Target layer:', layer.target_layer.nest_layer
@@ -177,6 +184,8 @@ class SavedCerebellarModel(CerebellarModel.CerebellarModel):
                 # If only an string has been used, embed it in an array
                 if isinstance(layer.record_vars,str):
                     layer.record_vars = [layer.record_vars]
+                    
+                logger.debug('Reading state from layer %s', layer.__name__)
                 
                 # Attention: This code assumes that every variable in the list have been recorded in the file. Otherwise, it might crash.
                 

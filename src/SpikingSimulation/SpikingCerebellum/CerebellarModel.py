@@ -83,7 +83,7 @@ class CerebellarModel(object):
         if (self.load_file is not None):
             import h5py
         
-            file = h5py.File(self.load_file)
+            file = h5py.File(self.load_file, 'r')
         else:
             file = None
         
@@ -172,7 +172,7 @@ class CerebellarModel(object):
         if (self.load_file is not None):
             import h5py
         
-            file = h5py.File(self.load_file)
+            file = h5py.File(self.load_file, 'r')
         else:
             file = None
         

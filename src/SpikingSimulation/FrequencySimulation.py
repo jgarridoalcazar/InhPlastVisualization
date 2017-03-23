@@ -111,14 +111,14 @@ class FrequencySimulation(object):
             data_path = self.config_options['simulation']['data_path']
             simulation_name = self.config_options['simulation']['simulation_name']
             # Read the old configuration file being saved with the simulation and containing specific network information
-            self.config_options = ReadConfigFile(data_path+'/'+'SimulationConfig.cfg')
+            #self.config_options = ReadConfigFile(data_path+'/'+'SimulationConfig.cfg')
             self.config_options['simulation']['run_simulation'] = False
             # Ignore original paths and names
-            self.config_options['simulation']['data_path'] = data_path
-            self.config_options['simulation']['simulation_name'] = simulation_name
+            #self.config_options['simulation']['data_path'] = data_path
+            #self.config_options['simulation']['simulation_name'] = simulation_name
             self.config_options['simulation']['record_to_file'] = False
-            self.config_options['network']['load_file'] = data_path + '/network.h5'
-            self.cerebellum = SavedGenerator.SavedCerebellarModel(config_dict=self.config_options, simulation_folder=data_path)
+            self.config_options['network']['load_file'] = data_path + '/' + simulation_name + '/network.h5'
+            self.cerebellum = SavedGenerator.SavedCerebellarModel(config_dict=self.config_options)
             
     
         logger.debug('Initializing cerebellum generator')

@@ -111,6 +111,11 @@ class PatternGenerator(object):
             self.load_pattern_file = None
         else:
             self.load_pattern_file = kwargs.pop('load_pattern_file')
+            
+        if ('load_pattern_times' not in kwargs):
+            self.load_pattern_times = False
+        else:
+            self.load_pattern_times = kwargs.pop('load_pattern_times')
         
         super(PatternGenerator, self).__init__()
         
@@ -334,11 +339,23 @@ class PatternGenerator(object):
         filename = self.save_pattern_file
         
         logger.info('Saving activation patterns to hdf5 file %s', filename)
-       
+        
+        bin_length = self.pattern_length
+        bin_id_pattern = self.pattern_id_index
+        pattern_in_bin = numpy.zeros((bin_length.size,bin_id_pattern.size),dtype=bool)
+        for idp,active_bins in enumerate(bin_id_pattern):
+            pattern_in_bin[active_bins,idp] = True
        
         import h5py
         
         with h5py.File(filename, 'w') as file:
+            
+            logger.debug('Writing stimulation pattern bin length')
+            bin_length_dataset = file.create_dataset('bin_length', data = bin_length.T)
+            logger.debug('Writing pattern activation matrix')
+            pattern_in_bin_dataset = file.create_dataset('pattern_activation', data = pattern_in_bin)
+            logger.debug('Writing activation levels of simulation')
+            activation_level_dataset = file.create_dataset('activation_level', data = self.activation_levels)
             
             # Saving neuron layers
             for ind, pattern in enumerate(self.pattern_activation):
@@ -353,7 +370,8 @@ class PatternGenerator(object):
     
         logger.debug('File writing ended')
         
-        return
+        return    
+        
     
     def _load_activation_pattern(self):
         '''
@@ -373,22 +391,42 @@ class PatternGenerator(object):
         with h5py.File(self.load_pattern_file, 'r') as file:
             
             # Retrieve the number of patterns
-            number_datasets = len(file['.'].keys())
+            self.number_of_patterns = len(file['.'].keys())
             
             # Create lists for the fibbers in patterns and the activation levels
             fiber_lists = []
-            activation_levels = []
+            pattern_activation = []
             
             for ind, dataset in enumerate(file['.'].values()):
                 # Show info
                 logger.debug('Loading stimulation pattern %s',ind)
                     
                 fiber_lists.append(dataset[:,0].astype(int))
-                activation_levels.append(dataset[:,1])
+                pattern_activation.append(dataset[:,1])
+                
+            if (self.load_pattern_times):
+                self.pattern_length = file['bin_length'][:]
+                self.pattern_length_cum = numpy.cumsum(self.pattern_length)
+                
+                
+                logger.debug('Loading pattern activation times')
+                pattern_active = file['pattern_activation'][:]
+                
+                # Select the bins where each pattern is presented
+                self.pattern_id_index = numpy.array([numpy.where(pattern_active[:,num_pattern])[0] for num_pattern in range(self.number_of_patterns)])
+        
+                # Select the patterns to be presented in each bin
+                self.pattern_id = numpy.array([numpy.where(pattern_active[num_bin,:])[0] for num_bin in range(len(self.pattern_length))])
+                
+                logger.debug('Loading activation levels')
+                
+                # Load the pattern activation levels
+                self.activation_levels = file['activation_level'][:,:]
+                
                 
         # Convert lists to arrays
         self.fibers_in_pattern = numpy.array(fiber_lists)
-        self.pattern_activation = numpy.array(activation_levels)
+        self.pattern_activation = numpy.array(pattern_activation)
         
         logger.debug('File reading ended')
         
@@ -400,13 +438,14 @@ class PatternGenerator(object):
         '''
         
         # Generate the length of each interval
-        self._generate_length()
-        
-        if self.overlapped_patterns:
-            # Generate pattern ids
-            self._generate_pattern_id_overlapped()
-        else:
-            self._generate_pattern_id_non_overlapped()
+        if (self.load_pattern_file is None or not self.load_pattern_times):
+            self._generate_length()
+            
+            if self.overlapped_patterns:
+                # Generate pattern ids
+                self._generate_pattern_id_overlapped()
+            else:
+                self._generate_pattern_id_non_overlapped()
         
         
         if (self.load_pattern_file is None):
