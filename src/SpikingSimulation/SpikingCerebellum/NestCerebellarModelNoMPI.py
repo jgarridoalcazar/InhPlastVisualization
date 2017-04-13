@@ -652,11 +652,11 @@ class NestCerebellarModel(CerebellarModel):
             
             amp = kwargs.pop('amplitude')*iThreshold*1.e12
             
-            if len(amp)==self.mflayer.number_of_neurons:
-                nest.SetStatus(nodes=self.dc_current.tolist(), params='amplitude', val=amp)
+            if len(amp)==numpy.count_nonzero(self.mflayer.is_local_node):
+                nest.SetStatus(nodes=self.dc_current[self.mflayer.is_local_node].tolist(), params='amplitude', val=amp)
                 # We could check and set status only of the local nodes   
             else:
-                logger.error('dc_current amplitude has to be a list with the same length of the number of MFs')
+                logger.error('dc_current amplitude has to be a list with the same length of the number of local MFs')
                 raise Exception('InvalidDCCurrent')
         else:
             logger.error('Error: dc_current amplitude has to be specified')
