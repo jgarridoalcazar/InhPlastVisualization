@@ -328,6 +328,7 @@ class NestCerebellarModel(CerebellarModel):
                 layer.weight_record['connections'][:,1] = layer.weight_record['connections'][:,1]-min_target
                 layer.weight_record['weights'] = numpy.array([global_connections[:,2] * 1.e-9],dtype=numpy.float32)
                 layer.weight_record['time'] = numpy.array([0],dtype=numpy.float32)
+                logger.debug('%s layer weight recording initialized',layer.__name__)
             else:
                 layer.weight_record = None
 
@@ -405,6 +406,9 @@ class NestCerebellarModel(CerebellarModel):
         
         # Initialize weight normalization
         self._initialize_weight_normalization()
+
+        # Initialize weight recording
+        self._initialize_weight_recording_buffer()
         
         return
     
