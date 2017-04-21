@@ -326,8 +326,6 @@ class NestCerebellarModel(CerebellarModel):
                 layer.weight_record['connections'] = global_connections[:,:2].astype(numpy.uint32)
                 layer.weight_record['connections'][:,0] = layer.weight_record['connections'][:,0]-min_source
                 layer.weight_record['connections'][:,1] = layer.weight_record['connections'][:,1]-min_target
-                layer.weight_record['weights'] = numpy.array([global_connections[:,2] * 1.e-9],dtype=numpy.float32)
-                layer.weight_record['time'] = numpy.array([0],dtype=numpy.float32)
                 logger.debug('%s layer weight recording initialized',layer.__name__)
             else:
                 layer.weight_record = None
@@ -1008,13 +1006,18 @@ class NestCerebellarModel(CerebellarModel):
         
         # print 'Process',self.get_my_process_id(),':','Selected connections:',selected_connections
         
+        if not self.simulation_options['record_to_file']:
+            logger.error('Record_to_file option is required in order to provide weight registers.')
+            raise Exception('RecordToFileRequired')
+
+
         # Calculate selected time indexes
-        time = synaptic_layer.weight_record['time']
+        time = synaptic_layer.network_record['weights_dset'][0,:]
         time_indexes = (time>=init_time) & (time<=end_time) 
         selected_time = time[time_indexes]
         
         # Pick selected weights
-        weights = synaptic_layer.weight_record['weights']
+        weights = synaptic_layer.network_record['weights_dset'][1:,:] 
         selected_weights = numpy.array([record[connection_indexes] for record in weights[time_indexes]]).transpose()
         
         # print 'Process',self.get_my_process_id(),':','Collected time ->',gtime,'Collected Connections ->',gconnections,'Collected weights ->',gweights
