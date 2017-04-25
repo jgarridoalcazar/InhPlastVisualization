@@ -119,7 +119,8 @@ class AxesWeightEvolutionLine(AxesPlot.AxesPlot):
         self.param['end_time'] = 0
         
         # Load data from the data provider
-        _,self.connections,_ = self.data_provider.get_synaptic_weights(**self.param)
+        source, target = self.data_provider.get_synaptic_connections(**self.param)
+        self.connections = numpy.column_stack((source,target))
         
         #print 'Process',process_id,':','Selected connections: ', self.connections
         

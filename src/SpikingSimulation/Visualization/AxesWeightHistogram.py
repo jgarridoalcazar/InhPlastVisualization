@@ -91,7 +91,16 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
         self.positions = numpy.linspace(self.min_weight, self.max_weight,self.num_bins)
         
         self.param['end_time'] = 0.0
-        _,gcon,_ = self.data_provider.get_synaptic_weights(**self.param)
+        #_,gcon,_ = self.data_provider.get_synaptic_weights(**self.param)
+        
+        source, target = self.data_provider.get_synaptic_connections(**self.param)
+        
+        
+        if synaptic_layer.learning_rule_type:
+            max_weight = synaptic_layer.learning_rule_parameters['max_weight']
+        else:
+            max_weight = 1.
+        
         
         animated_artists = []
         if (self.figure.blit):
@@ -103,8 +112,7 @@ class AxesWeightHistogram(AxesPlot.AxesPlot):
             self.axesRect = self.axes.bar(self.positions, [0]*len(self.positions), max(abs(self.max_weight),abs(self.min_weight))/self.num_bins)
             
         self.axes.set_xlim([self.min_weight,self.max_weight])    
-        if gcon is not None:
-            self.axes.set_ylim([0,len(gcon)])
+        self.axes.set_ylim([0,source.shape[0]+1])
         
         self.animated_artists = tuple(animated_artists)
         

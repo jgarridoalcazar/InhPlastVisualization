@@ -306,7 +306,7 @@ class FrequencySimulation(object):
             
         # Adjust the frame_rate depending on whether the simulation is running at the same time
         if self.config_options['simulation']['run_simulation']:
-            frame_rate = 1.0
+            frame_rate = 0.1
         else:
             frame_rate = 1.0
         
@@ -331,7 +331,7 @@ class FrequencySimulation(object):
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'pattern_provider':self.pattern_generator,
                                               'layer':'mflayer',
-                                              #'cell_index': range(50),
+                                              'cell_index': range(100),
                                               'visible_data_only':True,
                                               'show_legend':False,
                                               'x_length':1.})
@@ -369,6 +369,7 @@ class FrequencySimulation(object):
         animation.add_subplot(fig_position=5,axes_type=AxesWeightEvolutionLine.AxesWeightEvolutionLine,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'layer':'mfgocsynapsis',
+                                              'source_indexes': range(100),
                                               'target_indexes': [0],
                                               'visible_data_only':True,
                                               'show_legend':False})

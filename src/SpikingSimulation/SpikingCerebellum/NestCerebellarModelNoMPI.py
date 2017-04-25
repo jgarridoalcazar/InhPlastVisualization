@@ -45,7 +45,7 @@ class NestCerebellarModel(CerebellarModel):
          'ConductanceLIFwAT': 'iaf_cond_exp_at',
          'ConductanceLIFwATSym': 'iaf_cond_exp_at_sym',
          'ConductanceLIFStowIP': 'iaf_cond_exp_sto_ip',
-         'CurrentLIF' : 'iaf_neuron'
+         'CurrentLIF' : 'iaf_psc_alpha'
     }
 
     # This dictionary maps the layer configuration parameters into the NEST cell model parameters (used in the keys).
@@ -547,13 +547,9 @@ class NestCerebellarModel(CerebellarModel):
             target_nest_nodes = layer.target_layer.nest_layer[layer.target_index]
             
             #print 'Process:', self.get_my_process_id(),'Source cells:', presynaptic,'Target cells:',postsynaptic
-            if nest.version() >= 'NEST 2.8.0':
-                syn_dict = {'model': layer.__name__,
-                          'weight': layer.weights*1.e9}
-                nest.Connect(pre=source_nest_nodes, post=target_nest_nodes, conn_spec=con_dict, syn_spec=syn_dict)
-            else:
-                def_delay = nest.GetDefaults(layer.__name__,'delay')
-                nest.OneToOneConnect(pre=source_nest_nodes, post=target_nest_nodes, params=layer.weights*1.e9, delay=def_delay, model=layer.__name__)
+            syn_dict = {'model': layer.__name__,
+                      'weight': layer.weights*1.e9}
+            nest.Connect(pre=source_nest_nodes, post=target_nest_nodes, conn_spec=con_dict, syn_spec=syn_dict)
             
             logger.debug('Nest Process: %s. Connections created in layer %s: %s', nest.Rank(), layer.__name__,source_nest_nodes.shape[0])
         return
@@ -987,22 +983,24 @@ class NestCerebellarModel(CerebellarModel):
         
         # Calculate selected connection indexes
         connections = synaptic_layer.weight_record['connections']
-        # Optimize connection indexes selection
+                
         if (source_indexes == range(synaptic_layer.source_layer.number_of_neurons)):
-            if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
-                # No selection -> All the connections in the layer
-                connection_indexes = range(len(connections))
-            else:
-                # Target indexes selection
-                connection_indexes = [index for index in range(len(connections)) if (connections[index][1] in target_indexes)]
+            # No selection -> All the connections in the layer
+            connection_source_boolean = numpy.ones(connections.shape[0], dtype=bool)
         else:
-            if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
-                # Source indexes selection
-                connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes)]
-            else:
-                # Source and target selection
-                connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes) and (connections[index][1] in target_indexes)]
-        selected_connections = connections[connection_indexes]
+            # Source indexes selection
+            connection_source_boolean = numpy.in1d(connections[:,0],source_indexes)
+        
+        if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
+            # No selection -> All the connections in the layer
+            connection_target_boolean = numpy.ones(connections.shape[0], dtype=bool)
+        else:
+            # Target indexes selection
+            connection_target_boolean = numpy.in1d(connections[:,1],target_indexes)
+            
+        connection_indexes = numpy.where(numpy.logical_and(connection_source_boolean,connection_target_boolean))[0]
+        
+        selected_connections = connections[connection_indexes,:]
         
         # print 'Process',self.get_my_process_id(),':','Selected connections:',selected_connections
         
@@ -1018,7 +1016,7 @@ class NestCerebellarModel(CerebellarModel):
         
         # Pick selected weights
         weights = synaptic_layer.network_record['weights_dset'][1:,:] 
-        selected_weights = numpy.array([record[connection_indexes] for record in weights[time_indexes]]).transpose()
+        selected_weights = weights[numpy.ix_(connection_indexes,time_indexes)]
         
         # print 'Process',self.get_my_process_id(),':','Collected time ->',gtime,'Collected Connections ->',gconnections,'Collected weights ->',gweights
         
