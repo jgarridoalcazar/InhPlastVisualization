@@ -366,15 +366,15 @@ class FrequencySimulation(object):
                                               'visible_data_only':True,
                                               'show_legend':False})
 
-        animation.add_subplot(fig_position=5,axes_type=AxesWeightEvolutionLine.AxesWeightEvolutionLine,
-                            axes_parameters= {'data_provider':self.cerebellum,
-                                              'layer':'mfgocsynapsis',
-                                              'source_indexes': range(100),
-                                              'target_indexes': [0],
-                                              'visible_data_only':True,
-                                              'show_legend':False})
+#         animation.add_subplot(fig_position=5,axes_type=AxesWeightEvolutionLine.AxesWeightEvolutionLine,
+#                             axes_parameters= {'data_provider':self.cerebellum,
+#                                               'layer':'mfgocsynapsis',
+#                                               'source_indexes': range(100),
+#                                               'target_indexes': [0],
+#                                               'visible_data_only':True,
+#                                               'show_legend':False})
                 
-        animation.add_subplot(fig_position=6,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
+        animation.add_subplot(fig_position=5,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
                             axes_parameters= {'data_provider':self.cerebellum,
                                               'pattern_provider': self.pattern_generator,
                                               'layer':'mfgocsynapsis',
