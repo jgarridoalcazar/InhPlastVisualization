@@ -14,9 +14,9 @@
 
   // member functions of histentry_sym
 
-  mynest::histentry_sym::histentry_sym(nest::double_t t, nest::double_t Kexpt1, 
-  		nest::double_t Kcos2t1, nest::double_t Ksin2t1, nest::double_t Kexpt2,
-		nest::double_t Ksin2t2, nest::double_t Kcos2t2, size_t access_counter) :
+  mynest::histentry_sym::histentry_sym(double t, double Kexpt1, 
+  		double Kcos2t1, double Ksin2t1, double Kexpt2,
+		double Ksin2t2, double Kcos2t2, size_t access_counter) :
     t_(t),
 	Kexpt1_(Kexpt1),
 	Kcos2t1_(Kcos2t1),

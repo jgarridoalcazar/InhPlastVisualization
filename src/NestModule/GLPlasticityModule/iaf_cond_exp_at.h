@@ -132,7 +132,7 @@ namespace mynest
     void init_state_(const Node& proto);
     void init_buffers_();
     void calibrate();
-    void update(nest::Time const &, const nest::long_t, const nest::long_t);
+    void update(nest::Time const &, const long, const long);
 
     // END Boilerplate function declarations ----------------------------
 
@@ -151,19 +151,19 @@ namespace mynest
 
     //! Model parameters
 	struct Parameters_ {
-	  nest::double_t V_th_;       //!< Threshold Potential in mV
-	  nest::double_t V_reset_;    //!< Reset Potential in mV
-	  nest::double_t t_ref_;      //!< Refractory period in ms
-	  nest::double_t g_L;      //!< Leak Conductance in nS
-	  nest::double_t C_m;      //!< Membrane Capacitance in pF
-	  nest::double_t th_C;        //!<  Threshold constant. Increment of the threshold voltage after each spike in mV.
-	  nest::double_t E_ex;        //!< Excitatory reversal Potential in mV
-	  nest::double_t E_in;        //!< Inhibitory reversal Potential in mV
-	  nest::double_t E_L;         //!< Leak reversal Potential (aka resting potential) in mV
-	  nest::double_t tau_synE;    //!< Synaptic Time Constant Excitatory Synapse in ms
-	  nest::double_t tau_synI;    //!< Synaptic Time Constant for Inhibitory Synapse in ms
-	  nest::double_t I_e;         //!< Constant Current in pA
-	  nest::double_t tau_th;      //!< Adaptive threshold time constant in ms
+	  double V_th_;       //!< Threshold Potential in mV
+	  double V_reset_;    //!< Reset Potential in mV
+	  double t_ref_;      //!< Refractory period in ms
+	  double g_L;      //!< Leak Conductance in nS
+	  double C_m;      //!< Membrane Capacitance in pF
+	  double th_C;        //!<  Threshold constant. Increment of the threshold voltage after each spike in mV.
+	  double E_ex;        //!< Excitatory reversal Potential in mV
+	  double E_in;        //!< Inhibitory reversal Potential in mV
+	  double E_L;         //!< Leak reversal Potential (aka resting potential) in mV
+	  double tau_synE;    //!< Synaptic Time Constant Excitatory Synapse in ms
+	  double tau_synI;    //!< Synaptic Time Constant for Inhibitory Synapse in ms
+	  double I_e;         //!< Constant Current in pA
+	  double tau_th;      //!< Adaptive threshold time constant in ms
 
 	  Parameters_();  //!< Sets default parameter values
 
@@ -188,8 +188,8 @@ namespace mynest
 			   V_TH,
 			   STATE_VEC_SIZE };
 
-      nest::double_t y_[STATE_VEC_SIZE];  //!< neuron state, must be C-array for GSL solver
-      nest::int_t    r_;                  //!< number of refractory steps remaining
+      double y_[STATE_VEC_SIZE];  //!< neuron state, must be C-array for GSL solver
+      int    r_;                  //!< number of refractory steps remaining
 
       State_(const Parameters_&);  //!< Default initialization
       State_(const State_&);
@@ -227,7 +227,7 @@ namespace mynest
       // but remain unchanged during calibration. Since it is initialized with
       // step_, and the resolution cannot change after nodes have been created,
       // it is safe to place both here.
-      nest::double_t step_;           //!< step size in ms
+      double step_;           //!< step size in ms
       double   IntegrationStep_;//!< current integration time step, updated by GSL
 
       /** 
@@ -237,7 +237,7 @@ namespace mynest
        * It must be a part of Buffers_, since it is initialized once before
        * the first simulation, but not modified before later Simulate calls.
        */
-      nest::double_t I_stim_;
+      double I_stim_;
     };
 
      // ---------------------------------------------------------------- 
@@ -246,14 +246,14 @@ namespace mynest
       * Internal variables of the model.
       */
      struct Variables_ { 
-    	nest::int_t    RefractoryCounts_;
+    	int    RefractoryCounts_;
      };
 
     // Access functions for UniversalDataLogger -------------------------------
     
     //! Read out state vector elements, used by UniversalDataLogger
     template <State_::StateVecElems elem>
-    nest::double_t get_y_elem_() const { return S_.y_[elem]; }
+    double get_y_elem_() const { return S_.y_[elem]; }
 
     // ---------------------------------------------------------------- 
 

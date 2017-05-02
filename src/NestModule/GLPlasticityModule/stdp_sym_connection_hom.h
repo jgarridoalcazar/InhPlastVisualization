@@ -76,10 +76,10 @@ namespace mynest
       {
     	CommonSynapseProperties::get_status(d);
 
-    	def<nest::double_t>(d, "tau_sym", 1./inv_tau_sym1_);
-    	def<nest::double_t>(d, "lambda", lambda_);
-    	def<nest::double_t>(d, "alpha", alpha_);
-    	def<nest::double_t>(d, "Wmax", Wmax_);
+    	def<double>(d, "tau_sym", 1./inv_tau_sym1_);
+    	def<double>(d, "lambda", lambda_);
+    	def<double>(d, "alpha", alpha_);
+    	def<double>(d, "Wmax", Wmax_);
       }
   
       /**
@@ -88,9 +88,9 @@ namespace mynest
       void set_status(const DictionaryDatum & d, nest::ConnectorModel& cm){
     	CommonSynapseProperties::set_status(d, cm);
 
-    	nest::double_t old_tau_sym = 1.0/inv_tau_sym1_;
+    	double old_tau_sym = 1.0/inv_tau_sym1_;
 
-    	updateValue<nest::double_t>(d, "tau_sym", old_tau_sym);
+    	updateValue<double>(d, "tau_sym", old_tau_sym);
 
     	if ( old_tau_sym <= 0)
     	  throw nest::BadProperty("All time constants must be strictly positive.");
@@ -98,20 +98,20 @@ namespace mynest
     	inv_tau_sym1_ = 1.0/old_tau_sym;
     	inv_tau_sym2_ = inv_tau_sym1_*(std::atan(M_PI/2)*2./M_PI);
 
-    	updateValue<nest::double_t>(d, "lambda", lambda_);
-    	updateValue<nest::double_t>(d, "alpha", alpha_);
-    	updateValue<nest::double_t>(d, "Wmax", Wmax_);
+    	updateValue<double>(d, "lambda", lambda_);
+    	updateValue<double>(d, "alpha", alpha_);
+    	updateValue<double>(d, "Wmax", Wmax_);
       };
 
       // data members common to all connections
-      nest::double_t inv_tau_sym1_;
-      nest::double_t lambda_;
-      nest::double_t alpha_;
-      nest::double_t Wmax_;
+      double inv_tau_sym1_;
+      double lambda_;
+      double alpha_;
+      double Wmax_;
 
       // Auxiliar variables common to all connections
-      nest::double_t inv_tau_sym2_;
-      nest::double_t sym_A_;
+      double inv_tau_sym2_;
+      double sym_A_;
     };
 
   /**
@@ -166,7 +166,7 @@ namespace mynest
    * \param e The event to send
    * \param t_lastspike Point in time of last spike sent.
    */
-  void send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const CommonPropertiesType &);
+  void send(nest::Event& e, nest::thread t, double t_lastspike, const CommonPropertiesType &);
 
   void set_weight( double_t w )
   {
@@ -198,7 +198,7 @@ namespace mynest
    * \param receptor_type The ID of the requested receptor type
    * \param t_lastspike last spike produced by presynaptic neuron (in ms)
    */
-  void check_connection( nest::Node& s, nest::Node& t, nest::rport receptor_type, nest::double_t t_lastspike, const CommonPropertiesType& ){
+  void check_connection( nest::Node& s, nest::Node& t, nest::rport receptor_type, double t_lastspike, const CommonPropertiesType& ){
 	ConnTestDummyNode dummy_target;
     ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
 
@@ -207,18 +207,18 @@ namespace mynest
   
  private:
 
-  nest::double_t apply_weight_change_(nest::double_t w, nest::double_t trace, const STDPSymHomCommonProperties &cp);
+  double apply_weight_change_(double w, double trace, const STDPSymHomCommonProperties &cp);
 
   // data members of each connection
   // Accumulation variables
-  nest::double_t Kexpt1_; 		// value of exp(-abs(x)/tau1) at that time
-  nest::double_t Kcos2t1_;		// value of exp(-abs(x)/tau1)*cos(2*x/tau1) at that time
-  nest::double_t Ksin2t1_;		// value of exp(-abs(x)/tau1)*sin(2*x/tau1) at that time
-  nest::double_t Kexpt2_; 		// value of exp(-abs(x)/tau1) at that time
-  nest::double_t Ksin2t2_;		// value of exp(-abs(x)/tau2)*sin(2*x/tau2) at that time
-  nest::double_t Kcos2t2_;		// value of exp(-abs(x)/tau2)*cos(2*x/tau2) at that time
+  double Kexpt1_; 		// value of exp(-abs(x)/tau1) at that time
+  double Kcos2t1_;		// value of exp(-abs(x)/tau1)*cos(2*x/tau1) at that time
+  double Ksin2t1_;		// value of exp(-abs(x)/tau1)*sin(2*x/tau1) at that time
+  double Kexpt2_; 		// value of exp(-abs(x)/tau1) at that time
+  double Ksin2t2_;		// value of exp(-abs(x)/tau2)*sin(2*x/tau2) at that time
+  double Kcos2t2_;		// value of exp(-abs(x)/tau2)*cos(2*x/tau2) at that time
 
-  nest::double_t weight_;
+  double weight_;
   };
 
 template < typename targetidentifierT >
@@ -249,9 +249,9 @@ STDPSymConnectionHom< targetidentifierT >::STDPSymConnectionHom( const STDPSymCo
 
 
 template < typename targetidentifierT >
-inline nest::double_t STDPSymConnectionHom< targetidentifierT >::apply_weight_change_(nest::double_t w, nest::double_t trace, const CommonPropertiesType & cp)
+inline double STDPSymConnectionHom< targetidentifierT >::apply_weight_change_(double w, double trace, const CommonPropertiesType & cp)
 {
-  nest::double_t norm_w = (w / cp.Wmax_) + (cp.lambda_ * trace);
+  double norm_w = (w / cp.Wmax_) + (cp.lambda_ * trace);
 //  std::cout << "Old weight: " << w << " Norm. Weight: " << norm_w << " Kexpt1: " << Kexpt1_ << " Kcos2t1: " << Kcos2t1_ << " Ksin2t1: " << Ksin2t1_ << " Kexpt2: " << Kexpt2_ << " Ksin2t2: " << Ksin2t2_ << " Kcos2t2: " << Kcos2t2_ << " Trace: " << trace << " Lambda: " << cp.lambda_ << " Wmax: " << cp.Wmax_ << this << std::endl;
     if (norm_w > 1.0){
 	  return cp.Wmax_;
@@ -268,16 +268,16 @@ inline nest::double_t STDPSymConnectionHom< targetidentifierT >::apply_weight_ch
  * \param t_lastspike Time point of last spike emitted
  */
 template < typename targetidentifierT >
-inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const STDPSymHomCommonProperties &cp)
+inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest::thread t, double t_lastspike, const STDPSymHomCommonProperties &cp)
 {
   // synapse STDP depressing/facilitation dynamics
 
-	nest::double_t t_spike = e.get_stamp().get_ms();
+	double t_spike = e.get_stamp().get_ms();
 
   
   // t_lastspike_ = 0 initially
   nest::Node* target = get_target( t );
-  nest::double_t dendritic_delay = nest::Time(nest::Time::step(get_delay())).get_ms();
+  double dendritic_delay = nest::Time(nest::Time::step(get_delay())).get_ms();
     
   //get spike history in relevant range (t1, t2] from post-synaptic neuron
   std::deque<mynest::histentry_sym>::iterator start;
@@ -291,8 +291,8 @@ inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest
 
 	//dt = t_lastspike - (start->t_ + dendritic_delay);
 	dt = t_lastspike - start->t_;
-	//nest::double_t old_time = start->t_ + dendritic_delay;
-	nest::double_t old_time = start->t_;
+	//double old_time = start->t_ + dendritic_delay;
+	double old_time = start->t_;
     ++start;
 
 
@@ -300,19 +300,19 @@ inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest
 
     // Update trace at the time of the postsynaptic spike
     // Calculate central = exp(-abs(dt/tau1))*cos(dt*pi/(tau1*2))^2
-    nest::double_t dt_tau1 = dt*cp.inv_tau_sym1_;
+    double dt_tau1 = dt*cp.inv_tau_sym1_;
 
-    nest::double_t dt_pi_tau1 = M_PI*dt_tau1;
-    nest::double_t aux_expon_tau1 = std::exp(dt_tau1);
-    nest::double_t aux_cos_tau1 = std::cos(dt_pi_tau1);
-    nest::double_t aux_sin_tau1 = std::sin(dt_pi_tau1);
+    double dt_pi_tau1 = M_PI*dt_tau1;
+    double aux_expon_tau1 = std::exp(dt_tau1);
+    double aux_cos_tau1 = std::cos(dt_pi_tau1);
+    double aux_sin_tau1 = std::sin(dt_pi_tau1);
 
-    nest::double_t exp_t1 = Kexpt1_*aux_expon_tau1;
+    double exp_t1 = Kexpt1_*aux_expon_tau1;
 
     // Calculate cos_2_t1 = Cos(dt*pi/tau1)
-    nest::double_t cos_2_t1 = aux_expon_tau1*(Kcos2t1_*aux_cos_tau1 - Ksin2t1_*aux_sin_tau1);
+    double cos_2_t1 = aux_expon_tau1*(Kcos2t1_*aux_cos_tau1 - Ksin2t1_*aux_sin_tau1);
 
-    nest::double_t central = 0.5*(exp_t1 + cos_2_t1);
+    double central = 0.5*(exp_t1 + cos_2_t1);
 
 //    if (central<0.0){
 //		std::cout << "Error: Central<0.0. dt=" << dt << " exp_t1=" << exp_t1 << " and cos_2_t1=" << cos_2_t1 << std::endl;
@@ -321,19 +321,19 @@ inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest
 //	}
 
     // Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
-    nest::double_t dt_tau2 = dt*cp.inv_tau_sym2_;
+    double dt_tau2 = dt*cp.inv_tau_sym2_;
 //    std::cout << "dt: " << dt << " - inv_tau_sym2: " << cp.inv_tau_sym2_ << std::endl;
-    nest::double_t dt_pi_tau2 = M_PI*dt_tau2;
-    nest::double_t aux_expon_tau2 = std::exp(2*dt_tau2);
-    nest::double_t aux_cos_tau2 = std::cos(dt_pi_tau2);
-    nest::double_t aux_sin_tau2 = std::sin(dt_pi_tau2);
+    double dt_pi_tau2 = M_PI*dt_tau2;
+    double aux_expon_tau2 = std::exp(2*dt_tau2);
+    double aux_cos_tau2 = std::cos(dt_pi_tau2);
+    double aux_sin_tau2 = std::sin(dt_pi_tau2);
 
-    nest::double_t exp_t2 = Kexpt2_*aux_expon_tau2;
+    double exp_t2 = Kexpt2_*aux_expon_tau2;
 
     // Calculate cos_2_t2 = Cos(dt*pi/tau2)
-    nest::double_t cos_2_t2 = aux_expon_tau2*(Kcos2t2_*aux_cos_tau2 + Ksin2t2_*aux_sin_tau2);
+    double cos_2_t2 = aux_expon_tau2*(Kcos2t2_*aux_cos_tau2 + Ksin2t2_*aux_sin_tau2);
 
-    nest::double_t external = 0.5*(exp_t2 - cos_2_t2);
+    double external = 0.5*(exp_t2 - cos_2_t2);
 
 //    if (external<0.0){
 //		std::cout << "Error: External<0.0. dt=" << dt << " exp_t2=" << exp_t2 << " and cos_2_t2=" << cos_2_t2 << std::endl;
@@ -346,8 +346,8 @@ inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest
 
     //std::cout << "Pre-post traces. Central: " << central << " Expt1: " << exp_t1 << " Cos2t1: " << cos_2_t1 << " External: " << external << " Expt2: " << exp_t2 << " Cos2t2: " << cos_2_t2 << std::endl;
 
-    nest::double_t trace = central - cp.alpha_ * cp.sym_A_ * external;
-    nest::double_t old_weight = weight_;
+    double trace = central - cp.alpha_ * cp.sym_A_ * external;
+    double old_weight = weight_;
     weight_ = apply_weight_change_(weight_, trace, cp);
 
     //std::cout << "Weight change (pre->post) from pre at " << t_lastspike << " to post at time " << t_lastspike-dt << ": " << weight_-old_weight << ". Current value: " << weight_ << std::endl;
@@ -358,12 +358,12 @@ inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest
   }
 
   //depression due to the incoming pre-synaptic spike
-  nest::double_t central, external;
+  double central, external;
   //((mynest::Archiving_Node_Sym *)target_)->get_sym_K_value(t_spike - dendritic_delay, central, external);
   ((mynest::Archiving_Node_Sym *)target)->get_sym_K_value(t_spike, central, external);
 //  std::cout << "Post-pre at time: " << t_spike - dendritic_delay << " Central: " << central << " External: " << cp.sym_A_*external << " Alpha: " << cp.alpha_ << std::endl;
 
-  nest::double_t old_weight = weight_;
+  double old_weight = weight_;
   weight_ = apply_weight_change_(weight_, central - cp.alpha_ * cp.sym_A_ * external, cp);
 
   //std::cout << "Weight change (post->pre) from pre at " << t_spike-dendritic_delay << " to post accumulated: " << weight_-old_weight << ". Current value: " << weight_ << std::endl;
@@ -381,14 +381,14 @@ inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest
   dt = t_lastspike - t_spike;
 
   // Calculate central = exp(-abs(dt/tau1))*cos(dt*pi/(tau1*2))^2
-  nest::double_t dt_tau1 = dt*cp.inv_tau_sym1_;
+  double dt_tau1 = dt*cp.inv_tau_sym1_;
 
 //  std::cout << "dt_tau1-" << dt_tau1 << std::endl;
 
-  nest::double_t dt_pi_tau1 = M_PI*dt_tau1;
-  nest::double_t aux_expon_tau1 = std::exp(dt_tau1);
-  nest::double_t aux_cos_tau1 = std::cos(dt_pi_tau1);
-  nest::double_t aux_sin_tau1 = std::sin(dt_pi_tau1);
+  double dt_pi_tau1 = M_PI*dt_tau1;
+  double aux_expon_tau1 = std::exp(dt_tau1);
+  double aux_cos_tau1 = std::cos(dt_pi_tau1);
+  double aux_sin_tau1 = std::sin(dt_pi_tau1);
 
 //  std::cout << " aux_expon_tau1-" << aux_expon_tau1 << " aux_cos_tau1-" << aux_cos_tau1 << " aux_sin_tau1-" << aux_sin_tau1 << std::endl;
 
@@ -401,11 +401,11 @@ inline void STDPSymConnectionHom< targetidentifierT >::send(nest::Event& e, nest
   // std::cout << "Kexpt1-" << Kexpt1_ << "Kcos2t1-" << Kcos2t1_ << "Ksin2t1-" << Ksin2t1_ << std::endl;
 
   // Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
-  nest::double_t dt_tau2 = dt*cp.inv_tau_sym2_;
-  nest::double_t dt_pi_tau2 = M_PI*dt_tau2;
-  nest::double_t aux_expon_tau2 = std::exp(2*dt_tau2);
-  nest::double_t aux_cos_tau2 = std::cos(dt_pi_tau2);
-  nest::double_t aux_sin_tau2 = std::sin(dt_pi_tau2);
+  double dt_tau2 = dt*cp.inv_tau_sym2_;
+  double dt_pi_tau2 = M_PI*dt_tau2;
+  double aux_expon_tau2 = std::exp(2*dt_tau2);
+  double aux_cos_tau2 = std::cos(dt_pi_tau2);
+  double aux_sin_tau2 = std::sin(dt_pi_tau2);
 
   Kexpt2_ = Kexpt2_*aux_expon_tau2 + 1.0;
 
@@ -429,14 +429,14 @@ void STDPSymConnectionHom< targetidentifierT >::get_status(DictionaryDatum & d) 
     ConnectionBase::get_status(d);
 
     // own properties, different for individual synapse
-    def<nest::double_t>(d, "Kexpt1", Kexpt1_);
-    def<nest::double_t>(d, "Kcos2t1", Kcos2t1_);
-    def<nest::double_t>(d, "Ksin2t1", Ksin2t1_);
-    def<nest::double_t>(d, "Kexpt2", Kexpt2_);
-    def<nest::double_t>(d, "Kcos2t2", Kcos2t2_);
-    def<nest::double_t>(d, "Ksin2t2", Ksin2t2_);
-    def<nest::double_t>(d, nest::names::weight, weight_ );
-    def<nest::long_t>(d, nest::names::size_of, sizeof(*this));
+    def<double>(d, "Kexpt1", Kexpt1_);
+    def<double>(d, "Kcos2t1", Kcos2t1_);
+    def<double>(d, "Ksin2t1", Ksin2t1_);
+    def<double>(d, "Kexpt2", Kexpt2_);
+    def<double>(d, "Kcos2t2", Kcos2t2_);
+    def<double>(d, "Ksin2t2", Ksin2t2_);
+    def<double>(d, nest::names::weight, weight_ );
+    def<long>(d, nest::names::size_of, sizeof(*this));
   }
 
 template < typename targetidentifierT >
@@ -444,13 +444,13 @@ void STDPSymConnectionHom< targetidentifierT >::set_status(const DictionaryDatum
 {
     // base class properties
     ConnectionBase::set_status(d, cm);
-    updateValue<nest::double_t>(d, "Kexpt1", Kexpt1_);
-    updateValue<nest::double_t>(d, "Kcos2t1", Kcos2t1_);
-    updateValue<nest::double_t>(d, "Ksin2t1", Ksin2t1_);
-    updateValue<nest::double_t>(d, "Kexpt2", Kexpt2_);
-    updateValue<nest::double_t>(d, "Kcos2t2", Kcos2t2_);
-    updateValue<nest::double_t>(d, "Ksin2t2", Ksin2t2_);
-    updateValue<nest::double_t>(d, nest::names::weight, weight_);
+    updateValue<double>(d, "Kexpt1", Kexpt1_);
+    updateValue<double>(d, "Kcos2t1", Kcos2t1_);
+    updateValue<double>(d, "Ksin2t1", Ksin2t1_);
+    updateValue<double>(d, "Kexpt2", Kexpt2_);
+    updateValue<double>(d, "Kcos2t2", Kcos2t2_);
+    updateValue<double>(d, "Ksin2t2", Ksin2t2_);
+    updateValue<double>(d, nest::names::weight, weight_);
 
 //    std::cout << "Updating STDPSym values: Kexpt1-" << Kexpt1_ << " Kcos2t1-" << Kcos2t1_ << " Ksin2t1-" << Ksin2t1_ << " Kexpt2-" << Kexpt2_ << " Ksin2t2-" << Ksin2t2_ << " Kcos2t2-" << Kcos2t2_ << this << std::endl;
 

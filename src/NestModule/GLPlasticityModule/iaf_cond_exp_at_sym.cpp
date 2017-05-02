@@ -11,7 +11,7 @@
 #ifdef HAVE_GSL
 
 #include "exceptions.h"
-#include "network.h"
+#include "kernel_manager.h"
 #include "dict.h"
 #include "integerdatum.h"
 #include "doubledatum.h"
@@ -303,13 +303,13 @@ void mynest::iaf_cond_exp_at_sym::calibrate()
  * ---------------------------------------------------------------- */
 
 
-void mynest::iaf_cond_exp_at_sym::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to)
+void mynest::iaf_cond_exp_at_sym::update(nest::Time const & origin, const long from, const long to)
 {
    
-  assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
+  assert(to >= 0 && (nest::delay) from < nest::kernel().connection_manager.get_min_delay());
   assert(from < to);
 
-  for ( nest::long_t lag = from ; lag < to ; ++lag )
+  for ( long lag = from ; lag < to ; ++lag )
   {
     
     double t = 0.0;
@@ -357,7 +357,7 @@ void mynest::iaf_cond_exp_at_sym::update(nest::Time const & origin, const nest::
 	      set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
 	  
 	      nest::SpikeEvent se;
-	      network()->send(*this, se, lag);
+	      nest::kernel().event_delivery_manager.send(*this, se, lag);
 	      
 	      // Update intrinsic plasticity state just when it fires a spike
 	      S_.y_[State_::V_TH] += P_.th_C / P_.tau_th;
@@ -376,10 +376,10 @@ void mynest::iaf_cond_exp_at_sym::handle(nest::SpikeEvent & e)
   assert(e.get_delay() > 0);
 
   if(e.get_weight() > 0.0)
-    B_.spike_exc_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+    B_.spike_exc_.add_value(e.get_rel_delivery_steps(nest::kernel().simulation_manager.get_slice_origin()),
 			    e.get_weight() * e.get_multiplicity() );
   else
-    B_.spike_inh_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+    B_.spike_inh_.add_value(e.get_rel_delivery_steps(nest::kernel().simulation_manager.get_slice_origin()),
 			    -e.get_weight() * e.get_multiplicity() );  // ensure conductance is positive
 }
 
@@ -387,11 +387,11 @@ void mynest::iaf_cond_exp_at_sym::handle(nest::CurrentEvent& e)
 {
   assert(e.get_delay() > 0);
 
-  const nest::double_t c=e.get_current();
-  const nest::double_t w=e.get_weight();
+  const double c=e.get_current();
+  const double w=e.get_weight();
 
   // add weighted current; HEP 2002-10-04
-  B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+  B_.currents_.add_value(e.get_rel_delivery_steps(nest::kernel().simulation_manager.get_slice_origin()),
 		      w *c);
 }
 

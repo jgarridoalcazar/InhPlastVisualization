@@ -72,10 +72,10 @@ namespace mynest
       {
         CommonSynapseProperties::get_status(d);
 
-        def<nest::double_t>(d, "tau_plus", tau_plus_);
-        def<nest::double_t>(d, "lambda", lambda_);
-        def<nest::double_t>(d, "alpha", alpha_);
-        def<nest::double_t>(d, "Wmax", Wmax_);
+        def<double>(d, "tau_plus", tau_plus_);
+        def<double>(d, "lambda", lambda_);
+        def<double>(d, "alpha", alpha_);
+        def<double>(d, "Wmax", Wmax_);
       };
   
       /**
@@ -85,17 +85,17 @@ namespace mynest
       {
         CommonSynapseProperties::set_status(d, cm);
 
-        updateValue<nest::double_t>(d, "tau_plus", tau_plus_);
-        updateValue<nest::double_t>(d, "lambda", lambda_);
-        updateValue<nest::double_t>(d, "alpha", alpha_);
-        updateValue<nest::double_t>(d, "Wmax", Wmax_);
+        updateValue<double>(d, "tau_plus", tau_plus_);
+        updateValue<double>(d, "lambda", lambda_);
+        updateValue<double>(d, "alpha", alpha_);
+        updateValue<double>(d, "Wmax", Wmax_);
       };
 
       // data members common to all connections
-      nest::double_t tau_plus_;
-      nest::double_t lambda_;
-      nest::double_t alpha_;
-      nest::double_t Wmax_;
+      double tau_plus_;
+      double lambda_;
+      double alpha_;
+      double Wmax_;
   };
 
   /**
@@ -151,7 +151,7 @@ namespace mynest
    * \param e The event to send
    * \param t_lastspike Point in time of last spike sent.
    */
-  void send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const ESTDPHomCommonProperties &);
+  void send(nest::Event& e, nest::thread t, double t_lastspike, const ESTDPHomCommonProperties &);
 
   void set_weight( double_t w )
     {
@@ -184,7 +184,7 @@ namespace mynest
    * \param receptor_type The ID of the requested receptor type
    * \param t_lastspike last spike produced by presynaptic neuron (in ms)
    */
-  void check_connection( nest::Node& s, nest::Node& t, nest::rport receptor_type, nest::double_t t_lastspike, const CommonPropertiesType& ){
+  void check_connection( nest::Node& s, nest::Node& t, nest::rport receptor_type, double t_lastspike, const CommonPropertiesType& ){
     ConnTestDummyNode dummy_target;
     ConnectionBase::check_connection_( dummy_target, s, t, receptor_type );
 
@@ -193,12 +193,12 @@ namespace mynest
   
  private:
 
-  nest::double_t postsynaptic_change_(nest::double_t w, nest::double_t kplus, const ESTDPHomCommonProperties &cp);
-  nest::double_t presynaptic_change_(nest::double_t w, nest::double_t kminus, const ESTDPHomCommonProperties &cp);
+  double postsynaptic_change_(double w, double kplus, const ESTDPHomCommonProperties &cp);
+  double presynaptic_change_(double w, double kminus, const ESTDPHomCommonProperties &cp);
 
   // data members of each connection
-  nest::double_t weight_;
-  nest::double_t Kplus_;
+  double weight_;
+  double Kplus_;
 
   };
 
@@ -219,9 +219,9 @@ ESTDPConnectionHom< targetidentifierT >::ESTDPConnectionHom( const ESTDPConnecti
 }
 
 template < typename targetidentifierT >
-inline nest::double_t ESTDPConnectionHom< targetidentifierT >::postsynaptic_change_(nest::double_t w, nest::double_t kplus, const ESTDPHomCommonProperties &cp)
+inline double ESTDPConnectionHom< targetidentifierT >::postsynaptic_change_(double w, double kplus, const ESTDPHomCommonProperties &cp)
 {
-	nest::double_t norm_w = (w / cp.Wmax_) + (cp.lambda_ * kplus);
+	double norm_w = (w / cp.Wmax_) + (cp.lambda_ * kplus);
 	if (norm_w > 1.0){
 		return cp.Wmax_;
 	}else if (norm_w < 0.0)
@@ -231,9 +231,9 @@ inline nest::double_t ESTDPConnectionHom< targetidentifierT >::postsynaptic_chan
 }
 
 template < typename targetidentifierT >
-inline nest::double_t ESTDPConnectionHom< targetidentifierT >::presynaptic_change_(nest::double_t w, nest::double_t kminus, const ESTDPHomCommonProperties &cp)
+inline double ESTDPConnectionHom< targetidentifierT >::presynaptic_change_(double w, double kminus, const ESTDPHomCommonProperties &cp)
 {
-	nest::double_t norm_w = (w / cp.Wmax_) - (cp.lambda_ * cp.alpha_ * kminus);
+	double norm_w = (w / cp.Wmax_) - (cp.lambda_ * cp.alpha_ * kminus);
 	if (norm_w > 1.0){
 		return cp.Wmax_;
 	}else if (norm_w < 0.0)
@@ -249,17 +249,17 @@ inline nest::double_t ESTDPConnectionHom< targetidentifierT >::presynaptic_chang
  * \param t_lastspike Time point of last spike emitted
  */
 template < typename targetidentifierT >
-inline void ESTDPConnectionHom< targetidentifierT >::send(nest::Event& e, nest::thread t, nest::double_t t_lastspike, const ESTDPHomCommonProperties &cp)
+inline void ESTDPConnectionHom< targetidentifierT >::send(nest::Event& e, nest::thread t, double t_lastspike, const ESTDPHomCommonProperties &cp)
 {
   // synapse STDP depressing/facilitation dynamics
 
-	nest::double_t t_spike = e.get_stamp().get_ms();
+	double t_spike = e.get_stamp().get_ms();
 
   
   // t_lastspike_ = 0 initially
   
 	nest::Node* target = get_target( t );
-	nest::double_t dendritic_delay = nest::Time(nest::Time::step(get_delay())).get_ms();
+	double dendritic_delay = nest::Time(nest::Time::step(get_delay())).get_ms();
     
   //get spike history in relevant range (t1, t2] from post-synaptic neuron
   std::deque<nest::histentry>::iterator start;
@@ -269,7 +269,7 @@ inline void ESTDPConnectionHom< targetidentifierT >::send(nest::Event& e, nest::
   //facilitation due to post-synaptic spikes since last pre-synaptic spike
   while (start != finish)
   {
-    nest::double_t minus_dt = t_lastspike - (start->t_ + dendritic_delay);
+    double minus_dt = t_lastspike - (start->t_ + dendritic_delay);
     ++start;
     if (minus_dt == 0)
       continue;
@@ -294,11 +294,11 @@ void ESTDPConnectionHom< targetidentifierT >::get_status( DictionaryDatum& d ) c
 
   // base class properties, different for individual synapse
   ConnectionBase::get_status( d );
-  def< nest::double_t >( d, nest::names::weight, weight_ );
+  def< double >( d, nest::names::weight, weight_ );
 
   // own properties, different for individual synapse
-  def< nest::double_t >( d, "Kplus", Kplus_ );
-  def< nest::long_t >( d, nest::names::size_of, sizeof( *this ) );
+  def< double >( d, "Kplus", Kplus_ );
+  def< long >( d, nest::names::size_of, sizeof( *this ) );
 }
 
 template < typename targetidentifierT >
@@ -306,9 +306,9 @@ void ESTDPConnectionHom< targetidentifierT >::set_status( const DictionaryDatum&
 {
   // base class properties
   ConnectionBase::set_status( d, cm );
-  updateValue< nest::double_t >( d, nest::names::weight, weight_ );
+  updateValue< double >( d, nest::names::weight, weight_ );
 
-  updateValue< nest::double_t >( d, "Kplus", Kplus_ );
+  updateValue< double >( d, "Kplus", Kplus_ );
 
   // exception throwing must happen after setting own parameters
   // this exception will be caught and ignored within generic_connector_model::set_status()

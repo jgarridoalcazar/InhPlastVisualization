@@ -80,13 +80,13 @@ namespace mynest {
    * \param central The symKminus of the central part (exp*cos^2) value at t (in ms).
    * \param external The symKminos of the external part (exp*sin^2) value at t (in ms).
    */
-  void get_sym_K_value(nest::double_t t, nest::double_t & central, nest::double_t & external);
+  void get_sym_K_value(double t, double & central, double & external);
 
   /**
    * \fn void get_history(long_t t1, long_t t2, std::deque<Archiver::histentry_sym>::iterator* start, std::deque<Archiver::histentry_sym>::iterator* finish)
    * return the spike times (in steps) of spikes which occurred in the range (t1,t2].
    */
-  void get_sym_history(nest::double_t t1, nest::double_t t2,
+  void get_sym_history(double t1, double t2,
                std::deque<histentry_sym>::iterator* start,
     		   std::deque<histentry_sym>::iterator* finish);
 
@@ -95,7 +95,7 @@ namespace mynest {
      *
      * t_first_read: The newly registered synapse will read the history entries with t > t_first_read.
      */
-    void register_stdp_connection_sym(nest::double_t t_first_read);
+    void register_stdp_connection_sym(double t_first_read);
 
     void get_status(DictionaryDatum & d) const;
     void set_status(const DictionaryDatum & d);
@@ -123,18 +123,18 @@ namespace mynest {
     size_t n_incoming_sym_;
 
     // Accumulation variables
-    nest::double_t Kexpt1_; 		// value of exp(-abs(x)/tau1) at that time
-    nest::double_t Kcos2t1_;		// value of exp(-abs(x)/tau1)*cos(2*x/tau1) at that time
-    nest::double_t Ksin2t1_;		// value of exp(-abs(x)/tau1)*sin(2*x/tau1) at that time
-    nest::double_t Kexpt2_; 		// value of exp(-abs(x)/tau2) at that time
-    nest::double_t Ksin2t2_;		// value of exp(-abs(x)/tau2)*sin(2*x/tau2) at that time
-    nest::double_t Kcos2t2_;		// value of exp(-abs(x)/tau1)*cos(2*x/tau2) at that time
+    double Kexpt1_; 		// value of exp(-abs(x)/tau1) at that time
+    double Kcos2t1_;		// value of exp(-abs(x)/tau1)*cos(2*x/tau1) at that time
+    double Ksin2t1_;		// value of exp(-abs(x)/tau1)*sin(2*x/tau1) at that time
+    double Kexpt2_; 		// value of exp(-abs(x)/tau2) at that time
+    double Ksin2t2_;		// value of exp(-abs(x)/tau2)*sin(2*x/tau2) at that time
+    double Kcos2t2_;		// value of exp(-abs(x)/tau1)*cos(2*x/tau2) at that time
 
     // time constants for symmetric STDP
-    nest::double_t inv_tau_sym1_; // Distance between peaks of the kernel
-    nest::double_t inv_tau_sym2_; // It has to be calculated from tau1 according to tau2 = tau1/(atan(pi/2)*2*pi)
+    double inv_tau_sym1_; // Distance between peaks of the kernel
+    double inv_tau_sym2_; // It has to be calculated from tau1 according to tau2 = tau1/(atan(pi/2)*2*pi)
 
-    nest::double_t last_spike_sym_;
+    double last_spike_sym_;
 
     // spiking history needed by stdp synapses
     std::deque<histentry_sym> history_sym_;

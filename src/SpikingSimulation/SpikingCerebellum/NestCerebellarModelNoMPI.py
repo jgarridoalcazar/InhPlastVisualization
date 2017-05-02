@@ -243,6 +243,8 @@ class NestCerebellarModel(CerebellarModel):
         
         if 'resolution' in self.nest_options:
             nest_options_dict['resolution'] = self.nest_options['resolution']*1e3
+        else:
+            self.nest_options['resolution'] = nest.GetKernelStatus('resolution')*1.e-3
         
         nest_options_dict['overwrite_files'] = True # set to True to permit overwriting
         nest_options_dict['print_time'] = False # set to True to print the simulation completed
@@ -716,7 +718,8 @@ class NestCerebellarModel(CerebellarModel):
             # nest.Simulate(math.ceil(sim_time*1.e3))
             #logger.debug('Starting NEST simulation') 
             init_clock_time = time.time()
-            nest.Simulate(sim_time*1.e3)
+            if (sim_time>self.nest_options['resolution']):
+                nest.Simulate(sim_time*1.e3)
             end_clock_time = time.time()
             
             #sp_time,_=self.get_spike_activity(neuron_layer = 'grclayer', init_time=self.simulation_time, end_time=end_time)

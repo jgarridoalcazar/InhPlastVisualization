@@ -3,28 +3,27 @@
  *
  *  This file is based on the iaf_cond_exp cell model distributed with NEST.
  *  
- *  Modified by: Jes�s Garrido (jgarridoalcazar at gmail.com) in 2014.
+ *  Modified by: Jesus Garrido (jgarridoalcazar at gmail.com) in 2014.
  */
 
 #include "iaf_cond_exp_sto_ip.h"
 
 #ifdef HAVE_GSL
 
+#include <limits>
+
+#include "numerics.h"
+
 #include "exceptions.h"
-#include "network.h"
+#include "kernel_manager.h"
+#include "universal_data_logger_impl.h"
+
 #include "dict.h"
 #include "integerdatum.h"
 #include "doubledatum.h"
 #include "dictutils.h"
-#include "numerics.h"
-#include <limits>
 
-#include "universal_data_logger_impl.h"
-#include "event.h"
-
-#include <iomanip>
-#include <iostream>
-#include <cstdio>
+//#include "event.h"
 
 /* ---------------------------------------------------------------- 
  * Recordables map
@@ -342,20 +341,20 @@ void mynest::iaf_cond_exp_sto_ip::calibrate()
   V_.Time_step_in_s = nest::Time::get_resolution().get_ms()/1000.0;
 
   // Initialize random number generator
-  V_.rng_ = net_->get_rng(get_thread());
+  V_.rng_ = nest::kernel().rng_manager.get_rng(get_thread());
 }
 
 /* ---------------------------------------------------------------- 
  * Update and spike handling functions
  * ---------------------------------------------------------------- */
 
-void mynest::iaf_cond_exp_sto_ip::update(nest::Time const & origin, const nest::long_t from, const nest::long_t to)
+void mynest::iaf_cond_exp_sto_ip::update(nest::Time const & origin, const long from, const long to)
 {
    
-  assert(to >= 0 && (nest::delay) from < nest::Scheduler::get_min_delay());
+  assert(to >= 0 && (nest::delay) from < nest::kernel().connection_manager.get_min_delay());
   assert(from < to);
 
-  for ( nest::long_t lag = from ; lag < to ; ++lag )
+  for ( long lag = from ; lag < to ; ++lag )
   {
     
     double t = 0.0;
@@ -401,13 +400,13 @@ void mynest::iaf_cond_exp_sto_ip::update(nest::Time const & origin, const nest::
       S_.time_rel_ref += B_.step_;
 
       // Calculate the refractoriness
-      nest::double_t squared = S_.time_rel_ref * S_.time_rel_ref;
+      double squared = S_.time_rel_ref * S_.time_rel_ref;
       S_.y_[State_::REFR] = squared / (P_.t_ref*P_.t_ref + squared);
       S_.y_[State_::GAIN] = S_.y_[State_::R_0] * log(1.+exp((S_.y_[State_::V_M] - S_.y_[State_::V_TH]) / S_.y_[State_::U_ALPHA]));
       S_.y_[State_::FIR_PROB] = S_.y_[State_::REFR] * S_.y_[State_::GAIN] * V_.Time_step_in_s;
 
       // Generate uniformly distributed random number in [0,1] range
-      nest::double_t rand_num = V_.uni_dev_(V_.rng_);
+      double rand_num = V_.uni_dev_(V_.rng_);
 
       // neuron is decided to fire
       if ( rand_num <= S_.y_[State_::FIR_PROB] )
@@ -419,17 +418,17 @@ void mynest::iaf_cond_exp_sto_ip::update(nest::Time const & origin, const nest::
 	      set_spiketime(nest::Time::step(origin.get_steps()+lag+1));
 	  
 	      nest::SpikeEvent se;
-	      network()->send(*this, se, lag);
+	      nest::kernel().event_delivery_manager.send(*this, se, lag);
 	  }
     }
 
     // Update intrinsic plasticity parameters
-	nest::double_t old_gain = S_.y_[State_::R_0];
-    nest::double_t old_thres = S_.y_[State_::V_TH];
-    nest::double_t old_alpha = S_.y_[State_::U_ALPHA];
+	double old_gain = S_.y_[State_::R_0];
+    double old_thres = S_.y_[State_::V_TH];
+    double old_alpha = S_.y_[State_::U_ALPHA];
     //std::cout << "r0: " << old_gain << " Vth: " << old_thres << " Valpha: " << old_alpha << " FR: " << S_.y_[State_::GAIN] << " Vm: " << S_.y_[State_::V_M] << std::endl;
     S_.y_[State_::R_0] += P_.ip_rate * ( 1. - ( S_.y_[State_::GAIN] / P_.target_firing ) ) / old_gain;
-    nest::double_t Aux = ( 1. + old_gain / P_.target_firing ) * (1. - exp(- S_.y_[State_::GAIN] / old_gain )) - 1.;
+    double Aux = ( 1. + old_gain / P_.target_firing ) * (1. - exp(- S_.y_[State_::GAIN] / old_gain )) - 1.;
     S_.y_[State_::V_TH] += P_.ip_rate * Aux / old_alpha;
     S_.y_[State_::U_ALPHA] +=  P_.ip_rate * ( ( (S_.y_[State_::V_M] - old_thres) / old_alpha ) * Aux - 1. ) / old_alpha;
 
@@ -457,10 +456,10 @@ void mynest::iaf_cond_exp_sto_ip::handle(nest::SpikeEvent & e)
   assert(e.get_delay() > 0);
 
   if(e.get_weight() > 0.0)
-    B_.spike_exc_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+    B_.spike_exc_.add_value(e.get_rel_delivery_steps(nest::kernel().simulation_manager.get_slice_origin()),
 			    e.get_weight() * e.get_multiplicity() );
   else
-    B_.spike_inh_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()),
+    B_.spike_inh_.add_value(e.get_rel_delivery_steps(nest::kernel().simulation_manager.get_slice_origin()),
 			    -e.get_weight() * e.get_multiplicity() );  // ensure conductance is positive
 }
 
@@ -468,11 +467,11 @@ void mynest::iaf_cond_exp_sto_ip::handle(nest::CurrentEvent& e)
 {
   assert(e.get_delay() > 0);
 
-  const nest::double_t c=e.get_current();
-  const nest::double_t w=e.get_weight();
+  const double c=e.get_current();
+  const double w=e.get_weight();
 
   // add weighted current; HEP 2002-10-04
-  B_.currents_.add_value(e.get_rel_delivery_steps(network()->get_slice_origin()), 
+  B_.currents_.add_value(e.get_rel_delivery_steps(nest::kernel().simulation_manager.get_slice_origin()), 
 		      w *c);
 }
 

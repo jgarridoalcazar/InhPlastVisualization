@@ -74,7 +74,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
      last_spike_sym_(n.last_spike_sym_)
   {}
 
-  void Archiving_Node_Sym::register_stdp_connection_sym(nest::double_t t_first_read)
+  void Archiving_Node_Sym::register_stdp_connection_sym(double t_first_read)
   {
     // Mark all entries in the deque, which we will not read in future as read by this input
     // input, so that we savely increment the incoming number of
@@ -88,7 +88,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
     n_incoming_sym_++;
   }
 
-  void mynest::Archiving_Node_Sym::get_sym_K_value(nest::double_t t, nest::double_t & central, nest::double_t & external)
+  void mynest::Archiving_Node_Sym::get_sym_K_value(double t, double & central, double & external)
   {
   	central = external = 0.0;
     if (history_sym_.empty()) return;
@@ -96,20 +96,20 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
     while (i >= 0){
     	if (t > history_sym_[i].t_){
 
-    		nest::double_t dt = history_sym_[i].t_ - t;
+    		double dt = history_sym_[i].t_ - t;
 
     		// Calculate central = exp(-abs(dt/tau1))*cos(dt*pi/(tau1*2))^2
-    		nest::double_t dt_tau1 = dt*inv_tau_sym1_;
+    		double dt_tau1 = dt*inv_tau_sym1_;
 
-    		nest::double_t dt_pi_tau1 = M_PI*dt_tau1;
-    		nest::double_t aux_expon_tau1 = std::exp(dt_tau1);
-    		nest::double_t aux_cos_tau1 = std::cos(dt_pi_tau1);
-    		nest::double_t aux_sin_tau1 = std::sin(dt_pi_tau1);
+    		double dt_pi_tau1 = M_PI*dt_tau1;
+    		double aux_expon_tau1 = std::exp(dt_tau1);
+    		double aux_cos_tau1 = std::cos(dt_pi_tau1);
+    		double aux_sin_tau1 = std::sin(dt_pi_tau1);
 
-    		nest::double_t exp_t1 = history_sym_[i].Kexpt1_*aux_expon_tau1;
+    		double exp_t1 = history_sym_[i].Kexpt1_*aux_expon_tau1;
 
     		// Calculate cos_2_t1 = Cos(dt*pi/tau1)
-    		nest::double_t cos_2_t1 = aux_expon_tau1*(history_sym_[i].Kcos2t1_*aux_cos_tau1 -
+    		double cos_2_t1 = aux_expon_tau1*(history_sym_[i].Kcos2t1_*aux_cos_tau1 -
     				history_sym_[i].Ksin2t1_*aux_sin_tau1);
 
     		central = 0.5*(exp_t1 + cos_2_t1);
@@ -119,16 +119,16 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
 //      		}
 
     		// Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
-    		nest::double_t dt_tau2 = dt*inv_tau_sym2_;
-    		nest::double_t dt_pi_tau2 = M_PI*dt_tau2;
-    		nest::double_t aux_expon_tau2 = std::exp(2*dt_tau2);
-    		nest::double_t aux_cos_tau2 = std::cos(dt_pi_tau2);
-    		nest::double_t aux_sin_tau2 = std::sin(dt_pi_tau2);
+    		double dt_tau2 = dt*inv_tau_sym2_;
+    		double dt_pi_tau2 = M_PI*dt_tau2;
+    		double aux_expon_tau2 = std::exp(2*dt_tau2);
+    		double aux_cos_tau2 = std::cos(dt_pi_tau2);
+    		double aux_sin_tau2 = std::sin(dt_pi_tau2);
 
-    		nest::double_t exp_t2 = history_sym_[i].Kexpt2_*aux_expon_tau2;
+    		double exp_t2 = history_sym_[i].Kexpt2_*aux_expon_tau2;
 
 			// Calculate cos_2_t2 = Cos(dt*pi/tau2)
-			nest::double_t cos_2_t2 = aux_expon_tau2*(history_sym_[i].Kcos2t2_*aux_cos_tau2 +
+			double cos_2_t2 = aux_expon_tau2*(history_sym_[i].Kcos2t2_*aux_cos_tau2 +
 					history_sym_[i].Ksin2t2_*aux_sin_tau2);
 
 			external = 0.5*(exp_t2 - cos_2_t2);
@@ -148,7 +148,7 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
     return;
   }
 
-  void mynest::Archiving_Node_Sym::get_sym_history(nest::double_t t1, nest::double_t t2,
+  void mynest::Archiving_Node_Sym::get_sym_history(double t1, double t2,
   				   std::deque<histentry_sym>::iterator* start,
   				   std::deque<histentry_sym>::iterator* finish)
   {
@@ -188,15 +188,15 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
       }      
 
       //std::cout << "Updating postsynaptic neuron from time " << last_spike_sym_ << " to " << t_sp.get_ms() << std::endl;
-      nest::double_t dt = last_spike_sym_ - t_sp.get_ms();
+      double dt = last_spike_sym_ - t_sp.get_ms();
 
       // Calculate central = exp(-abs(dt/tau1))*cos(dt*pi/(tau1*2))^2
-      nest::double_t dt_tau1 = dt*inv_tau_sym1_;
+      double dt_tau1 = dt*inv_tau_sym1_;
 
-      nest::double_t dt_pi_tau1 = M_PI*dt_tau1;
-      nest::double_t aux_expon_tau1 = std::exp(dt_tau1);
-      nest::double_t aux_cos_tau1 = std::cos(dt_pi_tau1);
-      nest::double_t aux_sin_tau1 = std::sin(dt_pi_tau1);
+      double dt_pi_tau1 = M_PI*dt_tau1;
+      double aux_expon_tau1 = std::exp(dt_tau1);
+      double aux_cos_tau1 = std::cos(dt_pi_tau1);
+      double aux_sin_tau1 = std::sin(dt_pi_tau1);
 
       Kexpt1_ = Kexpt1_*aux_expon_tau1 + 1.0;
 
@@ -205,14 +205,14 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
       Ksin2t1_ = aux_expon_tau1*(Ksin2t1_*aux_cos_tau1 + Kcos2t1_*aux_sin_tau1);
 
       // Calculate external = A*exp(-2*abs(dt)/tau2)*sin(dt*pi/(tau2*2))^2
-      nest::double_t dt_tau2 = dt*inv_tau_sym2_;
+      double dt_tau2 = dt*inv_tau_sym2_;
 
       // std::cout << "Postsynaptic spike at time " << t_sp.get_ms() << " dt: " << dt << " - Kexpt1: " << Kexpt1_ << " - TauSym1: " << 1./inv_tau_sym1_ << std::endl;
 
-      nest::double_t dt_pi_tau2 = M_PI*dt_tau2;
-      nest::double_t aux_expon_tau2 = std::exp(2*dt_tau2);
-      nest::double_t aux_cos_tau2 = std::cos(dt_pi_tau2);
-      nest::double_t aux_sin_tau2 = std::sin(dt_pi_tau2);
+      double dt_pi_tau2 = M_PI*dt_tau2;
+      double aux_expon_tau2 = std::exp(2*dt_tau2);
+      double aux_cos_tau2 = std::cos(dt_pi_tau2);
+      double aux_sin_tau2 = std::sin(dt_pi_tau2);
 
       Kexpt2_ = Kexpt2_*aux_expon_tau2 + 1.0;
 
@@ -237,8 +237,8 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
   void mynest::Archiving_Node_Sym::get_status(DictionaryDatum & d) const
   {
 	  Archiving_Node::get_status(d);
-    def<nest::double_t>(d, nest::names::t_spike, get_spiketime_ms());
-    def<nest::double_t>(d, nest::names::tau_sym1, 1.0/inv_tau_sym1_);
+    def<double>(d, nest::names::t_spike, get_spiketime_ms());
+    def<double>(d, nest::names::tau_sym1, 1.0/inv_tau_sym1_);
   #ifdef DEBUG_ARCHIVER
     def<int>(d, nest::names::archiver_length, history_sym_.size());
   #endif
@@ -248,8 +248,8 @@ mynest::Archiving_Node_Sym::Archiving_Node_Sym(const Archiving_Node_Sym& n)
   {
 	  Archiving_Node::set_status(d);
     // We need to preserve values in case invalid values are set
-	  nest::double_t new_tau_sym1 = 1.0/inv_tau_sym1_;
-    updateValue<nest::double_t>(d, nest::names::tau_sym1, new_tau_sym1);
+	  double new_tau_sym1 = 1.0/inv_tau_sym1_;
+    updateValue<double>(d, nest::names::tau_sym1, new_tau_sym1);
 
     if ( new_tau_sym1 <= 0)
       throw nest::BadProperty("All time constants must be strictly positive.");
