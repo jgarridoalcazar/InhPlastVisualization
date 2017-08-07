@@ -144,6 +144,7 @@ void mynest::iaf_cond_exp_at::Parameters_::get(DictionaryDatum &d) const
 	def<double>(d,nest::names::V_reset,      V_reset_);
 	def<double>(d,nest::names::t_ref,        t_ref_);
 	def<double>(d,nest::names::th_C,         th_C);
+	def<double>(d,nest::names::E_L,         E_L);
 	def<double>(d,nest::names::g_L, 		 g_L);
 	def<double>(d,nest::names::C_m,			 C_m);
 	def<double>(d,nest::names::E_ex,         E_ex);
