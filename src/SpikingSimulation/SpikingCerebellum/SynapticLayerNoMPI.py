@@ -54,6 +54,7 @@ class SynapticLayer(object):
         self.template_connectivity_parameters = {
                                         'fixedn2one': ['number_of_source_cells', self._generate_fixed_n2one_connections_],
                                         'randomn2one': ['number_of_source_cells', self._generate_random_n2one_connections_],
+                                        'randomn2onestd': ['average_number_of_source_cells', 'std_number_of_source_cells', self._generate_random_n2one_std_connections_],
                                         'random_with_probability': ['connection_probability', self._generate_random_connections_],
                                         'randomn2onelocal': ['average_number_of_source_cells', 'average_dendritic_length', self._generate_random_n2one_local_connections_],
                                         'randomn2onestdlocal': ['average_number_of_source_cells', 'std_number_of_source_cells', 'average_dendritic_length', 'std_dendritic_length', self._generate_random_n2one_std_local_connections_],
@@ -247,7 +248,7 @@ class SynapticLayer(object):
         rank = 0
          
         num_source_cells = self.connectivity_parameters['number_of_source_cells']
-         
+
         # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
         local_target_cells, = numpy.where(self.target_layer.is_local_node)
         self.number_of_synapses = len(local_target_cells) * num_source_cells
@@ -257,6 +258,41 @@ class SynapticLayer(object):
         for i in range(len(local_target_cells)):
             self.source_index[i*num_source_cells:(i+1)*num_source_cells] = self.random_generator.permutation(numpy.arange(self.source_layer.number_of_neurons))[0:num_source_cells].astype(numpy.uint32)
         self.target_index = numpy.repeat(local_target_cells,num_source_cells).astype(numpy.uint32)
+         
+        return
+
+    def _generate_random_n2one_std_connections_(self):
+        '''
+        Generate connections between source and target layers n2one with random selection of source cells (sr0,sr1,...,sr(n-1) to t0, srn, s(rn+1),...,s(r2n-1) to t1,...).
+        '''
+        # Get the number of parallel proecesses
+        size = 1
+        rank = 0
+         
+        # Calculate the number of synapses this process generates dividing the number of target cells between the number of processes
+        local_target_cells, = numpy.where(self.target_layer.is_local_node)
+
+        mean_num_source = self.connectivity_parameters['average_number_of_source_cells']
+        std_num_source = self.connectivity_parameters['std_number_of_source_cells']
+
+        # Generate the number of source cells for each target cells
+        num_source_cells = numpy.rint(self.random_generator.normal(mean_num_source, std_num_source, len(local_target_cells))).astype(numpy.uint32)
+        num_source_cells[num_source_cells<0] = 0
+        self.number_of_synapses = numpy.sum(num_source_cells)
+        
+        # For each target cell generate a permutation of the source indexes
+        self.source_index = numpy.empty(self.number_of_synapses, dtype=numpy.uint32)
+        self.target_index = numpy.empty(self.number_of_synapses, dtype=numpy.uint32)
+        init_index = 0
+        end_index = 0
+        for num_source, num_target in zip(num_source_cells, local_target_cells):
+            init_index = end_index
+            end_index = init_index + num_source
+            if (self.connectivity_parameters['allow_multiple_connections']):
+                self.source_index[init_index:end_index] = self.random_generator.randint(self.source_layer.number_of_neurons,size=num_source).astype(numpy.uint32)
+            else:
+                self.source_index[init_index:end_index] = self.random_generator.permutation(numpy.arange(self.source_layer.number_of_neurons))[0:num_source].astype(numpy.uint32)
+            self.target_index[init_index:end_index] = numpy.repeat(num_target,num_source).astype(numpy.uint32)
          
         return
      

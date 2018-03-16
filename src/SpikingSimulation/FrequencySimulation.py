@@ -94,7 +94,7 @@ class FrequencySimulation(object):
         logger.debug('Simulation time fixed to %ss',self.simulation_time)
         
         self.new_config_options = self.config_options
-            
+
         # Initialize cerebellar model
         logger.debug('Creating cerebellum generator')
         if 'run_simulation' in self.config_options['simulation'] and self.config_options['simulation']['run_simulation']:
