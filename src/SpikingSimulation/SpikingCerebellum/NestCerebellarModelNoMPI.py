@@ -345,17 +345,18 @@ class NestCerebellarModel(CerebellarModel):
             # We assume GetConnections return only those connections whose target node is local to the process
             # We use the layer name to search those connections in the layer. Otherwise it take ours to search by the source/target neurons.
             #layer.weight_record['con'] = nest.GetConnections(source=layer.source_layer.nest_layer.tolist(),target=layer.target_layer.nest_layer.tolist())
-            if ('con' not in layer.weight_record):
-                layer.weight_record['con'] = nest.GetConnections(synapse_model=layer.__name__)
-                global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['source','target']))
-                min_source = layer.source_layer.MinIndex
-                min_target = layer.target_layer.MinIndex
-                layer.weight_record['connections'] = global_connections[:,:2].astype(numpy.uint32)
-                layer.source_index = layer.weight_record['connections'][:,0]-min_source
-                layer.target_index = layer.weight_record['connections'][:,1]-min_target
-            
-            global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['weight']))
-            layer.weights = (global_connections[:,0] * 1.e-9).astype(numpy.float32)
+            if layer.weight_record is not None:
+                if ('con' not in layer.weight_record):
+                    layer.weight_record['con'] = nest.GetConnections(synapse_model=layer.__name__)
+                    global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['source','target']))
+                    min_source = layer.source_layer.MinIndex
+                    min_target = layer.target_layer.MinIndex
+                    layer.weight_record['connections'] = global_connections[:,:2].astype(numpy.uint32)
+                    layer.source_index = layer.weight_record['connections'][:,0]-min_source
+                    layer.target_index = layer.weight_record['connections'][:,1]-min_target
+                
+                global_connections = numpy.array(nest.GetStatus(layer.weight_record['con'],['weight']))
+                layer.weights = (global_connections[:,0] * 1.e-9).astype(numpy.float32)
             
         return
     

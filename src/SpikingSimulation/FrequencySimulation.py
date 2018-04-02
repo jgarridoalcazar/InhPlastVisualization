@@ -306,11 +306,11 @@ class FrequencySimulation(object):
             
         # Adjust the frame_rate depending on whether the simulation is running at the same time
         if self.config_options['simulation']['run_simulation']:
-            frame_rate = 0.1
+            frame_rate = 1.0
         else:
             frame_rate = 1.0
         
-        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=2,numColumns=3,blit=True,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
+        animation = SimulAnimation.SimulAnimation(simulation=self,numRows=2,numColumns=2,blit=True,end_time=self.simulation_time,frame_rate=frame_rate,figsize=[23,14],dpi=80)
 #         animation.add_subplot(fig_position=2,axes_type=AxesNeuronPropertyLine.AxesNeuronPropertyLine,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'property':'Vm',
@@ -362,7 +362,7 @@ class FrequencySimulation(object):
 #                                               'x_length':1.})
         animation.add_subplot(fig_position=4,axes_type=AxesWeightHistogram.AxesWeightHistogram,
                             axes_parameters= {'data_provider':self.cerebellum,
-                                              'layer':'mfgocsynapsis',
+                                              'layer':'grcgocsynapsis',
                                               'visible_data_only':True,
                                               'show_legend':False})
 
@@ -374,12 +374,12 @@ class FrequencySimulation(object):
 #                                               'visible_data_only':True,
 #                                               'show_legend':False})
                 
-        animation.add_subplot(fig_position=5,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
-                            axes_parameters= {'data_provider':self.cerebellum,
-                                              'pattern_provider': self.pattern_generator,
-                                              'layer':'mfgocsynapsis',
-                                              'target_indexes': [0],
-                                              'show_legend':False})
+#        animation.add_subplot(fig_position=5,axes_type=AxesWeightActivationPlot.AxesWeightActivationPlot,
+#                            axes_parameters= {'data_provider':self.cerebellum,
+#                                              'pattern_provider': self.pattern_generator,
+#                                              'layer':'mfgocsynapsis',
+#                                              'target_indexes': [0],
+#                                              'show_legend':False})
 #         animation.add_subplot(fig_position=7,axes_type=AxesReceptiveField.AxesReceptiveField,
 #                             axes_parameters= {'data_provider':self.cerebellum,
 #                                               'pattern_provider': self.pattern_generator,
