@@ -254,6 +254,8 @@ class SavedCerebellarModel(CerebellarModel.CerebellarModel):
         Simulate the network for the specified time (in seconds).
         @param time Length to be simulated (in seconds)
         '''
+
+        self.simulation_time = self.simulation_time + time
         
         return
     

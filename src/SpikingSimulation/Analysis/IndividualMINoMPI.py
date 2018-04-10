@@ -6,10 +6,10 @@ import os
         
 logger = logging.getLogger('Simulation')
 
-class MutualInformation(Analysis.Analysis):
+class IndividualMI(Analysis.Analysis):
     '''
-    This class defines the calcule of the mutual information between the
-    patterns and the cellular activity.
+    This class defines the calcule of the mutual information (average of individual neurons) 
+    between a single pattern and the cellular activity.
     '''
     
     def __init__(self,**kwargs):
@@ -75,7 +75,7 @@ class MutualInformation(Analysis.Analysis):
             raise Exception('NonProvidedParameter','time_bin')
             
         
-        super(MutualInformation, self).__init__(**kwargs)
+        super(IndividualMI, self).__init__(**kwargs)
                 
                 
     def initialize(self):
@@ -83,7 +83,7 @@ class MutualInformation(Analysis.Analysis):
         Perform all the required operations needed in order to initialize the analysis.
         '''
         
-        super(MutualInformation, self).initialize()
+        super(IndividualMI, self).initialize()
         
         # Time of the last update
         self.data_update = 0
@@ -210,96 +210,31 @@ class MutualInformation(Analysis.Analysis):
         logger.info('Individual pattern false alarm matrix:')
         logger.info('%s', fa_matrix)
         
-        # Calculate hit matrix considering pattern combinations
-        patterns, hit_matrix = calc_Hit_Matrix(self.bin_has_fired[:,init_bin:end_bin], self.bin_pattern[init_bin:end_bin])
-        
-        logger.info('Pattern list %s', patterns)
-        logger.info('Hit matrix')
-        logger.info('%s',hit_matrix)
-        
-        # Calculate the firing state of the cell population
-        cell_state = calc_Firing_State(self.bin_has_fired[:,init_bin:end_bin])
-        
-        # Calculate the mutual information
-        self.mutual_information, self.max_mutual_information = calc_MI(self.bin_pattern[init_bin:end_bin],cell_state)
-        
+
+        # Calculate pattern entropy, cell entropy and joint entropy
+        pat_entropy = calc_Entropy(self.bin_is_pattern[:,init_bin:end_bin])
+        cell_entropy = calc_Entropy(self.bin_has_fired[:,init_bin:end_bin])
+        joint_entropy = calc_Joint_Entropy(self.bin_has_fired[:,init_bin:end_bin], self.bin_is_pattern[:,init_bin:end_bin])
+
+        logger.debug('Shannon entropy of the patterns: %s', pat_entropy)
+    
+        logger.debug('Shannon entropy of the population response: %s', cell_entropy)
+    
+        logger.debug('Joint shannon entropy: %s', joint_entropy)
+
+        # Calculate average MI
+        Av_MI = calc_MI(pat_entropy, cell_entropy, joint_entropy)
+
+        logger.debug('Average MI of individual cells: %s', Av_MI)
+
+        self.mutual_information, self.max_mutual_information = Av_MI,pat_entropy
+
         logger.info('Mutual information')
         logger.info('%s',self.mutual_information)
         
         logger.info('Theoretical maximum of MI')
         logger.info('%s',self.max_mutual_information)
-    
-        
-    #             # Calculate probability of hits
-    #             hit_probability = numpy.array([numpy.sum(self.bin_has_fired[:,init_bin:end_bin] & self.bin_is_pattern[pattern, init_bin:end_bin],axis=1)/float(end_bin-init_bin) \
-    #                                for pattern in range(len(self.pattern_index))])
-    #             
-    #             logger.debug('Hit probability matrix (pattern in rows, cell in columns)')
-    #             logger.debug(str(hit_probability))
-    #             
-    #             
-    #             # Calculate probability of missed
-    #             miss_probability = numpy.array([numpy.sum(~self.bin_has_fired[:,init_bin:end_bin] & self.bin_is_pattern[pattern, init_bin:end_bin],axis=1)/float(end_bin-init_bin) \
-    #                                for pattern in range(len(self.pattern_index))])
-    #             logger.debug('Misses probability matrix (pattern in rows, cell in columns)')
-    #             logger.debug(str(miss_probability))
-    #             
-    #             
-    #             # Calculate probability of false alarm
-    #             false_probability = numpy.array([numpy.sum(self.bin_has_fired[:,init_bin:end_bin] & ~self.bin_is_pattern[pattern, init_bin:end_bin],axis=1)/float(end_bin-init_bin) \
-    #                                for pattern in range(len(self.pattern_index))])
-    #             logger.debug('False-alarm probability matrix (pattern in rows, cell in columns)')
-    #             logger.debug(str(false_probability))
-    #             
-    #              
-    #             # Calculate probability of correct rejection
-    #             rejection_probability = numpy.array([numpy.sum(~self.bin_has_fired[:,init_bin:end_bin] & ~self.bin_is_pattern[pattern, init_bin:end_bin],axis=1)/float(end_bin-init_bin) \
-    #                                for pattern in range(len(self.pattern_index))])
-    #             logger.debug('Correct rejection probability matrix (pattern in rows, cell in columns)')
-    #             logger.debug(str(rejection_probability))
-    #             
-    #             logger.debug('Pattern probability')
-    #             logger.debug(str(pattern_prob))
-    #             
-    #             logger.debug('Cell response probability')
-    #             logger.debug(str(cell_response_prob))
-    #             
-    #             # Print the header of the probability 
-    #             
-    #             for key_pat in range(len(self.pattern_index)):
-    #                 pat_prob = pattern_prob[key_pat]
-    #                 not_pat_prob = 1. - pat_prob
-    #                     
-    #                 for key_cell in range(len(self.cell_index)):
-    #                     
-    #                     hit = hit_probability[key_pat,key_cell]
-    #                     miss = miss_probability[key_pat,key_cell]
-    #                     false = false_probability[key_pat,key_cell]
-    #                     reject = rejection_probability[key_pat,key_cell]
-    #                     
-    #                     cell_prob = cell_response_prob[key_cell]
-    #                     not_cell_prob = 1. - cell_prob
-    #                     
-    #                     # Calculate the mutual information
-    #                     self.mutual_information[key_pat,key_cell] = 0
-    #                     if hit:
-    #                         self.mutual_information[key_pat,key_cell] += hit*math.log(hit/(pat_prob*cell_prob),2)
-    #                     if miss:
-    #                         self.mutual_information[key_pat,key_cell] += miss*math.log(miss/(pat_prob*not_cell_prob),2)
-    #                     if false:
-    #                         self.mutual_information[key_pat,key_cell] += false*math.log(false/(not_pat_prob*cell_prob),2)
-    #                     if reject:
-    #                         self.mutual_information[key_pat,key_cell] += reject*math.log(reject/(not_pat_prob*not_cell_prob),2)
-    #             
-    #             # Calculate maximum mutual information
-    #             self.max_mutual_information = -pattern_prob*numpy.log2(pattern_prob) - (1.-pattern_prob)*numpy.log2(1.-pattern_prob)
-    #                                                                 
-    #             logger.info('Mutual information matrix (pattern in rows, cell in columns)')
-    #             logger.info(str(self.mutual_information))
-    #             
-    #             logger.info('Theoretical maximum of MI (pattern in columns)')
-    #             logger.info(str(self.max_mutual_information))
-            
+           
         self.data_update = simulation_time
         
         return 
@@ -317,24 +252,52 @@ class MutualInformation(Analysis.Analysis):
             
         numpy.savetxt(file_name, [self.mutual_information, self.av_firing_rate], delimiter='\t', newline='\n')
 
-def calc_Hit_Matrix(cell_firing, bin_pattern):
+def calc_Entropy(bin_matrix):
     '''
-    Calculate the hit matrix with 1 line for each cell and 1 column for each pattern combination (including noise).
+    Calculate the entropy for each individual pattern.
+    @param bin_matrix Boolean matrix including 1 line for each pattern and 1 column for each time bin.
+    '''
+    sum_bins = numpy.count_nonzero(bin_matrix,axis=1)
+    probability = sum_bins/float(bin_matrix.shape[1])
+    entropy = numpy.zeros(probability.shape)
+    idx = probability>0.0
+    entropy[idx] = -probability[idx]*numpy.log2(probability[idx])
+    entropy[idx] -= (1-probability[idx])*numpy.log2(1-probability[idx])
+    return entropy
+
+
+def calc_Joint_Entropy(cell_firing, pattern_present):
+    '''
+    Calculate the entropy of having both cell firing and pattern present.
     @param cell_firing Boolean matrix including 1 line for each cell and 1 column for each time bin.
-    @param bin_pattern Array with the index of the pattern for each bin.
+    @param pattern_present Boolean matrix including 1 line for each pattern and 1 column for each time bin.
     '''
-    patterns = numpy.unique(bin_pattern)
+    hit_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
+    cr_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
+    miss_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
+    fa_matrix = numpy.empty((len(pattern_present),len(cell_firing)))
     
-    hit_matrix = numpy.empty((len(cell_firing),len(patterns)))
+    for index_pat, pattern in enumerate(pattern_present):
+        if (numpy.count_nonzero(pattern)):
+            for index_cell, firing in enumerate(cell_firing):
+                hit_matrix[index_pat,index_cell] = numpy.count_nonzero(firing&pattern)/float(pattern.shape[0])
+                cr_matrix[index_pat,index_cell] = numpy.count_nonzero(~firing&~pattern)/float(pattern.shape[0])
+                miss_matrix[index_pat,index_cell] = numpy.count_nonzero(~firing&pattern)/float(pattern.shape[0])
+                fa_matrix[index_pat,index_cell] = numpy.count_nonzero(firing&~pattern)/float(pattern.shape[0])
+        else:
+            logger.warning('Pattern %s never occurs. Statistics will not be calculated', index_pat)
     
-    for index, pat in enumerate(patterns):
-        pattern_bin_index = (bin_pattern==pat)
-        
-        for cell_index in range(len(cell_firing)):
-            hit_matrix[cell_index,index] = numpy.count_nonzero(cell_firing[cell_index,pattern_bin_index])/float(numpy.count_nonzero(pattern_bin_index))   
-    
-    return patterns, hit_matrix
-    
+    entropy = numpy.zeros((len(pattern_present),len(cell_firing)),dtype=numpy.float)           
+    idx = hit_matrix>0
+    entropy[idx] = -hit_matrix[idx]*numpy.log2(hit_matrix[idx])
+    idx = cr_matrix>0
+    entropy[idx] -= cr_matrix[idx]*numpy.log2(cr_matrix[idx])
+    idx = miss_matrix>0
+    entropy[idx] -= miss_matrix[idx]*numpy.log2(miss_matrix[idx])
+    idx = fa_matrix>0
+    entropy[idx] -= fa_matrix[idx]*numpy.log2(fa_matrix[idx])
+    return entropy
+
 def calc_Ind_Pattern_Hit_Matrix(cell_firing, pattern_present):
     '''
     Calculate the correct rejection, hit, miss and false alarm matrisses with 1 line for each cell and 1 column for each pattern (including noise).
@@ -359,57 +322,20 @@ def calc_Ind_Pattern_Hit_Matrix(cell_firing, pattern_present):
         
     return cr_matrix, hit_matrix, miss_matrix, fa_matrix 
     
-     
+def calc_MI(pattern_entropy, cell_entropy, joint_entropy):
+    '''
+    Calculate the MI between the pattern in the input and each neuron.
+    @param pattern_entropy Array with the entropy of each individual pattern.
+    @param cell_entropy Array with the entropy of each individual cell.
+    @param joint_entropy 2D array with the joint entropy of each cell to each pattern
+    '''
+    
+    MI_matrix = numpy.empty((len(pattern_entropy),len(cell_entropy)))
 
-def calc_Firing_State(fired_matrix):
-    '''
-    Calculate the state of a cell population based of the cells firing in the bin.
-    @param fired_matrix Boolean matrix indicating whether a cell (in rows) fired in a time bin (in columns)
-    '''
-    
-    num_bins = fired_matrix.shape[1]
-    
-    accumulated = numpy.zeros(num_bins)
-    for index, row in enumerate(fired_matrix):
-        accumulated += numpy.left_shift(row,index)
-        
-    return accumulated
-        
-def calc_MI(X,Y):
-    '''
-    Calculate the MI between the pattern in the input and the outout in some neuron layer.
-    @param X Array with the number of pattern (including background noise) in each time bin.
-    @param Y Combination of cells firing in each time bin.
-    '''
-    patterns = numpy.unique(X)
-    cell_states = numpy.unique(Y)
-    
-    patterns_edges = numpy.append(patterns-0.5,[patterns[-1]+0.5])
-    cell_states_edges = numpy.append(cell_states-0.5,[cell_states[-1]+0.5])
-     
-    c_XY = numpy.histogram2d(X,Y,[patterns_edges, cell_states_edges])[0]
-    c_X = numpy.histogram(X,patterns_edges)[0]
-    c_Y = numpy.histogram(Y,cell_states_edges)[0]
+    for index_pat, pattern_H in enumerate(pattern_entropy):
+        MI_matrix[index_pat,:] = pattern_H + cell_entropy[:] - joint_entropy[index_pat,:]
 
-    H_X = shan_entropy(c_X)
-    logger.debug('Shannon entropy of the patterns: %s', H_X)
+    Av_MI = numpy.average(MI_matrix,axis=1)
     
-    H_Y = shan_entropy(c_Y)
-    logger.debug('Shannon entropy of the population response: %s', H_Y)
-    
-    H_XY = shan_entropy(c_XY)
-    logger.debug('Joint shannon entropy: %s', H_XY)
-    
-    MI = H_X + H_Y - H_XY
-    return MI, H_X
+    return Av_MI
 
-def shan_entropy(c):
-    '''
-    Calculate Shannon Entropy of the histogram.
-    @param c Histogram of the occurrences of the events.
-    '''
-    c_normalized = c/float(numpy.sum(c))
-    c_normalized = c_normalized[numpy.nonzero(c_normalized)]
-    logger.debug('Occurrence distribution: %s', c_normalized)
-    H = -sum(c_normalized*numpy.log2(c_normalized))  
-    return H
