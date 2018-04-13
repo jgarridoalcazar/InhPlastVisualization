@@ -10,6 +10,7 @@ import copy
 import math
 import numpy
 import pickle
+import os.path
 
 from mpi4py import MPI
 from deap import base, creator, tools
@@ -207,6 +208,12 @@ class EvolutionaryAlgorithm(object):
         if 'saving_step' not in self.config_options['algorithm']:
             self.config_options['algorithm']['saving_step'] = 1
             logger.warning('Non-specified saving_step parameter. Using default value %s', self.config_options['algorithm']['saving_step'])
+
+        if 'evaluated_individuals_file' not in self.config_options['algorithm']:
+            self.config_options['algorithm']['evaluated_individuals_file'] = None
+        else:
+            if os.path.isfile(self.config_options['algorithm']['evaluated_individuals_file']):
+                logger.warning('Evaluated individual file %s already exists. New individuals will be appended', self.config_options['algorithm']['evaluated_individuals_file'])
         
         # Initialize the simulation seeds if they have not been initialized    
         if 'simulation' not in self.config_options:
@@ -501,6 +508,13 @@ class EvolutionaryAlgorithm(object):
                         individual.fitness.values = numpy.average(runningDict[tuple_ind][0]), numpy.std(runningDict[tuple_ind][0])
                         logger.debug('Fitness value calculated for individual %s: %s', individual, individual.fitness.values)
                         output_population.append(individual)
+                        # Print fitness value for evaluated individual
+                        if (self.config_options['algorithm']['evaluated_individuals_file'] is not None):
+                            with open(self.config_options['algorithm']['evaluated_individuals_file'],'a') as file:
+                                param_values = self._get_unnormalized_values(individual)
+                                for val in param_values+list(individual.fitness.values):
+                                    file.write('%s\t'%val)
+                                file.write('\n')
                         is_from_queue = runningDict[tuple_ind][1]
                         runningDict.pop(tuple_ind)
                         logger.debug('%s extracted from the running dictionary', tuple_ind)
@@ -559,6 +573,9 @@ class EvolutionaryAlgorithm(object):
                             individualDict[ind_key] = ind
                             for seed in range(self.config_options['simulation']['seed'],self.config_options['simulation']['seed']+self.config_options['algorithm']['number_of_repetitions']):
                                 simulationList.append((ind,seed,True))
+                        else:
+                            print 'Skipping individual',ind_key
+                            print 'Individual dict',individualDict
                 elif self.end_simulation:
                     proc_rank = availableProcs.pop(0)
                     ########################################
@@ -649,7 +666,12 @@ class EvolutionaryAlgorithm(object):
             # Fill idle nodes with new random individual
             #if self.config_options['algorithm']['fill_idle_nodes']:
             #    population = self._fill_idle_nodes(self.population)
-        
+
+            # Remove identical individual
+            filt_offspring = []
+            [filt_offspring.append(ind) for ind in self.population if ind not in filt_offspring]
+            self.population = filt_offspring
+            
             logger.debug("Start of evolution")
         
             self.population = self._evaluate_population(self.population)
@@ -692,14 +714,27 @@ class EvolutionaryAlgorithm(object):
             # Apply crossover and mutation on the offspring
             for child1, child2 in zip(offspring[::2], offspring[1::2]):
                 if self.num_generator.rand() < self.config_options['algorithm']['crossover_probability']:
+                    orig_child1 = toolbox.clone(child1)
+                    orig_child2 = toolbox.clone(child2)
                     toolbox.mate(child1, child2)
-                    del child1.fitness.values
-                    del child2.fitness.values
+                    if orig_child1!=child1:
+                        del child1.fitness.values
+
+                    if orig_child2!=child2:
+                        del child2.fitness.values
+
 
             for mutant in offspring:
                 if self.num_generator.rand() < self.config_options['algorithm']['mutation_probability']:
+                    orig_mutant = toolbox.clone(mutant)
                     toolbox.mutate(mutant, rand_generator=self.num_generator)
-                    del mutant.fitness.values
+                    if (mutant!=orig_mutant):
+                        del mutant.fitness.values
+
+            # Remove identical individual
+            filt_offspring = []
+            [filt_offspring.append(ind) for ind in offspring if ind not in filt_offspring]
+            offspring = filt_offspring
     
             # Fill idle nodes with new random individual
             #if self.config_options['algorithm']['fill_idle_nodes']:
@@ -707,18 +742,22 @@ class EvolutionaryAlgorithm(object):
             
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            for idx,ind in enumerate(offspring):
+                print idx, ind, ind.fitness.valid
+            
             
             # Evaluate the population
-            invalid_ind = self._evaluate_population(invalid_ind)
-        
+            if (len(invalid_ind)>0):
+                invalid_ind = self._evaluate_population(invalid_ind)
+
             # The population is entirely replaced by the offspring
-            # population[:] = offspring
+            self.population[:] = offspring[:]
             # The population is extended with the offspring
-            self.population.extend(invalid_ind)
+            #self.population.extend(invalid_ind)
             
-            halloffame.update(invalid_ind)
+            halloffame.update(self.population)
             record = stats.compile(self.population)
-            logbook.record(gen=gen, evals=len(invalid_ind), **record)
+            logbook.record(gen=gen, evals=len(self.population), **record)
             
             # Saving evolution state
             if self.config_options['algorithm']['saving_file'] and gen % self.config_options['algorithm']['saving_step'] == 0:
@@ -817,10 +856,13 @@ def helper_subprocess_simulation(pipe, local_config_options):
             simulation.visualize_results()
 
 
+        parameter_keys_IMI = [key for key in simulation.config_options.keys() if key.startswith('individual_mutual_information')]
         parameter_keys_MI = [key for key in simulation.config_options.keys() if key.startswith('mutual_information')]
         parameter_keys_hit = [key for key in simulation.config_options.keys() if key.startswith('hit_analysis')]
         parameter_keys_hit_top = [key for key in simulation.config_options.keys() if key.startswith('hit_top_analysis')]
-        if parameter_keys_MI:
+        if parameter_keys_IMI:
+            [mutual_information] = simulation.analyze_av_MI()[0]
+        elif parameter_keys_MI:
             [mutual_information] = simulation.analyze_MI()
         elif parameter_keys_hit:
             [mutual_information] = simulation.analyze_Hits()
@@ -843,6 +885,7 @@ def helper_subprocess_simulation(pipe, local_config_options):
 # Function creating a subprocess to launch nest simulation (it avoids NEST getting frozen after raising an exception in the previous simulation)
 def helper_simulation(local_config_options):
 
+
     import SpikingSimulation.FrequencySimulation as FrequencySimulation
     
     # logger.debug('Simulation parameter dictionary: %s', local_config_options)
@@ -860,10 +903,13 @@ def helper_simulation(local_config_options):
         if simulation.config_options['simulation']['visualize_results']:
             simulation.visualize_results()
     
+        parameter_keys_IMI = [key for key in simulation.config_options.keys() if key.startswith('individual_mutual_information')]
         parameter_keys_MI = [key for key in simulation.config_options.keys() if key.startswith('mutual_information')]
         parameter_keys_hit = [key for key in simulation.config_options.keys() if key.startswith('hit_analysis')]
         parameter_keys_hit_top = [key for key in simulation.config_options.keys() if key.startswith('hit_top_analysis')]
-        if parameter_keys_MI:
+        if parameter_keys_IMI:
+            [mutual_information] = simulation.analyze_av_MI()[0]
+        elif parameter_keys_MI:
             [mutual_information] = simulation.analyze_MI()
         elif parameter_keys_hit:
             [mutual_information] = simulation.analyze_Hits()
@@ -877,6 +923,8 @@ def helper_simulation(local_config_options):
         mutual_information = 0.0
         logger.debug('Exception caught on individual simulation %s: %s', local_config_options, err)
         logger.info('Using default mutual information value %s', mutual_information)
+
+    mutual_information = numpy.random.randn()
          
     return mutual_information
 

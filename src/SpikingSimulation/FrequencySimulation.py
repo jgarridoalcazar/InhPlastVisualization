@@ -187,7 +187,7 @@ class FrequencySimulation(object):
                 
                 self.current_time = self.cerebellum.simulation_time
         else:
-            sim_time = self.simulation_time-self.current_time
+            sim_time = end_time-self.current_time
             logger.debug('Running the simulation %ss until %ss', sim_time, self.cerebellum.simulation_time+sim_time) 
             self.cerebellum.simulate_network(sim_time)
             self.current_time = self.cerebellum.simulation_time
@@ -425,7 +425,7 @@ class FrequencySimulation(object):
             MIAnalysis = MutualInformation.MutualInformation(data_provider=self.cerebellum, pattern_generator=self.pattern_generator, layer=self.config_options[key]['layer'],
                                                              window_length=self.config_options[key]['window_length'], time_bin = self.config_options[key]['time_bin'])
             MIAnalysis.initialize()
-            MIAnalysis.runAtTime(self.simulation_time)
+            MIAnalysis.runAtTime(self.current_time)
             mutual_information.append(MIAnalysis.mutual_information/MIAnalysis.max_mutual_information)
             if self.config_options[key]['record_to_file']:
                 filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key 
@@ -469,7 +469,7 @@ class FrequencySimulation(object):
             MIAnalysis = IndividualMI.IndividualMI(data_provider=self.cerebellum, pattern_generator=self.pattern_generator, layer=self.config_options[key]['layer'],
                                                              window_length=self.config_options[key]['window_length'], time_bin = self.config_options[key]['time_bin'])
             MIAnalysis.initialize()
-            MIAnalysis.runAtTime(self.simulation_time)
+            MIAnalysis.runAtTime(self.current_time)
             mutual_information.append(MIAnalysis.mutual_information/MIAnalysis.max_mutual_information)
             if self.config_options[key]['record_to_file']:
                 filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key 
@@ -513,7 +513,7 @@ class FrequencySimulation(object):
             Analysis = HitAnalysis.HitAnalysis(data_provider=self.cerebellum, pattern_generator=self.pattern_generator, layer=self.config_options[key]['layer'],
                                                              window_length=self.config_options[key]['window_length'], time_bin = self.config_options[key]['time_bin'])
             Analysis.initialize()
-            Analysis.runAtTime(self.simulation_time)
+            Analysis.runAtTime(self.current_time)
             hit_analysis.append(Analysis.hit_index)
             if self.config_options[key]['record_to_file']:
                 filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key 
@@ -568,7 +568,7 @@ class FrequencySimulation(object):
             logger.info('Analyzing hit analysis in section %s',key)
             Analysis = HitTopAnalysis.HitTopAnalysis(**func_params)
             Analysis.initialize()
-            Analysis.runAtTime(self.simulation_time)
+            Analysis.runAtTime(self.current_time)
             hit_analysis.append(Analysis.top_n_average)
             if self.config_options[key]['record_to_file']:
                 filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation']['simulation_name'] + '/' + key 
