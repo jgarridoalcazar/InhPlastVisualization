@@ -14,6 +14,8 @@
 
 source $HOME/install/nest/ins/nompi/bin/nest_vars.sh
 
+module load alhambra/gcc-7.3.0
+
 export PATH=$HOME/.local/bin:$HOME/install/cmake/ins/bin:$HOME/install/openssl/ins/bin:$HOME/install/cpython/ins/bin:$PATH
 export LD_LIBRARY_PATH=$HOME/install/gsl/ins/lib:$HOME/install/openssl/ins/lib:$HOME/install/cpython/ins/lib:$HOME/install/readline/ins/lib:$HOME/install/libtool/ins/lib:$NEST_INSTALL_DIR/lib64:$LD_LIBRARY_PATH
 
