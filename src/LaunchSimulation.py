@@ -51,7 +51,9 @@ if __name__ == "__main__":
 
     end_saving = time.time()
 
-    logger.info('Saving network finished: %ss', end_saving - end_simulation)    
+    logger.info('Saving network finished: %ss', end_saving - end_simulation)  
+
+    simulation.analyze_av_MI()  
     
     simulation.analyze_MI()    
     
