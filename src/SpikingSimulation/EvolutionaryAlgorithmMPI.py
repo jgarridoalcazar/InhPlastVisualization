@@ -923,9 +923,7 @@ def helper_simulation(local_config_options):
         mutual_information = 0.0
         logger.debug('Exception caught on individual simulation %s: %s', local_config_options, err)
         logger.info('Using default mutual information value %s', mutual_information)
-
-    mutual_information = numpy.random.randn()
-         
+     
     return mutual_information
 
 
