@@ -262,6 +262,7 @@ def calc_Entropy(bin_matrix):
     entropy = numpy.zeros(probability.shape)
     idx = probability>0.0
     entropy[idx] = -probability[idx]*numpy.log2(probability[idx])
+    idx = probability<1.0
     entropy[idx] -= (1-probability[idx])*numpy.log2(1-probability[idx])
     return entropy
 
