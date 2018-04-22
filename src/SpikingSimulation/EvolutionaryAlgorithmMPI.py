@@ -573,9 +573,6 @@ class EvolutionaryAlgorithm(object):
                             individualDict[ind_key] = ind
                             for seed in range(self.config_options['simulation']['seed'],self.config_options['simulation']['seed']+self.config_options['algorithm']['number_of_repetitions']):
                                 simulationList.append((ind,seed,True))
-                        else:
-                            print 'Skipping individual',ind_key
-                            print 'Individual dict',individualDict
                 elif self.end_simulation:
                     proc_rank = availableProcs.pop(0)
                     ########################################
@@ -742,8 +739,8 @@ class EvolutionaryAlgorithm(object):
             
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
-            for idx,ind in enumerate(offspring):
-                print idx, ind, ind.fitness.valid
+            #for idx,ind in enumerate(offspring):
+            #    print idx, ind, ind.fitness.valid
             
             
             # Evaluate the population
