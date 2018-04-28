@@ -739,16 +739,17 @@ class EvolutionaryAlgorithm(object):
             
             # Evaluate the individuals with an invalid fitness
             invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+            valid_ind = [ind for ind in offspring if ind.fitness.valid]
             #for idx,ind in enumerate(offspring):
             #    print idx, ind, ind.fitness.valid
             
             
             # Evaluate the population
             if (len(invalid_ind)>0):
-                invalid_ind = self._evaluate_population(invalid_ind)
+                evaluated_pop = self._evaluate_population(invalid_ind)
 
             # The population is entirely replaced by the offspring
-            self.population[:] = offspring[:]
+            self.population[:] = valid_ind[:] + evaluated_pop[:]
             # The population is extended with the offspring
             #self.population.extend(invalid_ind)
             
