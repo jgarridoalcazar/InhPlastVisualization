@@ -273,8 +273,10 @@ class EvolutionaryAlgorithm(object):
         # Extract every parameter to explore
         self.parameter_keys = [key for key in self.config_options.keys() if key.startswith('parameter')]
         self.parameter_dic = []
+        key_list = []
         for key in self.parameter_keys:
             self.parameter_dic.append(self.config_options.pop(key))
+            key_list.append(key)
 
         # Print fitness value for evaluated individual
         if (self.config_options['algorithm']['evaluated_individuals_file'] is not None):
@@ -283,7 +285,7 @@ class EvolutionaryAlgorithm(object):
                 for val in key_list:
                     file.write('%s\t' % val)
                 file.write('\n')
-                    
+
         for key,parameter in zip(self.parameter_keys,self.parameter_dic):
             # Check if the section and parameter exists
             if not 'section' in parameter:
