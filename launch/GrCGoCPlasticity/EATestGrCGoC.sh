@@ -9,7 +9,7 @@
 #$ -cwd
 #$ -v OMP_NUM_THREADS=1
 #$ -q 72H
-#$ -pe openmpi 32
+#$ -pe impi 32
 #$ -hold_jid test-GrC-GoC
 
 source $HOME/install/nest/ins/nompi/bin/nest_vars.sh
