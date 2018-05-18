@@ -8,7 +8,7 @@
 #$ -R y
 #$ -cwd
 #$ -v OMP_NUM_THREADS=1
-#$ -q 72H
+#$ -q 12H
 #$ -pe impi 32
 #$ -hold_jid test-GrC-GoC
 
