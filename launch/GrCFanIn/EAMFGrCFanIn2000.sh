@@ -20,4 +20,4 @@ export PATH=$HOME/.local/bin:$HOME/install/cmake/ins/bin:$HOME/install/openssl/i
 export LD_LIBRARY_PATH=$HOME/install/gsl/ins/lib:$HOME/install/openssl/ins/lib:$HOME/install/cpython/ins/lib:$HOME/install/readline/ins/lib:$HOME/install/libtool/ins/lib:$NEST_INSTALL_DIR/lib64:$LD_LIBRARY_PATH
 
 
-mpirun -np $(($NSLOTS+1)) python ./src/LaunchEvolutionaryAlgorithmMPI.py ./config/GrCGoCPlasticity/EAMFGrCFanIn2000.cfg
+mpirun -np $(($NSLOTS+1)) python ./src/LaunchEvolutionaryAlgorithmMPI.py ./config/GrCFanIn/EAMFGrCFanIn2000.cfg
