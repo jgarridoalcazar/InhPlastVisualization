@@ -10,7 +10,7 @@
 #$ -v OMP_NUM_THREADS=1
 #$ -q 72H
 #$ -pe impi 128
-#$ -hold_jid MFGrCFanIn2000
+#$ -hold_jid MFGoCFanIn2000
 
 source $HOME/install/nest/ins/nompi/bin/nest_vars.sh
 
