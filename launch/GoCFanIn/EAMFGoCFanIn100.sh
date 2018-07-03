@@ -1,6 +1,6 @@
 #!/bin/sh
 #$ -S /bin/sh
-#$ -N 100FanIn
+#$ -N FT100FanIn
 #$ -m bea
 #$ -M jesusgarrido@ugr.es
 #$ -o /SCRATCH/TIC117/jesusgarrido/SpikingGranularLayer/results
@@ -10,7 +10,7 @@
 #$ -v OMP_NUM_THREADS=1
 #$ -q 72H
 #$ -pe impi 128
-#$ -hold_jid 100FanIn
+#$ -hold_jid FT100FanIn
 
 source $HOME/install/nest/ins/nompi/bin/nest_vars.sh
 
