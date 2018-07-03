@@ -1,6 +1,6 @@
 #!/bin/sh
 #$ -S /bin/sh
-#$ -N MFGoCFanIn2000
+#$ -N 2000FanIn
 #$ -m bea
 #$ -M jesusgarrido@ugr.es
 #$ -o /SCRATCH/TIC117/jesusgarrido/SpikingGranularLayer/results
@@ -10,7 +10,7 @@
 #$ -v OMP_NUM_THREADS=1
 #$ -q 72H
 #$ -pe impi 128
-#$ -hold_jid MFGoCFanIn2000
+#$ -hold_jid 2000FanIn
 
 source $HOME/install/nest/ins/nompi/bin/nest_vars.sh
 
