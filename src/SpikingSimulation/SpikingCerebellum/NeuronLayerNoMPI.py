@@ -13,10 +13,10 @@ class NeuronLayer(InputLayer.InputLayer):
     '''
     This class defines a neuron layer and the data needed to generate it in a simulator.
     '''
-    
+
     template_model_parameters = {
                          'ConductanceLIF': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus', 'tau_istdp'],
-                         'ConductanceLIFSym': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus', 'tau_istdp','tau_sym'],
+                         'ConductanceLIFSym': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_minus', 'tau_istdp'],
                          'ConductanceLIFwIP': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_ip','beta_ip','epsilon_rc_ip','epsilon_rr_ip','tau_minus', 'tau_istdp', 'max_cm'],
                          'ConductanceLIFwIPSym': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_ip','beta_ip','epsilon_rc_ip','epsilon_rr_ip','tau_istdp','tau_minus', 'max_cm'],
                          'ConductanceLIFwAT': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tau_th','th_cons','tau_minus', 'tau_istdp'],
@@ -24,7 +24,7 @@ class NeuronLayer(InputLayer.InputLayer):
                          'ConductanceLIFStowIP': ['cm','texc','tinh','grest','eexc','einh','erest','eth','tref', 'tref_abs', 'tau_sym', 'tau_istdp','ip_rate','target_freq','tau_minus'],
                          'CurrentLIF': ['cm','grest','erest','eth','tref','tau_minus', 'tau_istdp']
                         }
-    
+
     def __init__(self,**kwargs):
         '''
         Constructor of the class. It creates a new neuron layer.
@@ -37,7 +37,7 @@ class NeuronLayer(InputLayer.InputLayer):
         @param record_vars: List with the name of the states variables to be recorded in this layer (e.g., Vm, Gexc, Ginh)
         @param record_step: Time-step for recorded state vars (in s)
         '''
-        
+
         # Read cell model and its properties
         if ('cell_model' in kwargs):
             self.cell_model = kwargs.pop('cell_model')
@@ -50,23 +50,23 @@ class NeuronLayer(InputLayer.InputLayer):
                         logger.warning('Non-specified cell model parameter: %s in layer %s. Using default value', param, kwargs['name'])
             else:
                 logger.error('Unknown cell model: %s', self.cell_model)
-                raise Exception('UnknownCellModel')                         
+                raise Exception('UnknownCellModel')
         else:
             logger.error('Non-specified cell model')
             raise Exception('Non-DefinedProperty')
-        
+
         if ('record_vars' in kwargs):
             self.record_vars = kwargs.pop('record_vars')
         else:
             self.record_vars = None
-            
+
         if ('record_step' in kwargs):
             self.record_step = kwargs.pop('record_step')
         else:
-            self.record_step = 1e-3            
-        
+            self.record_step = 1e-3
+
         super(NeuronLayer, self).__init__(**kwargs)
-        
+
     def equal_cell_model(self, neuronLayer1):
         '''
         It compares the cell model of this neuron layer with the one in the neuron layer passed as a parameter.
@@ -77,7 +77,7 @@ class NeuronLayer(InputLayer.InputLayer):
         # Checking the type of the parameter
         if (not(isinstance(neuronLayer1, NeuronLayer))):
             return False
-        
+
         # Checking the number of the cell model name
         if (self.cell_model != neuronLayer1.cell_model):
             return False
