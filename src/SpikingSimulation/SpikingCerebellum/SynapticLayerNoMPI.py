@@ -655,6 +655,7 @@ class SynapticLayer(object):
         self.weights = self.random_generator.rand(self.number_of_synapses) * (max_weight-min_weight) + min_weight
         return
      
+        
     def _generate_fixed_weights_(self):
         '''
         Initialize all the weights to the specified values.
@@ -709,6 +710,10 @@ class SynapticLayer(object):
         
         # Load the attributes of the layer
         #self.__name__ = root.attrs['name']
+        
+        self.network_record = {}
+        self.network_record['connections_dset'] = root['connections'][:,:]
+        self.network_record['weights_dset'] = root['weights'][:,:]
         
         # Load the source and target indexes and the weights of the layer
         target_index = root['connections'][1,:]

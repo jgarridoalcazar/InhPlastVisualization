@@ -135,8 +135,8 @@ class SavedCerebellarModel(CerebellarModel.CerebellarModel):
                 node = CerebellarModel._search_hdf5_group(file, layer.__name__)
             
                 # print 'Process',self.get_my_process_id(),':','Source layer:',layer.source_layer.nest_layer,'Target layer:', layer.target_layer.nest_layer
-                layer.weight_record['connections'] = node['connections'][:,:]
-                layer.weight_record['weights'] = numpy.transpose(node['weights'][1:,:])
+                layer.weight_record['connections'] = numpy.transpose(node['connections'][:,:])
+                layer.weight_record['weights'] = node['weights'][1:,:]
                 layer.weight_record['time'] = node['weights'][0,:]
                 
             else:
@@ -449,30 +449,47 @@ class SavedCerebellarModel(CerebellarModel.CerebellarModel):
         else:
             end_time = float('inf')
         
-        
         if not synaptic_layer.weight_recording:
-            logger.error('Invalid synaptic layer in get_synaptic_weights function. The weights in this layer has not been recorded')
+            logger.error('Invalid synaptic layer in get_synaptic_weights function. The weights in layer %s have not been recorded',synaptic_layer_name)
             raise Exception('InvalidSynapticLayer')
         
         # print 'Process',self.get_my_process_id(),':','Weight record:',synaptic_layer.weight_record
         
         # Calculate selected connection indexes
         connections = synaptic_layer.weight_record['connections']
-        connection_indexes = [index for index in range(len(connections)) if (connections[index][0] in source_indexes) and (connections[index][1] in target_indexes)]
-        gconnections = connections[connection_indexes]
+        
+        if (source_indexes == range(synaptic_layer.source_layer.number_of_neurons)):
+            # No selection -> All the connections in the layer
+            connection_source_boolean = numpy.ones(connections.shape[0], dtype=bool)
+        else:
+            # Source indexes selection
+            connection_source_boolean = numpy.in1d(connections[:,0],source_indexes)
+        
+        if (target_indexes == range(synaptic_layer.target_layer.number_of_neurons)):
+            # No selection -> All the connections in the layer
+            connection_target_boolean = numpy.ones(connections.shape[0], dtype=bool)
+        else:
+            # Target indexes selection
+            connection_target_boolean = numpy.in1d(connections[:,1],target_indexes)
+            
+        connection_indexes = numpy.where(numpy.logical_and(connection_source_boolean,connection_target_boolean))[0]
+        
+        selected_connections = connections[connection_indexes,:]
         
         # print 'Process',self.get_my_process_id(),':','Selected connections:',selected_connections
         
         # Calculate selected time indexes
         time = synaptic_layer.weight_record['time']
         time_indexes = (time>=init_time) & (time<=end_time) 
-        gtime = time[time_indexes]
+        selected_time = time[time_indexes]
         
         # Pick selected weights
         weights = synaptic_layer.weight_record['weights']
-        gweights = numpy.array([record[connection_indexes] for record in weights[time_indexes]]).transpose()
+        selected_weights = weights[numpy.ix_(connection_indexes,time_indexes)]
         
-        return (gtime,gconnections,gweights)
+        # print 'Process',self.get_my_process_id(),':','Collected time ->',gtime,'Collected Connections ->',gconnections,'Collected weights ->',gweights
+        
+        return (selected_time,selected_connections,selected_weights)
         
         
     def get_number_of_virtual_processes(self):
