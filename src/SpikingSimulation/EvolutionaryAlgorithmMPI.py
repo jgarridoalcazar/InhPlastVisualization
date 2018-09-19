@@ -913,12 +913,15 @@ def helper_simulation(local_config_options):
 
         parameter_keys_IMI = [key for key in simulation.config_options.keys() if key.startswith('individual_mutual_information')]
         parameter_keys_MI = [key for key in simulation.config_options.keys() if key.startswith('mutual_information')]
+        parameter_keys_MI_Top = [key for key in simulation.config_options.keys() if key.startswith('individual_mutual_information_top')]
         parameter_keys_hit = [key for key in simulation.config_options.keys() if key.startswith('hit_analysis')]
         parameter_keys_hit_top = [key for key in simulation.config_options.keys() if key.startswith('hit_top_analysis')]
         if parameter_keys_IMI:
             [mutual_information] = simulation.analyze_av_MI()[0]
         elif parameter_keys_MI:
             [mutual_information] = simulation.analyze_MI()
+        elif parameter_keys_MI_Top:
+            [mutual_information] = simulation.analyze_av_MI_Top()
         elif parameter_keys_hit:
             [mutual_information] = simulation.analyze_Hits()
         elif parameter_keys_hit_top:
