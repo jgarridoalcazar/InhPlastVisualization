@@ -478,7 +478,7 @@ class FrequencySimulation(object):
                 
         return mutual_information
 
-    def analyze_av_MI_Top(self):
+    def analyze_av_MI_Pattern(self):
         '''
         Analyze the estimators that have been set in the configuration file
         '''
@@ -489,26 +489,26 @@ class FrequencySimulation(object):
             import Analysis.IndividualMITopNoMPI as IndividualMITop
 
         # Extract every mutual information to explore
-        parameter_keys = [key for key in self.config_options.keys() if key.startswith('individual_mutual_information_top')]
+        parameter_keys = [key for key in self.config_options.keys() if key.startswith('average_mi_per_pattern')]
         mutual_information = []
         for key in parameter_keys:
 
             if not 'layer' in self.config_options[key]:
-                logger.error('Layer name has not been specified in the mutual information section')
+                logger.error('Layer name has not been specified in the average mi per pattern section')
                 raise Exception('NonSpecifiedLayer')
 
             if not 'window_length' in self.config_options[key]:
-                logger.error('Window length has not been specified in the mutual information section')
+                logger.error('Window length has not been specified in the average mi per pattern section')
                 raise Exception('NonSpecifiedWindowLenght')
 
             if not 'time_bin' in self.config_options[key]:
-                logger.error('time bin has not been specified in the mutual information section')
+                logger.error('time bin has not been specified in the average mi per pattern section')
                 raise Exception('NonSpecifiedTimeBin')
 
             if not 'record_to_file' in self.config_options[key]:
                 self.config_options[key]['record_to_file'] = False
 
-            logger.info('Analyzing individual mutual information top in section %s', key)
+            logger.info('Analyzing average mutual information per pattern in section %s', key)
             MIAnalysis = IndividualMITop.IndividualMITop(data_provider=self.cerebellum,
                                                    pattern_generator=self.pattern_generator,
                                                    layer=self.config_options[key]['layer'],
@@ -520,7 +520,7 @@ class FrequencySimulation(object):
             if self.config_options[key]['record_to_file']:
                 filename = self.config_options['simulation']['data_path'] + '/' + self.config_options['simulation'][
                     'simulation_name'] + '/' + key
-                logger.debug('Writing individual mutual information from section %s to file %s', key, filename)
+                logger.debug('Writing average mutual information per pattern from section %s to file %s', key, filename)
                 MIAnalysis.writeToFile(file_name=filename)
 
         return mutual_information
